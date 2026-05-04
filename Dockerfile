@@ -20,6 +20,14 @@ COPY . .
 
 RUN composer dump-autoload --optimize
 
+# ── NUEVA Etapa 2: Compilación de activos (Vite) ──────────────────────────────
+FROM node:20-alpine AS node_builder
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm install
+COPY . .
+RUN npm run build
+
 # ── Etapa 2: Imagen final ─────────────────────────────────────────────────────
 FROM php:8.3-fpm-alpine
 
