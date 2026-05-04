@@ -80,7 +80,12 @@ RUN echo "opcache.enable=1"                      >> /usr/local/etc/php/conf.d/op
     && echo "opcache.interned_strings_buffer=8"  >> /usr/local/etc/php/conf.d/opcache.ini \
     && echo "opcache.max_accelerated_files=4000" >> /usr/local/etc/php/conf.d/opcache.ini \
     && echo "opcache.validate_timestamps=0"      >> /usr/local/etc/php/conf.d/opcache.ini
+# ── 7. Copiar la aplicación (UNA sola vez, destino correcto) ──────────────────
+WORKDIR /var/www/html
+COPY --from=composer_builder /app /var/www/html
 
+# COPIAR activos compilados (Crucial para Laravel 11 + Vite)
+COPY --from=node_builder /app/public/build /var/www/html/public/build
 # ── 5. Copiar configuraciones de servicios ────────────────────────────────────
 COPY docker/nginx/nginx.conf              /etc/nginx/nginx.conf
 COPY docker/supervisor/laravel.ini        /etc/supervisor.d/laravel.ini
@@ -89,9 +94,7 @@ COPY docker/supervisor/laravel.ini        /etc/supervisor.d/laravel.ini
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# ── 7. Copiar la aplicación (UNA sola vez, destino correcto) ──────────────────
-WORKDIR /var/www/html
-COPY --from=composer_builder /app /var/www/html
+
 
 # ── 8. Permisos ───────────────────────────────────────────────────────────────
 RUN mkdir -p storage/framework/{sessions,views,cache} \
