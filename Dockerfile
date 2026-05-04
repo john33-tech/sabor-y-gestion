@@ -43,6 +43,7 @@ RUN apk update && apk add --no-cache \
     zip \
     unzip \
     openssl \
+    ca-certificates \
     openssl-dev \
     libzip-dev \
     libpng-dev \
@@ -102,7 +103,8 @@ RUN mkdir -p storage/framework/{sessions,views,cache} \
     && mkdir -p /run/nginx \
     && chown -R www-data:www-data /var/www/html \
     && chmod -R 775 /var/www/html/storage \
-    && chmod -R 775 /var/www/html/bootstrap/cache
+    && chmod -R 775 /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/public/build
 
 # ── 9. Puerto y punto de entrada (SIEMPRE al final) ───────────────────────────
 EXPOSE 8080
