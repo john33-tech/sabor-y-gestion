@@ -41,13 +41,16 @@
                             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold
                                 {{ $mesa->estado == 'libre' ? 'bg-green-500 text-white' : '' }}
                                 {{ $mesa->estado == 'ocupado' ? 'bg-red-500 text-white' : '' }}
-                                {{ $mesa->estado == 'reservado' ? 'bg-yellow-500 text-white' : '' }}">
+                                {{ $mesa->estado == 'reservado' ? 'bg-yellow-500 text-white' : '' }}
+                                {{ $mesa->estado == 'fuera_servicio' ? 'bg-gray-500 text-white' : '' }}">
                                 @if($mesa->estado == 'libre')
                                     <i class="fas fa-check-circle mr-1"></i> Libre
                                 @elseif($mesa->estado == 'ocupado')
                                     <i class="fas fa-user-clock mr-1"></i> Ocupado
-                                @else
+                                @elseif($mesa->estado == 'reservado')
                                     <i class="fas fa-calendar-check mr-1"></i> Reservado
+                                @else
+                                    <i class="fas fa-tools mr-1"></i> Fuera de Servicio
                                 @endif
                             </span>
                         </div>

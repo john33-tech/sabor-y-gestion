@@ -26,7 +26,7 @@ class MesaController extends Controller
             'numero_mesa' => 'required|string|max:10|unique:mesas',
             'capacidad' => 'required|integer|min:1|max:20',
             'area' => 'nullable|string|max:100',
-            'estado' => 'required|in:libre,ocupado,reservado',
+            'estado' => 'required|in:libre,ocupado,reservado,fuera_servicio',
             'hora_reserva' => 'required_if:estado,reservado|nullable|date',
             'cliente_reserva' => 'required_if:estado,reservado|nullable|string|max:100',
             'telefono_reserva' => 'required_if:estado,reservado|nullable|integer',
@@ -57,7 +57,7 @@ class MesaController extends Controller
             'numero_mesa' => 'required|string|max:10|unique:mesas,numero_mesa,' . $mesa->id,
             'capacidad' => 'required|integer|min:1|max:20',
             'area' => 'nullable|string|max:100',
-            'estado' => 'required|in:libre,ocupado,reservado',
+            'estado' => 'required|in:libre,ocupado,reservado,fuera_servicio',
             'hora_reserva' => 'required_if:estado,reservado|nullable|date',
             'cliente_reserva' => 'required_if:estado,reservado|nullable|string|max:100',
             'telefono_reserva' => 'required_if:estado,reservado|nullable|integer',
@@ -81,7 +81,7 @@ class MesaController extends Controller
     public function cambiarEstado(Request $request, Mesa $mesa)
     {
         $request->validate([
-            'estado' => 'required|in:libre,ocupado,reservado'
+            'estado' => 'required|in:libre,ocupado,reservado,fuera_servicio'
         ]);
 
         $mesa->estado = $request->estado;
