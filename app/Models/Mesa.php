@@ -41,4 +41,8 @@ class Mesa extends Model
     {
         return $this->estado === 'reservado';
     }
+    public function isFueraServicio()
+    {
+        return $this->estado === 'fuera_servicio';
+    }
 }

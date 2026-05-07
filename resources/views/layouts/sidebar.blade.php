@@ -245,7 +245,7 @@
 
 
 <!-- Operaciones -->
-@if(in_array($role, ['admin', 'cajero', 'mesero', 'cocinero']))
+@if(in_array($role, ['admin', 'cajero', 'mesero', 'cocinero', 'cliente']))
 <div x-data="{
     open: localStorage.getItem('sidebar_section_operaciones') === 'true',
     toggle() {
@@ -288,6 +288,18 @@ class="mb-1">
             <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Pedidos</span>
         </a>
         @endif
+
+
+        <!-- RESERVAR MESA cliente -->
+        @if(in_array($role, ['cliente']))
+        <a href="{{ route('reserva.index') }}"
+        class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
+              <i class="w-5 text-base transition-colors fas fa-calendar-check text-white/80 sm:text-lg group-hover:text-white"></i>
+              <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Reservar mesa</span>
+        </a>
+        @endif
+
+        
 
         <!-- Comandas -->
         @if(in_array($role, ['admin', 'cajero', 'cocinero']))

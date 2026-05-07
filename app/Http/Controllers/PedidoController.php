@@ -188,60 +188,121 @@ public function store(Request $request)
     }
     
     public function update(Request $request, Pedido $pedido)
-    {
-        if (!in_array($pedido->estado, [Pedido::ESTADO_PENDIENTE, Pedido::ESTADO_EN_PREPARACION])) {
-            return redirect()->route('pedidos.index')
-                ->with('error', 'No se puede modificar un pedido en estado ' . $pedido->estado);
-        }
-        
-        $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.plato_id' => 'required|exists:platos,id',
-            'items.*.cantidad' => 'required|integer|min:1',
-            'items.*.notas' => 'nullable|string',
-            'notas' => 'nullable|string',
-            'descuento' => 'nullable|numeric|min:0'
-        ]);
-        
-        DB::beginTransaction();
-        
-        try {
-            // Actualizar datos del pedido
-            $pedido->descuento = $request->descuento ?? 0;
-            $pedido->notas = $request->notas;
-            $pedido->save();
-            
-            // Eliminar detalles existentes
-            $pedido->detalles()->delete();
-            
-            // Crear nuevos detalles
-            foreach ($request->items as $item) {
-                $plato = Plato::find($item['plato_id']);
-                
-                DetallePedido::create([
-                    'pedido_id' => $pedido->id,
-                    'plato_id' => $item['plato_id'],
-                    'cantidad' => $item['cantidad'],
-                    'precio_unitario' => $plato->precio,
-                    'subtotal' => $plato->precio * $item['cantidad'],
-                    'notas' => $item['notas'] ?? null,
-                    'estado' => DetallePedido::ESTADO_PENDIENTE
+{
+    if (!in_array($pedido->estado, [
+        Pedido::ESTADO_PENDIENTE,
+        Pedido::ESTADO_EN_PREPARACION
+    ])) {
+
+        return redirect()->route('pedidos.index')
+            ->with('error', 'No se puede modificar un pedido en estado ' . $pedido->estado);
+    }
+
+    $request->validate([
+        'tipo_pedido' => 'required|in:mesa,delivery,para_llevar',
+        'mesa_id' => 'required_if:tipo_pedido,mesa|nullable|exists:mesas,id',
+        'cliente_nombre' => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:255',
+        'cliente_telefono' => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:20',
+        'direccion' => 'required_if:tipo_pedido,delivery|nullable|string|max:500',
+
+        'items' => 'required|array|min:1',
+        'items.*.plato_id' => 'required|exists:platos,id',
+        'items.*.cantidad' => 'required|integer|min:1',
+        'items.*.notas' => 'nullable|string',
+
+        'notas' => 'nullable|string',
+        'descuento' => 'nullable|numeric|min:0'
+    ]);
+
+    DB::beginTransaction();
+
+    try {
+
+        // LIBERAR MESA ANTERIOR
+        if ($pedido->tipo_pedido == 'mesa' && $pedido->mesa_id) {
+
+            $mesaAnterior = Mesa::find($pedido->mesa_id);
+
+            if ($mesaAnterior) {
+                $mesaAnterior->update([
+                    'estado' => 'libre'
                 ]);
             }
-            
-            // Recalcular totales
-            $pedido->calcularTotales();
-            
-            DB::commit();
-            
-            return redirect()->route('pedidos.show', $pedido)
-                ->with('success', 'Pedido actualizado exitosamente');
-                
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al actualizar el pedido: ' . $e->getMessage());
         }
+
+        // ACTUALIZAR DATOS DEL PEDIDO
+        $pedido->tipo_pedido = $request->tipo_pedido;
+
+        $pedido->mesa_id = $request->tipo_pedido == 'mesa'
+            ? $request->mesa_id
+            : null;
+
+        $pedido->cliente_nombre = $request->cliente_nombre
+            ?? ($request->tipo_pedido == 'mesa'
+                ? 'Cliente Mesa ' . $request->mesa_id
+                : null);
+
+        $pedido->cliente_telefono = $request->cliente_telefono;
+
+        $pedido->direccion = $request->tipo_pedido == 'delivery'
+            ? $request->direccion
+            : null;
+
+        $pedido->descuento = $request->descuento ?? 0;
+
+        $pedido->notas = $request->notas;
+
+        $pedido->save();
+
+        // OCUPAR NUEVA MESA
+        if ($pedido->tipo_pedido == 'mesa' && $request->mesa_id) {
+
+            $mesaNueva = Mesa::find($request->mesa_id);
+
+            if ($mesaNueva) {
+
+                $mesaNueva->update([
+                    'estado' => 'ocupado'
+                ]);
+            }
+        }
+
+        // ELIMINAR DETALLES ANTERIORES
+        $pedido->detalles()->delete();
+
+        // CREAR NUEVOS DETALLES
+        foreach ($request->items as $item) {
+
+            $plato = Plato::find($item['plato_id']);
+
+            DetallePedido::create([
+                'pedido_id' => $pedido->id,
+                'plato_id' => $item['plato_id'],
+                'cantidad' => $item['cantidad'],
+                'precio_unitario' => $plato->precio,
+                'subtotal' => $plato->precio * $item['cantidad'],
+                'notas' => $item['notas'] ?? null,
+                'estado' => DetallePedido::ESTADO_PENDIENTE
+            ]);
+        }
+
+        // RECALCULAR TOTALES
+        $pedido->calcularTotales();
+
+        DB::commit();
+
+        return redirect()->route('pedidos.show', $pedido)
+            ->with('success', 'Pedido actualizado exitosamente');
+
+    } catch (\Exception $e) {
+
+        DB::rollBack();
+
+        return back()
+            ->with('error', 'Error al actualizar el pedido: ' . $e->getMessage())
+            ->withInput();
     }
+}
     
     public function destroy(Pedido $pedido)
     {
@@ -309,7 +370,22 @@ public function store(Request $request)
             'mensaje' => 'Estado actualizado correctamente'
         ]);
     }
-    
+
+
+    public function misPedidos()
+    {
+        // Obtener solo los pedidos del usuario autenticado
+        $pedidos = Pedido::with(['mesa', 'detalles.plato'])
+            ->where('usuario_id', Auth::id())
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+        
+        $estados = Pedido::getEstados();
+        $tipos = Pedido::getTipos();
+        
+        return view('pedidos.misPedidos', compact('pedidos', 'estados', 'tipos'));
+    }
+
     public function imprimir(Pedido $pedido)
     {
         $pedido->load(['mesa', 'detalles.plato']);

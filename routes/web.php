@@ -13,6 +13,7 @@ use App\Http\Controllers\CierreCajaController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\CategoriaController; 
 use App\Http\Controllers\IngredienteController; 
+use App\Http\Controllers\ReservaMesaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -43,7 +44,14 @@ Route::middleware(['auth'])->group(function () {
     
     // Mesas
     Route::resource('mesas', MesaController::class)->middleware('role:admin,mesero');
-    
+    // Reserva de mesa, disponible solo para cliente
+    Route::resource('reserva', ReservaMesaController::class)->middleware('role:cliente');
+    Route::get('/reservas/{id}/edit', [ReservaMesaController::class, 'edit'])
+    ->name('reserva.edit');
+    Route::put('/reservas/{id}', [ReservaMesaController::class, 'update'])
+    ->name('reserva.update');
+    Route::delete('/reservas/{id}', [ReservaMesaController::class, 'destroy'])
+    ->name('reserva.destroy');
 
     // Comandas (Cocina)
     Route::prefix('comandas')->name('comandas.')->middleware('role:admin,cocinero')->group(function () {
@@ -90,6 +98,12 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('role:admin,cocinero');
     Route::get('/pedidos/{pedido}/imprimir', [PedidoController::class, 'imprimir'])
         ->name('pedidos.imprimir');
+        Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])
+    ->name('pedidos.update');
+    //Mis pedidos, disponible solo para cliente
+    Route::get('/misPedidos', [PedidoController::class, 'misPedidos'])
+    ->name('misPedidos.index')
+    ->middleware('role:cliente');
 });
 
 require __DIR__.'/auth.php';

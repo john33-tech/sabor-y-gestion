@@ -57,6 +57,7 @@
                         <option value="libre" {{ old('estado') == 'libre' ? 'selected' : '' }}>Libre</option>
                         <option value="ocupado" {{ old('estado') == 'ocupado' ? 'selected' : '' }}>Ocupado</option>
                         <option value="reservado" {{ old('estado') == 'reservado' ? 'selected' : '' }}>Reservado</option>
+                        <option value="fuera_servicio" {{ old('estado') == 'fuera_servicio' ? 'selected' : '' }}>Fuera de Servicio</option>
                     </select>
                 </div>
 

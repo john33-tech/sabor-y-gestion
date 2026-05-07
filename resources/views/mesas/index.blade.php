@@ -17,6 +17,10 @@
                 <span class="w-3 h-3 bg-yellow-500 rounded-full"></span>
                 <span class="text-sm text-muted">Reservado</span>
             </div>
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-gray-500 rounded-full"></span>
+                <span class="text-sm text-muted">Fuera de Servicio</span>
+            </div>
             <a href="{{ route('mesas.create') }}" class="bg-primary hover:bg-secondary text-surface px-5 py-2.5 rounded-lg transition duration-300 ml-4 shadow-md hover:shadow-lg">
                 <i class="fas fa-plus mr-2"></i> Nueva Mesa
             </a>
@@ -45,12 +49,13 @@
                                 {{ $mesa->estado == 'libre' ? 'bg-green-100 border-2 border-green-400' : '' }}
                                 {{ $mesa->estado == 'ocupado' ? 'bg-red-100 border-2 border-red-400' : '' }}
                                 {{ $mesa->estado == 'reservado' ? 'bg-yellow-100 border-2 border-yellow-400' : '' }}
+                                {{ $mesa->estado == 'fuera_servicio' ? 'bg-gray-100 border-2 border-gray-400' : '' }}
                             ">
                                 
                                 <!-- Contenido de la mesa -->
                                 <div class="text-center p-4 w-full">
                                     <!-- Número de mesa -->
-                                    <div class="text-2xl font-bold mb-2 {{ $mesa->estado == 'libre' ? 'text-green-700' : ($mesa->estado == 'ocupado' ? 'text-red-700' : 'text-yellow-700') }}">
+                                    <div class="text-2xl font-bold mb-2 {{ $mesa->estado == 'libre' ? 'text-green-700' : ($mesa->estado == 'ocupado' ? 'text-red-700' : ($mesa->estado == 'reservado' ? 'text-yellow-700' : 'text-gray-700')) }}">
                                         Mesa {{ $mesa->numero_mesa }}
                                     </div>
                                     
@@ -65,7 +70,7 @@
                                     </div>
                                     
                                     <!-- Capacidad en texto -->
-                                    <div class="text-xs font-semibold {{ $mesa->estado == 'libre' ? 'text-green-600' : ($mesa->estado == 'ocupado' ? 'text-red-600' : 'text-yellow-600') }} mb-2">
+                                    <div class="text-xs font-semibold {{ $mesa->estado == 'libre' ? 'text-green-600' : ($mesa->estado == 'ocupado' ? 'text-red-600' : ($mesa->estado == 'reservado' ? 'text-yellow-600' : 'text-gray-600')) }} mb-2">
                                         <i class="fas fa-users mr-1"></i> {{ $mesa->capacidad }} personas
                                     </div>
                                     
@@ -73,13 +78,16 @@
                                     <div class="text-xs font-bold uppercase tracking-wide px-2 py-1 rounded-full inline-block
                                         {{ $mesa->estado == 'libre' ? 'bg-green-500 text-white' : '' }}
                                         {{ $mesa->estado == 'ocupado' ? 'bg-red-500 text-white' : '' }}
-                                        {{ $mesa->estado == 'reservado' ? 'bg-yellow-500 text-white' : '' }}">
+                                        {{ $mesa->estado == 'reservado' ? 'bg-yellow-500 text-white' : '' }}
+                                        {{ $mesa->estado == 'fuera_servicio' ? 'bg-gray-500 text-white' : '' }}">
                                         @if($mesa->estado == 'libre')
                                             <i class="fas fa-check-circle mr-1"></i> Libre
                                         @elseif($mesa->estado == 'ocupado')
                                             <i class="fas fa-user-clock mr-1"></i> Ocupado
-                                        @else
+                                        @elseif($mesa->estado == 'reservado')
                                             <i class="fas fa-calendar-check mr-1"></i> Reservado
+                                        @else
+                                            <i class="fas fa-tools mr-1"></i> Fuera de Servicio
                                         @endif
                                     </div>
 
