@@ -98,6 +98,8 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('role:admin,cocinero');
     Route::get('/pedidos/{pedido}/imprimir', [PedidoController::class, 'imprimir'])
         ->name('pedidos.imprimir');
+        Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])
+    ->name('pedidos.update');
     //Mis pedidos, disponible solo para cliente
     Route::get('/misPedidos', [PedidoController::class, 'misPedidos'])
     ->name('misPedidos.index')
