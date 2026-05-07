@@ -96,4 +96,13 @@ class MesaController extends Controller
 
         return redirect()->route('mesas.index')->with('success', 'Estado actualizado');
     }
+
+
+
+
+    public function reservaMesa(Request $request, Mesa $mesa)
+    {
+        
+        return redirect()->route('mesas.reserva')->with('success', 'Mesa reservada exitosamente');
+    }
 }

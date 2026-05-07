@@ -43,7 +43,13 @@ Route::middleware(['auth'])->group(function () {
     
     // Mesas
     Route::resource('mesas', MesaController::class)->middleware('role:admin,mesero');
-    
+    //Reserva de mesa, disponible solo para cliente
+    Route::get('/reserva', [PedidoController::class, 'reservaMesa'])
+    ->name('reserva.index')
+    ->middleware('role:cliente');
+
+    Route::resource('reserva', ReservaMesaController::class)->middleware('role:cliente');
+
 
     // Comandas (Cocina)
     Route::prefix('comandas')->name('comandas.')->middleware('role:admin,cocinero')->group(function () {
@@ -90,6 +96,10 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('role:admin,cocinero');
     Route::get('/pedidos/{pedido}/imprimir', [PedidoController::class, 'imprimir'])
         ->name('pedidos.imprimir');
+    //Mis pedidos, disponible solo para cliente
+    Route::get('/misPedidos', [PedidoController::class, 'misPedidos'])
+    ->name('misPedidos.index')
+    ->middleware('role:cliente');
 });
 
 require __DIR__.'/auth.php';

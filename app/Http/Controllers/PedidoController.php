@@ -306,7 +306,22 @@ public function store(Request $request)
             'mensaje' => 'Estado actualizado correctamente'
         ]);
     }
-    
+
+
+    public function misPedidos()
+    {
+        // Obtener solo los pedidos del usuario autenticado
+        $pedidos = Pedido::with(['mesa', 'detalles.plato'])
+            ->where('usuario_id', Auth::id())
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+        
+        $estados = Pedido::getEstados();
+        $tipos = Pedido::getTipos();
+        
+        return view('pedidos.misPedidos', compact('pedidos', 'estados', 'tipos'));
+    }
+
     public function imprimir(Pedido $pedido)
     {
         $pedido->load(['mesa', 'detalles.plato']);
