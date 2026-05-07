@@ -61,7 +61,7 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 //(PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
-                PDO::MYSQL_ATTR_SSL_CA                  => env('DB_SSL_CA'),
+                PDO::MYSQL_ATTR_SSL_CA                  => storage_path('ssl/isrgrootx1.pem'),
                 PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT  => true,
                 PDO::ATTR_EMULATE_PREPARES              => true,
                 PDO::ATTR_TIMEOUT                       => 30,

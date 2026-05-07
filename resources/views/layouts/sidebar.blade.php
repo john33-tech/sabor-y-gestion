@@ -382,7 +382,7 @@ class="mb-1">
 
             <!-- Versión -->
             <div class="pt-4 mt-4 border-t border-white/10">
-                <div x-show="$store.sidebar.sidebarOpen" class="px-4 py-2">
+                <div x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="px-4 py-2">
                     <p class="text-xs text-white/40">v2.0.0</p>
                 </div>
             </div>
