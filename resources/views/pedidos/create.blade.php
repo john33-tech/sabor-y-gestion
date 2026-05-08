@@ -3,6 +3,8 @@
 @section('title', 'Nuevo Pedido')
 
 @section('content')
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="mb-8">
@@ -194,6 +196,39 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- MAPA -->
+    <div id="delivery-map-container"
+         class="hidden">
+
+        <label class="block text-sm font-medium mb-2 mt-4"
+               style="color: #111827;">
+
+            <i class="fas fa-map mr-1"></i>
+            Seleccione ubicación en el mapa
+
+        </label>
+
+        <div id="map"
+             style="height: 350px;"
+             class="rounded-lg border">
+        </div>
+
+        <input type="hidden"
+               name="latitud"
+               id="latitud">
+
+        <input type="hidden"
+               name="longitud"
+               id="longitud">
+
+        <p class="text-sm mt-2"
+           style="color: #78716C;">
+
+            Haga clic en el mapa para seleccionar la ubicación exacta.
+
+        </p>
+
+    </div>
 
                         <!-- Notas -->
                         <div class="mb-6">
@@ -259,6 +294,64 @@
 </div>
 
 @push('scripts')
+<script>
+
+let map;
+let marker;
+
+function initMap() {
+
+    map = L.map('map').setView([-16.5000, -68.1500], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    map.on('click', function(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        document.getElementById('latitud').value = lat;
+        document.getElementById('longitud').value = lng;
+
+        if(marker) {
+            map.removeLayer(marker);
+        }
+
+        marker = L.marker([lat, lng]).addTo(map);
+    });
+}
+// Mostrar mapa solo en delivery
+const tipoPedido = document.getElementById('tipo_pedido_input');
+const mapContainer = document.getElementById('delivery-map-container');
+
+function toggleMap() {
+
+    if(tipoPedido.value === 'delivery') {
+
+        mapContainer.classList.remove('hidden');
+
+        setTimeout(() => {
+
+            if(!map) {
+                initMap();
+            }
+
+            map.invalidateSize();
+
+        }, 200);
+
+    } else {
+
+        mapContainer.classList.add('hidden');
+    }
+}
+
+tipoPedido.addEventListener('change', toggleMap);
+
+toggleMap();
+
+</script>
 <script>
 let items = [];
 let searchTimeout;
@@ -391,6 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateTipoPedido(tipo) {
         // Actualizar input hidden
         tipoInput.value = tipo;
+        toggleMap();
         
         // Actualizar estilos de botones
         tipoBtns.forEach(btn => {

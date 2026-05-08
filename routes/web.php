@@ -46,12 +46,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('mesas', MesaController::class)->middleware('role:admin,mesero');
     // Reserva de mesa, disponible solo para cliente
     Route::resource('reserva', ReservaMesaController::class)->middleware('role:cliente');
-    Route::get('/reservas/{id}/edit', [ReservaMesaController::class, 'edit'])
-    ->name('reserva.edit');
-    Route::put('/reservas/{id}', [ReservaMesaController::class, 'update'])
-    ->name('reserva.update');
-    Route::delete('/reservas/{id}', [ReservaMesaController::class, 'destroy'])
-    ->name('reserva.destroy');
+
 
     // Comandas (Cocina)
     Route::prefix('comandas')->name('comandas.')->middleware('role:admin,cocinero')->group(function () {
@@ -89,21 +84,20 @@ Route::middleware(['auth'])->group(function () {
 
 
    //PEDIDOS
-    Route::resource('pedidos', PedidoController::class)->middleware('role:admin,mesero,cajero');
+    Route::resource('pedidos', PedidoController::class)->middleware('role:admin,mesero,cajero,cliente');
     Route::post('/pedidos/{pedido}/cambiar-estado', [PedidoController::class, 'cambiarEstado'])
         ->name('pedidos.cambiar-estado')
-        ->middleware('role:admin,mesero,cocinero');
+        ->middleware('role:admin,mesero,cocinero,cliente');
     Route::post('/detalle-pedido/{detalle}/cambiar-estado', [PedidoController::class, 'cambiarEstadoDetalle'])
         ->name('pedidos.detalle.cambiar-estado')
-        ->middleware('role:admin,cocinero');
+        ->middleware('role:admin,cocinero,cliente');
     Route::get('/pedidos/{pedido}/imprimir', [PedidoController::class, 'imprimir'])
         ->name('pedidos.imprimir');
-        Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])
-    ->name('pedidos.update');
-    //Mis pedidos, disponible solo para cliente
+    Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])
+        ->name('pedidos.update');
     Route::get('/misPedidos', [PedidoController::class, 'misPedidos'])
-    ->name('misPedidos.index')
-    ->middleware('role:cliente');
+    ->name('pedidos.misPedidos')
+    ->middleware('auth');
 });
 
 require __DIR__.'/auth.php';

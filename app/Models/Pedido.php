@@ -26,7 +26,9 @@ class Pedido extends Model
         'notas',
         'fecha_hora_estimada',
         'fecha_hora_entrega',
-        'usuario_id'
+        'usuario_id',
+        'latitud',
+        'longitud'
     ];
 
     protected $casts = [

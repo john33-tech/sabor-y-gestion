@@ -78,7 +78,42 @@
                     </table>
                 </div>
             </div>
+            <!--direccion para delivery-->
+            @if($pedido->tipo_pedido == 'delivery' && $pedido->latitud)
 
+            <div class="card mt-4">
+
+                <h3 class="text-lg font-bold mb-3">
+                    Ubicación del Cliente
+                </h3>
+
+                <div id="mapShow" style="height: 350px;" class="rounded-lg border"></div>
+
+            </div>
+
+            <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+            <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+                <script>
+
+                const mapShow = L.map('mapShow').setView([
+                {{ $pedido->latitud }},
+                {{ $pedido->longitud }}
+                ], 15);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(mapShow);
+
+                L.marker([
+                    {{ $pedido->latitud }},
+                    {{ $pedido->longitud }}
+                ]).addTo(mapShow)
+                .bindPopup('Ubicación del cliente')
+                .openPopup();
+
+                </script>
+            @endif
             <!-- Notas del Pedido -->
             @if($pedido->notas)
             <div class="card">

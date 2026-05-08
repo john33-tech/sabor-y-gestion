@@ -6,9 +6,6 @@
 <div class="space-y-6">
     <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold text-text">📅 Reservas Disponibles</h1>
-        <a href="{{ route('mesas.create') }}" class="bg-primary hover:bg-secondary text-surface px-4 py-2 rounded-lg transition duration-300 shadow-md hover:shadow-lg">
-            <i class="fas fa-plus mr-2"></i> Nueva Mesa
-        </a>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         @forelse($mesas as $mesa)
