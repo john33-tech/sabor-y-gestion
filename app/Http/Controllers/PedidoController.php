@@ -134,6 +134,9 @@ public function store(Request $request)
         // Generar número de pedido (después de tener los totales)
         $pedido->generarNumeroPedido();
         
+        // Emitir evento para tiempo real (Notificar a cocineros)
+        event(new \App\Events\PedidoCreado($pedido));
+        
         // Actualizar estado de la mesa si es pedido de mesa
         if ($pedido->tipo_pedido == 'mesa') {
             $mesa = Mesa::find($request->mesa_id);

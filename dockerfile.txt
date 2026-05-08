@@ -1,0 +1,82 @@
+# ── Etapa 1: Dependencias con Composer ───────────────────────────────────────
+FROM composer:2.7 AS composer_builder
+WORKDIR /app
+COPY composer.json composer.lock ./
+# Se añade --no-dev para producción
+RUN composer install --no-scripts --no-autoloader --prefer-dist --ignore-platform-reqs --no-dev
+COPY . .
+RUN composer dump-autoload --optimize
+
+# ── NUEVA Etapa 2: Compilación de activos (Vite) ──────────────────────────────
+# Esto soluciona el error de "Vite manifest not found"
+FROM node:20-alpine AS node_builder
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm install
+COPY . .
+# Genera la carpeta public/build con el manifest.json
+RUN npm run build
+
+# ── Etapa 3: Imagen final ─────────────────────────────────────────────────────
+FROM php:8.3-fpm-alpine
+LABEL maintainer="Tu Nombre <tu@email.com>"
+
+# ── 1. Paquetes del sistema ──────────────────────────────────────────────────
+# Se añade ca-certificates para la conexión SSL con TiDB Cloud
+RUN apk update && apk add --no-cache \
+    nginx \
+    supervisor \
+    bash \
+    curl \
+    git \
+    zip \
+    unzip \
+    openssl \
+    ca-certificates \
+    libzip-dev \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    icu-dev \
+    $PHPIZE_DEPS \
+    && rm -rf /var/cache/apk/*
+
+# ── 2. Extensiones PHP ────────────────────────────────────────────────────────
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo_mysql \
+        mysqli \
+        zip \
+        gd \
+        opcache \
+        bcmath \
+        pcntl \
+        intl
+
+# ── 5. Copiar configuraciones y aplicación ────────────────────────────────────
+WORKDIR /var/www/html
+
+# Copiar aplicación de PHP
+COPY --from=composer_builder /app /var/www/html
+
+# COPIAR activos compilados (Crucial para Laravel 11 + Vite)
+COPY --from=node_builder /app/public/build /var/www/html/public/build
+
+# Resto de configuraciones
+COPY docker/nginx/nginx.conf              /etc/nginx/nginx.conf
+COPY docker/supervisor/laravel.ini        /etc/supervisor.d/laravel.ini
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# ── 8. Permisos ───────────────────────────────────────────────────────────────
+# Asegurar que public/build también tenga los permisos correctos[cite: 1]
+RUN mkdir -p storage/framework/{sessions,views,cache} \
+    && mkdir -p /var/log/supervisor \
+    && mkdir -p /run/nginx \
+    && chown -R www-data:www-data /var/www/html \
+    && chmod -R 775 /var/www/html/storage \
+    && chmod -R 775 /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/public/build
+
+EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
