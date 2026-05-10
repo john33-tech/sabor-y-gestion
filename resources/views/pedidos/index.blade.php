@@ -10,7 +10,7 @@
         <h1 class="text-3xl font-bold text-primary">
             <i class="fas fa-receipt mr-2"></i> Pedidos
         </h1>
-        <a href="{{ route('pedidos.create') }}" class="btn-primary">
+        <a href="{{ route('pedidos.create') }}" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors duration-200 shadow-sm">
             <i class="fas fa-plus mr-2"></i> Nuevo Pedido
         </a>
     </div>

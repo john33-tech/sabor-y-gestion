@@ -4,7 +4,7 @@
 <div class="space-y-6">
     <div class="flex justify-between items-center">
         <h1 class="text-3xl font-bold text-primary">Control de Inventario</h1>
-        <a href="{{ route('inventario.create') }}" class="btn-primary">
+        <a href="{{ route('inventario.create') }}" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors duration-200 shadow-sm">
             <i class="fas fa-plus mr-2"></i> Agregar Stock Inicial
         </a>
     </div>

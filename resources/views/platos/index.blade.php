@@ -5,7 +5,7 @@
 <div class="space-y-6" x-data="{ showImageModal: false, modalImageUrl: '', modalImageTitle: '' }">
     <div class="flex justify-between items-center">
         <h1 class="text-3xl font-bold text-primary">Productos</h1>
-        <a href="{{ route('platos.create') }}" class="btn-primary">
+        <a href="{{ route('platos.create') }}" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors duration-200 shadow-sm">
             <i class="fas fa-plus mr-2"></i> Nuevo Producto
         </a>
     </div>

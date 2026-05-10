@@ -124,33 +124,6 @@
             </div>
             @endif
 
-
-<!-- Reportes -->
-    @if(in_array($role, ['admin', 'cocinero']))
-<div x-data="{ open: false }">
-    <button @click="open = !open" 
-            class="flex items-center justify-between w-full px-4 py-2 text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200">
-        <div class="flex items-center gap-3">
-            <i class="fas fa-chart-line w-4"></i>
-            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)">Reportes</span>
-        </div>
-        <i class="fas fa-chevron-down text-xs transition-transform" :class="{'rotate-180': open}"></i>
-    </button>
-    
-    <div x-show="open" x-collapse x-cloak class="mt-1 ml-2 space-y-1 sm:ml-3">
-        <a href="{{ route('reportes.consumos') }}" class="flex items-center gap-3 px-4 py-1.5 text-xs rounded-lg text-white/70 hover:bg-white/10 hover:text-white">
-            <i class="fas fa-receipt w-4"></i>
-            <span>Consumos</span>
-        </a>
-    </div>
-</div>
-
-
-
-
-
-
-
             <!-- Catálogo y Menú -->
             @if(in_array($role, ['admin', 'cocinero']))
             <div x-data="{
@@ -225,45 +198,36 @@
                 </div>
    @endif
 
-           
 
 
-
-
-<div x-show="open"
-     x-collapse
-     x-cloak
-     class="mt-1 ml-2 space-y-1 sm:ml-3">
-    
-    <a href="{{ route('inventario.index') }}"
-       class="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
-        
-        <div class="flex items-center gap-2 sm:gap-3">
-            <i class="fas fa-boxes text-[10px] sm:text-xs w-4"></i>
-            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">
-                Inventario
-            </span>
-        </div>
-        
-        @if($lowStockCount > 0)
-            <span class="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-black bg-yellow-400 animate-pulse rounded-full">
-                {{ $lowStockCount }}
-            </span>
-        @endif
-    </a>
-</div>
-
-
-
-
-
-
-
-
-
-
+        @if(in_array($role, ['admin', 'cocinero']))
+            <div x-show="open"
+                x-collapse
+                x-cloak
+                class="mt-1 ml-2 space-y-1 sm:ml-3">
+                
+                <a href="{{ route('inventario.index') }}"
+                class="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
+                    
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <i class="fas fa-boxes text-[10px] sm:text-xs w-4"></i>
+                        <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">
+                            Inventario
+                        </span>
+                    </div>
+                    
+                    @if($lowStockCount > 0)
+                        <span class="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-black bg-yellow-400 animate-pulse rounded-full">
+                            {{ $lowStockCount }}
+                        </span>
+                    @endif
+                </a>
             </div>
-            @endif
+        </div>
+        @endif
+
+
+
 
             <!-- Mesas -->
             @if(in_array($role, ['admin', 'mesero']))
@@ -308,14 +272,6 @@
                 </div>
             </div>
             @endif
-
-
-
-
-
-
-
-
 
 
 <!-- Operaciones -->
@@ -477,6 +433,53 @@ class="mb-1">
                 </div>
             </div>
             @endif
+
+
+        <!-- Reportes -->
+@if(in_array($role, ['admin', 'cocinero']))
+<div x-data="{
+    open: localStorage.getItem('sidebar_section_reportes') === 'true',
+    toggle() {
+        this.open = !this.open;
+        localStorage.setItem('sidebar_section_reportes', this.open);
+    }
+}"
+x-init="() => {
+    if (localStorage.getItem('sidebar_section_reportes') === null) {
+        open = false;
+        localStorage.setItem('sidebar_section_reportes', false);
+    }
+}"
+class="mb-1">
+    <button @click="toggle()"
+            class="w-full flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-all duration-200 hover:bg-white/10 group">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <i class="w-5 text-base transition-colors fas fa-chart-line text-white/80 sm:text-lg group-hover:text-white"></i>
+            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)"
+                  x-transition.duration.200
+                  class="text-xs font-medium sm:text-sm text-white/80 group-hover:text-white whitespace-nowrap">
+                Reportes
+            </span>
+        </div>
+        <i x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)"
+           :class="open ? 'fa-chevron-up' : 'fa-chevron-down'"
+           class="text-xs transition-transform duration-200 fas text-white/50"></i>
+    </button>
+
+    <div x-show="open"
+         x-collapse
+         x-cloak
+         class="mt-1 ml-2 space-y-1 sm:ml-3">
+        <a href="{{ route('reportes.consumos') }}"
+           class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
+            <i class="fas fa-receipt text-[10px] sm:text-xs w-4"></i>
+            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">
+                Consumos
+            </span>
+        </a>
+    </div>
+</div>
+@endif
 
             <!-- Versión -->
             <div class="pt-4 mt-4 border-t border-white/10">
