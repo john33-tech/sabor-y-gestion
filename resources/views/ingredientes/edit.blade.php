@@ -78,11 +78,15 @@
                     <div class="grid grid-cols-2 gap-4 text-sm">
                         <div>
                             <span class="text-muted">Fecha de creación:</span>
-                            <p class="font-medium">{{ $ingrediente->created_at->format('d/m/Y H:i') }}</p>
+                            <p class="font-medium">
+                                {{ $ingrediente->created_at ? $ingrediente->created_at->format('d/m/Y H:i') : 'No disponible' }}
+                            </p>
                         </div>
                         <div>
                             <span class="text-muted">Última actualización:</span>
-                            <p class="font-medium">{{ $ingrediente->updated_at->format('d/m/Y H:i') }}</p>
+                            <p class="font-medium">
+                                {{ $ingrediente->updated_at ? $ingrediente->updated_at->format('d/m/Y H:i') : 'No disponible' }}
+                            </p>
                         </div>
                         <div>
                             <span class="text-muted">Usado en platos:</span>

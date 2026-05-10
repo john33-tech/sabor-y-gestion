@@ -64,7 +64,7 @@
                         <div>
                             <label class="block text-sm font-medium text-text mb-2">Precio *</label>
                             <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-500">$</span>
+                                <span class="absolute left-3 top-2 text-gray-500">Bs </span>
                                 <input type="number" name="precio" step="0.01" required value="{{ old('precio', $plato->precio) }}" class="w-full pl-8 pr-4 py-2 rounded-lg border border-border focus:outline-none focus:border-primary">
                             </div>
                             @error('precio')
