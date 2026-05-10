@@ -48,7 +48,7 @@ class PagoQrController extends Controller
         }
 
         // Disparar evento Pusher para notificar al frontend
-        event(new PagoConfirmadoEvent($emisor, [
+        broadcast(new PagoConfirmadoEvent($emisor, [
             'status'         => 'success',
             'factura_id'     => $factura->id,
             'numero_factura' => $factura->numero_factura,
