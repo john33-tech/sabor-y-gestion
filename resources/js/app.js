@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (userRole === 'cocinero' || userRole === 'admin') {
             console.log('Intentando suscribirse al canal privado: pedidos.cocineros');
             
-            window.Echo.private('pedidos.cocineros')
+            window.Echo.channel('pedidos.cocineros')
                 .subscribed(() => {
                     console.log('✅ Suscripción exitosa al canal pedidos.cocineros');
                 })

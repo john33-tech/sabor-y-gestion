@@ -6,6 +6,7 @@ use App\Models\Factura;
 use App\Models\Pedido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class FacturaController extends Controller
 {
@@ -127,5 +128,52 @@ class FacturaController extends Controller
     {
         $factura->delete();
         return redirect()->route('facturas.index')->with('success', 'Factura eliminada definitivamente');
+    }
+
+    /**
+     * Generar código QR para pago de una factura.
+     * GET /facturas/{factura}/generar-qr
+     */
+    public function generarQr(Factura $factura)
+    {
+        $factura->load('pedido');
+
+        // Identificador único del canal Pusher para este pago
+        $emisor = 'fact' . $factura->id;
+
+        // Construir URL del QR con parámetros dinámicos
+        $params = [
+            'i'         => 1,
+            'cliente'   => $factura->cliente_nombre,
+            'monto'     => $factura->total,
+            'descuento' => $factura->descuento,
+            'emisor'    => $emisor,
+            'pedido'    => $factura->pedido_id,
+        ];
+
+        $url = 'https://proyecto-tis-umss.infinityfreeapp.com/?' . http_build_query($params);
+
+        // Generar QR 300x300 en formato SVG
+        $qrSvg = (string) QrCode::size(300)
+            ->style('round')
+            ->eye('circle')
+            ->margin(1)
+            ->generate($url);
+
+        return response()->json([
+            'qr_svg' => $qrSvg,
+            'emisor' => $emisor,
+            'url'    => $url,
+            'factura' => [
+                'id'              => $factura->id,
+                'numero_factura'  => $factura->numero_factura,
+                'cliente_nombre'  => $factura->cliente_nombre,
+                'total'           => number_format($factura->total, 2),
+                'descuento'       => number_format($factura->descuento, 2),
+                'subtotal'        => number_format($factura->subtotal, 2),
+                'impuesto'        => number_format($factura->impuesto, 2),
+                'pedido_id'       => $factura->pedido_id,
+            ],
+        ]);
     }
 }

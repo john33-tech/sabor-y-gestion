@@ -69,6 +69,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('facturas', FacturaController::class)->middleware('role:admin,cajero');
     Route::post('/facturas/{factura}/pagar', [FacturaController::class, 'pagar'])->name('facturas.pagar')->middleware('role:admin,cajero');
     Route::post('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular')->middleware('role:admin,cajero');
+    Route::get('/facturas/{factura}/generar-qr', [FacturaController::class, 'generarQr'])->name('facturas.generar-qr')->middleware('role:admin,cajero');
     
     // Pagos
     Route::resource('pagos', PagoController::class)->middleware('role:admin,cajero');
