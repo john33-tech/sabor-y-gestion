@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\PagoQrConfirmado;
+use App\Events\PagoConfirmadoEvent;
 use App\Models\Factura;
 use App\Models\Pedido;
 use Illuminate\Http\Request;
@@ -48,7 +48,7 @@ class PagoQrController extends Controller
         }
 
         // Disparar evento Pusher para notificar al frontend
-        event(new PagoQrConfirmado($emisor, [
+        event(new PagoConfirmadoEvent($emisor, [
             'status'         => 'success',
             'factura_id'     => $factura->id,
             'numero_factura' => $factura->numero_factura,
