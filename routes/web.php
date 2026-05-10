@@ -99,6 +99,16 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/misPedidos', [PedidoController::class, 'misPedidos'])
     ->name('pedidos.misPedidos')
     ->middleware('auth');
+
+
+
+    // Reportes de Consumos
+    Route::prefix('reportes')->name('reportes.')->middleware('role:admin,cocinero')->group(function () {
+        Route::get('/consumos', [App\Http\Controllers\ReporteConsumoController::class, 'index'])->name('consumos');
+        Route::get('/consumos/export', [App\Http\Controllers\ReporteConsumoController::class, 'export'])->name('consumos.export');
+    });
+
+
 });
 
 

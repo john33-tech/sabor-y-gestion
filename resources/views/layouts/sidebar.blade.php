@@ -124,6 +124,33 @@
             </div>
             @endif
 
+
+<!-- Reportes -->
+    @if(in_array($role, ['admin', 'cocinero']))
+<div x-data="{ open: false }">
+    <button @click="open = !open" 
+            class="flex items-center justify-between w-full px-4 py-2 text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200">
+        <div class="flex items-center gap-3">
+            <i class="fas fa-chart-line w-4"></i>
+            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)">Reportes</span>
+        </div>
+        <i class="fas fa-chevron-down text-xs transition-transform" :class="{'rotate-180': open}"></i>
+    </button>
+    
+    <div x-show="open" x-collapse x-cloak class="mt-1 ml-2 space-y-1 sm:ml-3">
+        <a href="{{ route('reportes.consumos') }}" class="flex items-center gap-3 px-4 py-1.5 text-xs rounded-lg text-white/70 hover:bg-white/10 hover:text-white">
+            <i class="fas fa-receipt w-4"></i>
+            <span>Consumos</span>
+        </a>
+    </div>
+</div>
+
+
+
+
+
+
+
             <!-- Catálogo y Menú -->
             @if(in_array($role, ['admin', 'cocinero']))
             <div x-data="{
@@ -196,7 +223,7 @@
                         </span>
                     </a>
                 </div>
-
+   @endif
 
            
 
@@ -225,6 +252,11 @@
         @endif
     </a>
 </div>
+
+
+
+
+
 
 
 

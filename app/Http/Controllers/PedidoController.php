@@ -433,72 +433,109 @@ private function verificarStockItems($items)
     
    
    
-        public function cambiarEstado(Request $request, Pedido $pedido)
-    {
-        $request->validate([
-            'estado' => 'required|in:' . implode(',', array_keys(Pedido::getEstados()))
-        ]);
-        
-        $estadoAnterior = $pedido->estado;
-        
-        DB::beginTransaction();
-        
-        try {
-            // Si se marca como "listo" o "entregado", descontar inventario
-            if (in_array($request->estado, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO]) 
-                && !in_array($estadoAnterior, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
-                
-                foreach ($pedido->detalles as $detalle) {
-                    if ($detalle->plato) {
-                        $detalle->plato->descontarInventario();
-                    }
+ public function cambiarEstado(Request $request, Pedido $pedido)
+{
+    $request->validate([
+        'estado' => 'required|in:' . implode(',', array_keys(Pedido::getEstados()))
+    ]);
+    
+    $estadoAnterior = $pedido->estado;
+    
+    DB::beginTransaction();
+    
+    try {
+        // Si se marca como "listo" o "entregado", descontar inventario y guardar consumo
+        if (in_array($request->estado, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO]) 
+            && !in_array($estadoAnterior, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
+            
+            foreach ($pedido->detalles as $detalle) {
+                if ($detalle->plato) {
+                    $detalle->plato->descontarInventario();
                 }
             }
             
-            // Si se cancela un pedido que ya había descontado inventario, revertir
-            if ($request->estado == Pedido::ESTADO_CANCELADO 
-                && in_array($estadoAnterior, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
-                
-                foreach ($pedido->detalles as $detalle) {
-                    if ($detalle->plato) {
-                        $detalle->plato->revertirInventario(); // Necesitas crear este método
-                    }
-                }
-            }
-            
-            $pedido->actualizarEstado($request->estado);
-            
-            // Limpiar caché del contador de stock bajo
-            Cache::forget('low_stock_count_direct');
-            
-            DB::commit();
-            
-            // Si la petición es AJAX, retornar JSON
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => true,
-                    'estado' => $request->estado,
-                    'mensaje' => "Pedido #{$pedido->numero_pedido} actualizado"
-                ]);
-            }
-            
-            return redirect()->route('pedidos.show', $pedido)
-                ->with('success', "Pedido #{$pedido->numero_pedido} cambiado de {$estadoAnterior} a {$request->estado}");
-                
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'mensaje' => 'Error: ' . $e->getMessage()
-                ], 500);
-            }
-            
-            return redirect()->back()
-                ->with('error', 'Error al cambiar estado: ' . $e->getMessage());
+            // Guardar consumo
+            $this->guardarConsumo($pedido);
         }
+        
+        // Si se cancela un pedido que ya había descontado inventario, revertir
+        if ($request->estado == Pedido::ESTADO_CANCELADO 
+            && in_array($estadoAnterior, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
+            
+            foreach ($pedido->detalles as $detalle) {
+                if ($detalle->plato) {
+                    $detalle->plato->revertirInventario();
+                }
+            }
+        }
+        
+        $pedido->actualizarEstado($request->estado);
+        
+        // Limpiar caché
+        Cache::forget('low_stock_count_direct');
+        
+        DB::commit();
+        
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'estado' => $request->estado,
+                'mensaje' => "Pedido #{$pedido->numero_pedido} actualizado"
+            ]);
+        }
+        
+        return redirect()->route('pedidos.show', $pedido)
+            ->with('success', "Pedido #{$pedido->numero_pedido} cambiado de {$estadoAnterior} a {$request->estado}");
+            
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        if ($request->ajax()) {
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+        
+        return redirect()->back()
+            ->with('error', 'Error al cambiar estado: ' . $e->getMessage());
     }
+}
+
+private function guardarConsumo(Pedido $pedido)
+{
+    $detalles = [];
+    foreach ($pedido->detalles as $detalle) {
+        $detalles[] = [
+            'plato_id' => $detalle->plato_id,
+            'plato_nombre' => $detalle->plato->nombre,
+            'cantidad' => $detalle->cantidad,
+            'precio_unitario' => $detalle->precio_unitario,
+            'subtotal' => $detalle->subtotal,
+            'notas' => $detalle->notas
+        ];
+    }
+    
+    // Verificar si ya existe un consumo para este pedido
+    $consumoExistente = Consumo::where('pedido_id', $pedido->id)->first();
+    
+    if (!$consumoExistente) {
+        Consumo::create([
+            'numero_pedido' => $pedido->numero_pedido,
+            'pedido_id' => $pedido->id,
+            'usuario_id' => $pedido->usuario_id,
+            'tipo_pedido' => $pedido->tipo_pedido,
+            'estado' => 'completado',
+            'subtotal' => $pedido->subtotal,
+            'impuesto' => $pedido->impuesto,
+            'descuento' => $pedido->descuento,
+            'total' => $pedido->total,
+            'detalles' => $detalles,
+            'fecha_consumo' => now()
+        ]);
+    }
+}
+
     
     public function cambiarEstadoDetalle(Request $request, DetallePedido $detalle)
     {
