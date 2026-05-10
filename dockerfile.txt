@@ -80,3 +80,4 @@ RUN mkdir -p storage/framework/{sessions,views,cache} \
 
 EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+

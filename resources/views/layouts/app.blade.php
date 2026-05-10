@@ -139,6 +139,7 @@
                         @endif
 
                         @yield('content')
+                        {{ $slot ?? '' }}
                     </div>
                 </main>
             </div>

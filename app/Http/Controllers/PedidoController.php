@@ -129,6 +129,9 @@ public function store(Request $request)
         
         // Generar número de pedido (después de tener los totales)
         $pedido->generarNumeroPedido();
+
+        // Generar factura automática
+        $pedido->generarOrUpdateFactura();
         
         // Emitir evento para tiempo real (Notificar a cocineros)
         event(new \App\Events\PedidoCreado($pedido));
@@ -288,6 +291,9 @@ public function store(Request $request)
 
         // RECALCULAR TOTALES
         $pedido->calcularTotales();
+
+        // ACTUALIZAR FACTURA
+        $pedido->generarOrUpdateFactura();
 
         DB::commit();
 

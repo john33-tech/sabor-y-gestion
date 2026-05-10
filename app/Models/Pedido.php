@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Factura;
+use Illuminate\Support\Facades\Auth;
 
 class Pedido extends Model
 {
@@ -103,13 +105,13 @@ class Pedido extends Model
     public function actualizarEstado($estado)
     {
         $this->estado = $estado;
-        
+
         if ($estado == self::ESTADO_ENTREGADO) {
             $this->fecha_hora_entrega = now();
         }
-        
+
         $this->save();
-        
+
         if ($this->tipo_pedido == self::TIPO_MESA && $estado == self::ESTADO_ENTREGADO) {
             if ($this->mesa) {
                 $this->mesa->update(['estado' => 'libre']);
@@ -122,26 +124,60 @@ class Pedido extends Model
 public function generarNumeroPedido()
 {
     // Obtener el último número de pedido
-    $ultimoPedido = self::orderBy('id', 'desc')->first();
-    
+    $ultimoPedido = self::orderBy('id', 'desc')->whereNotNull('numero_pedido')->first();
+
     if ($ultimoPedido && $ultimoPedido->numero_pedido) {
         // Extraer el número del último pedido (ej: PED-0001 -> 1)
         $numero = intval(substr($ultimoPedido->numero_pedido, -4)) + 1;
     } else {
         $numero = 1;
     }
-    
+
     // Generar el nuevo número con formato PED-0001, PED-0002, etc.
         $nuevoNumero = 'PED-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
-    
+
     // Verificar que no exista ya ese número (por si acaso)
     while (self::where('numero_pedido', $nuevoNumero)->exists()) {
         $numero++;
         $nuevoNumero = 'PED-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
     }
-    
+
     $this->numero_pedido = $nuevoNumero;
     $this->save();
+}
+
+    // app/Models/Pedido.php
+
+public function generarOrUpdateFactura()
+{
+    $factura = Factura::firstOrNew(['pedido_id' => $this->id]);
+
+    if (!$factura->exists) {
+        $factura->metodo_pago = 'efectivo';
+        $factura->estado = Factura::ESTADO_PENDIENTE;
+        $factura->fecha_emision = now();
+        $factura->usuario_id = $this->usuario_id ?? Auth::id();
+
+        // --- SOLUCIÓN MANUAL DIRECTA ---
+        $ultimo = Factura::orderBy('id', 'desc')->first();
+        $numero = 1;
+        if ($ultimo && $ultimo->numero_factura) {
+            $ultimoNumero = str_replace('FACT-', '', $ultimo->numero_factura);
+            $numero = intval($ultimoNumero) + 1;
+        }
+        $factura->numero_factura = 'FACT-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
+    }
+
+    $factura->cliente_nombre = $this->cliente_nombre ?? 'Cliente';
+    $factura->cliente_telefono = $this->cliente_telefono;
+    $factura->subtotal = $this->subtotal;
+    $factura->impuesto = $this->impuesto;
+    $factura->descuento = $this->descuento;
+    $factura->total = $this->total;
+    //dd($factura->toArray()); // El código se detiene AQUÍ
+
+    $factura->save();
+    return $factura;
 }
 
 }

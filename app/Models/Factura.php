@@ -39,6 +39,31 @@ class Factura extends Model
     const ESTADO_PAGADA = 'pagada';
     const ESTADO_ANULADA = 'anulada';
 
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($factura) {
+            if (!$factura->numero_factura) {
+                $ultimo = self::orderBy('id', 'desc')->whereNotNull('numero_factura')->first();
+                $numero = 1;
+                if ($ultimo) {
+                    $ultimoNumero = str_replace('FACT-', '', $ultimo->numero_factura);
+                    $numero = intval($ultimoNumero) + 1;
+                }
+                
+                $nuevoNumero = 'FACT-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
+                
+                while (self::where('numero_factura', $nuevoNumero)->exists()) {
+                    $numero++;
+                    $nuevoNumero = 'FACT-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
+                }
+                
+                $factura->numero_factura = $nuevoNumero;
+            }
+        });
+    }
+
     public function pedido()
     {
         return $this->belongsTo(Pedido::class);
@@ -49,11 +74,32 @@ class Factura extends Model
         return $this->belongsTo(User::class, 'usuario_id');
     }
 
-    public function generarNumeroFactura()
+    /**
+     * Recalcula el total de la factura basándose en el subtotal, impuesto y descuento.
+     */
+    public function recalculateTotal()
+    {
+        $this->total = ($this->subtotal + $this->impuesto) - $this->descuento;
+        return $this;
+    }
+
+    public function generateNextNumero()
     {
         $ultimo = self::orderBy('id', 'desc')->first();
-        $numero = $ultimo ? intval(substr($ultimo->numero_factura, -6)) + 1 : 1;
-        $this->numero_factura = 'FACT-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
-        $this->save();
+        $numero = 1;
+        if ($ultimo && $ultimo->numero_factura) {
+            $ultimoNumero = substr($ultimo->numero_factura, 5); // Remueve 'FACT-'
+            $numero = intval($ultimoNumero) + 1;
+        }
+        
+        $nuevoNumero = 'FACT-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
+        
+        // Verificar duplicados por si acaso
+        while (self::where('numero_factura', $nuevoNumero)->exists()) {
+            $numero++;
+            $nuevoNumero = 'FACT-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
+        }
+        
+        $this->numero_factura = $nuevoNumero;
     }
 }

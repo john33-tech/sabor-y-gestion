@@ -174,7 +174,7 @@
                         <span>${{ number_format($pedido->subtotal, 2) }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span>IVA (19%):</span>
+                        <span>IVA (13%):</span>
                         <span>${{ number_format($pedido->impuesto, 2) }}</span>
                     </div>
                     @if($pedido->descuento > 0)
@@ -189,7 +189,25 @@
                     </div>
                 </div>
                 
-                @if($pedido->estado != 'facturado' && $pedido->estado == 'entregado')
+                @if($pedido->factura)
+                <div class="mt-4">
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-semibold text-blue-800">Factura #{{ $pedido->factura->numero_factura }}</span>
+                            <span class="px-2 py-1 rounded text-xs {{ $pedido->factura->estado == 'pagada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
+                                {{ strtoupper($pedido->factura->estado) }}
+                            </span>
+                        </div>
+                        <div class="text-sm text-blue-700 mb-3">
+                            Generada automáticamente para el cobro.
+                        </div>
+                        {{-- Opcional: Link a la factura si existe la vista --}}
+                        {{-- <a href="{{ route('facturas.show', $pedido->factura) }}" class="btn-primary w-full justify-center">
+                            <i class="fas fa-eye mr-2"></i> Ver Factura
+                        </a> --}}
+                    </div>
+                </div>
+                @elseif($pedido->estado != 'facturado' && $pedido->estado == 'entregado')
                 <div class="mt-4">
                     <form action="{{ route('facturas.create') }}" method="GET">
                         <input type="hidden" name="pedido_id" value="{{ $pedido->id }}">
