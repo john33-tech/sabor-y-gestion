@@ -9,6 +9,7 @@ use App\Models\Mesa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class PedidoController extends Controller
 {
@@ -46,36 +47,74 @@ class PedidoController extends Controller
         return view('pedidos.index', compact('pedidos', 'estados', 'tipos', 'mesas'));
     }
     
-    public function create(Request $request)
-    {
-        $platos = Plato::where('disponible', true)
-            ->with('categoria')
-            ->orderBy('categoria_id')
-            ->orderBy('nombre')
-            ->get()
-            ->groupBy('categoria.nombre');
-        
-        $mesas = Mesa::where('estado', 'libre')
-            ->orderBy('area')
-            ->orderBy('numero_mesa')
-            ->get();
-        
-        $numeroPedido = $this->generarNumeroPedidoTemporal();
-        
-        // Si se selecciona una mesa específica
-        $mesaSeleccionada = null;
-        if ($request->has('mesa_id')) {
-            $mesaSeleccionada = Mesa::find($request->mesa_id);
+  
+ public function create(Request $request)
+{
+    $platos = Plato::where('disponible', true)
+        ->with(['categoria', 'ingredientes.inventario'])
+        ->orderBy('categoria_id')
+        ->orderBy('nombre')
+        ->get()
+        ->groupBy('categoria.nombre');
+    
+    // Procesar cada plato para agregar información de stock
+    $platosConStock = [];
+    foreach ($platos as $categoria => $platosCategoria) {
+        $platosProcesados = [];
+        foreach ($platosCategoria as $plato) {
+            // Verificar stock para 1 unidad
+            $tieneStock = $plato->verificarStock(1);
+            $stockInsuficiente = [];
+            
+            // Obtener detalles de ingredientes con stock insuficiente
+            if (!$tieneStock) {
+                foreach ($plato->ingredientes as $ingrediente) {
+                    $inventario = $ingrediente->inventario;
+                    $cantidadNecesaria = $ingrediente->pivot->cantidad;
+                    
+                    if (!$inventario || $inventario->cantidad_actual < $cantidadNecesaria) {
+                        $stockInsuficiente[] = [
+                            'nombre' => $ingrediente->nombre,
+                            'disponible' => $inventario?->cantidad_actual ?? 0,
+                            'necesario' => $cantidadNecesaria,
+                            'unidad' => $ingrediente->unidad_medida
+                        ];
+                    }
+                }
+            }
+            
+            // Crear un objeto con los datos necesarios
+            $platosProcesados[] = (object)[
+                'id' => $plato->id,
+                'nombre' => $plato->nombre,
+                'precio' => $plato->precio,
+                'descripcion' => $plato->descripcion,
+                'categoria_id' => $plato->categoria_id,
+                'tiene_stock' => $tieneStock,
+                'stock_insuficiente' => $stockInsuficiente,
+                'ingredientes' => $plato->ingredientes
+            ];
         }
-        
-        return view('pedidos.create', compact('platos', 'mesas', 'numeroPedido', 'mesaSeleccionada'));
+        $platosConStock[$categoria] = $platosProcesados;
     }
     
+    $mesas = Mesa::where('estado', 'libre')
+        ->orderBy('area')
+        ->orderBy('numero_mesa')
+        ->get();
+    
+    $numeroPedido = $this->generarNumeroPedidoTemporal();
+    
+    $mesaSeleccionada = null;
+    if ($request->has('mesa_id')) {
+        $mesaSeleccionada = Mesa::find($request->mesa_id);
+    }
+    
+    return view('pedidos.create', compact('platosConStock', 'mesas', 'numeroPedido', 'mesaSeleccionada'));
+}
+
+
  
-
-
-
-    // app/Http/Controllers/PedidoController.php
 
 public function store(Request $request)
 {
@@ -170,28 +209,73 @@ public function store(Request $request)
         return view('pedidos.show', compact('pedido', 'estados', 'tipos', 'estadosDetalle'));
     }
     
+  
+
     public function edit(Pedido $pedido)
-    {
-        if (!in_array($pedido->estado, [Pedido::ESTADO_PENDIENTE, Pedido::ESTADO_EN_PREPARACION])) {
-            return redirect()->route('pedidos.index')
-                ->with('error', 'No se puede editar un pedido en estado ' . $pedido->estado);
-        }
-        
-        $platos = Plato::where('disponible', true)
-            ->with('categoria')
-            ->orderBy('categoria_id')
-            ->orderBy('nombre')
-            ->get()
-            ->groupBy('categoria.nombre');
-        
-        $mesas = Mesa::orderBy('numero_mesa')->get();
-        
-        $pedido->load('detalles.plato');
-        
-        return view('pedidos.edit', compact('pedido', 'platos', 'mesas'));
+{
+    if (!in_array($pedido->estado, [Pedido::ESTADO_PENDIENTE, Pedido::ESTADO_EN_PREPARACION])) {
+        return redirect()->route('pedidos.index')
+            ->with('error', 'No se puede editar un pedido en estado ' . $pedido->estado);
     }
     
-    public function update(Request $request, Pedido $pedido)
+    $platosQuery = Plato::where('disponible', true)
+        ->with(['categoria', 'ingredientes.inventario'])
+        ->orderBy('categoria_id')
+        ->orderBy('nombre')
+        ->get()
+        ->groupBy('categoria.nombre');
+    
+    // Procesar cada plato para agregar información de stock
+    $platos = [];
+    foreach ($platosQuery as $categoria => $platosCategoria) {
+        $platosProcesados = [];
+        foreach ($platosCategoria as $plato) {
+            $tieneStock = $plato->verificarStock(1);
+            $stockInsuficiente = [];
+            
+            if (!$tieneStock) {
+                foreach ($plato->ingredientes as $ingrediente) {
+                    $inventario = $ingrediente->inventario;
+                    $cantidadNecesaria = $ingrediente->pivot->cantidad;
+                    
+                    if (!$inventario || $inventario->cantidad_actual < $cantidadNecesaria) {
+                        $stockInsuficiente[] = [
+                            'nombre' => $ingrediente->nombre,
+                            'disponible' => $inventario?->cantidad_actual ?? 0,
+                            'necesario' => $cantidadNecesaria,
+                            'unidad' => $ingrediente->unidad_medida
+                        ];
+                    }
+                }
+            }
+            
+            $plato->tiene_stock = $tieneStock;
+            $plato->stock_insuficiente = $stockInsuficiente;
+            $platosProcesados[] = $plato;
+        }
+        $platos[$categoria] = $platosProcesados;
+    }
+    
+    $mesas = Mesa::orderBy('numero_mesa')->get();
+    $pedido->load('detalles.plato');
+    
+    return view('pedidos.edit', compact('pedido', 'platos', 'mesas'));
+}
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+   public function update(Request $request, Pedido $pedido)
     {
         if (!in_array($pedido->estado, [Pedido::ESTADO_PENDIENTE, Pedido::ESTADO_EN_PREPARACION])) {
             return redirect()->route('pedidos.index')
@@ -206,37 +290,78 @@ public function store(Request $request)
             'notas' => 'nullable|string',
             'descuento' => 'nullable|numeric|min:0'
         ]);
+
+        // Verificar stock antes de actualizar
+        $stockCheck = $this->verificarStockItems($request->items);
+        if (!$stockCheck['success']) {
+            return back()->with('error', $stockCheck['mensaje']);
+        }
         
         DB::beginTransaction();
         
         try {
-            // Actualizar datos del pedido
-            $pedido->descuento = $request->descuento ?? 0;
-            $pedido->notas = $request->notas;
-            $pedido->save();
+            // OBTENER DETALLES ANTIGUOS PARA REVERTIR INVENTARIO
+            $detallesAntiguos = $pedido->detalles()->with('plato.ingredientes')->get();
+            
+            // REVERTIR INVENTARIO DE PLATOS QUE YA ESTABAN EN EL PEDIDO
+            // Solo si el pedido ya había descontado inventario (estado listo o entregado)
+            if (in_array($pedido->estado, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
+                foreach ($detallesAntiguos as $detalle) {
+                    if ($detalle->plato) {
+                        $detalle->plato->revertirInventario();
+                    }
+                }
+            }
             
             // Eliminar detalles existentes
             $pedido->detalles()->delete();
             
             // Crear nuevos detalles
+            $nuevosItems = [];
             foreach ($request->items as $item) {
                 $plato = Plato::find($item['plato_id']);
                 
-                DetallePedido::create([
+                $nuevosItems[] = [
                     'pedido_id' => $pedido->id,
                     'plato_id' => $item['plato_id'],
                     'cantidad' => $item['cantidad'],
                     'precio_unitario' => $plato->precio,
                     'subtotal' => $plato->precio * $item['cantidad'],
                     'notas' => $item['notas'] ?? null,
-                    'estado' => DetallePedido::ESTADO_PENDIENTE
-                ]);
+                    'estado' => DetallePedido::ESTADO_PENDIENTE,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ];
             }
+            
+            DetallePedido::insert($nuevosItems);
+            
+            // DESCONTAR NUEVO INVENTARIO si el pedido está en estado listo o entregado
+            if (in_array($pedido->estado, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
+                foreach ($request->items as $item) {
+                    $plato = Plato::find($item['plato_id']);
+                    // Descontar por cada plato la cantidad
+                    for ($i = 0; $i < $item['cantidad']; $i++) {
+                        $plato->descontarInventario();
+                    }
+                }
+            }
+            
+            // Actualizar datos del pedido
+            $pedido->descuento = $request->descuento ?? 0;
+            $pedido->notas = $request->notas;
+            $pedido->save();
             
             // Recalcular totales
             $pedido->calcularTotales();
             
+            // Limpiar caché del contador de stock bajo
+            Cache::forget('low_stock_count_direct');
+            
             DB::commit();
+            
+            // Actualizar el estado de la comanda si existe
+            $this->actualizarComanda($pedido);
             
             return redirect()->route('pedidos.show', $pedido)
                 ->with('success', 'Pedido actualizado exitosamente');
@@ -246,6 +371,36 @@ public function store(Request $request)
             return back()->with('error', 'Error al actualizar el pedido: ' . $e->getMessage());
         }
     }
+    
+    // Método auxiliar para actualizar la comanda
+    private function actualizarComanda(Pedido $pedido)
+    {
+        // Si el pedido está en comanda (pendiente o en preparación)
+        if (in_array($pedido->estado, ['pendiente', 'en_preparacion', 'listo'])) {
+            // Opcional: Notificar a cocina que el pedido fue actualizado
+            //event(new \App\Events\PedidoActualizado($pedido));
+        }
+    }
+    // Método para verificar stock antes de actualizar
+private function verificarStockItems($items)
+{
+    foreach ($items as $item) {
+        $plato = Plato::find($item['plato_id']);
+        
+        // Verificar stock para cada unidad del plato
+        for ($i = 0; $i < $item['cantidad']; $i++) {
+            if (!$plato->verificarStock()) {
+                return [
+                    'success' => false,
+                    'mensaje' => "No hay suficiente stock para el plato: {$plato->nombre}"
+                ];
+            }
+        }
+    }
+    
+    return ['success' => true];
+}
+
     
     public function destroy(Pedido $pedido)
     {
@@ -277,26 +432,72 @@ public function store(Request $request)
     }
     
    
-    public function cambiarEstado(Request $request, Pedido $pedido)
+   
+        public function cambiarEstado(Request $request, Pedido $pedido)
     {
         $request->validate([
             'estado' => 'required|in:' . implode(',', array_keys(Pedido::getEstados()))
         ]);
         
         $estadoAnterior = $pedido->estado;
-        $pedido->actualizarEstado($request->estado);
         
-        // Si la petición es AJAX, retornar JSON
-        if ($request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'estado' => $request->estado,
-                'mensaje' => "Pedido #{$pedido->numero_pedido} actualizado"
-            ]);
+        DB::beginTransaction();
+        
+        try {
+            // Si se marca como "listo" o "entregado", descontar inventario
+            if (in_array($request->estado, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO]) 
+                && !in_array($estadoAnterior, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
+                
+                foreach ($pedido->detalles as $detalle) {
+                    if ($detalle->plato) {
+                        $detalle->plato->descontarInventario();
+                    }
+                }
+            }
+            
+            // Si se cancela un pedido que ya había descontado inventario, revertir
+            if ($request->estado == Pedido::ESTADO_CANCELADO 
+                && in_array($estadoAnterior, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
+                
+                foreach ($pedido->detalles as $detalle) {
+                    if ($detalle->plato) {
+                        $detalle->plato->revertirInventario(); // Necesitas crear este método
+                    }
+                }
+            }
+            
+            $pedido->actualizarEstado($request->estado);
+            
+            // Limpiar caché del contador de stock bajo
+            Cache::forget('low_stock_count_direct');
+            
+            DB::commit();
+            
+            // Si la petición es AJAX, retornar JSON
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'estado' => $request->estado,
+                    'mensaje' => "Pedido #{$pedido->numero_pedido} actualizado"
+                ]);
+            }
+            
+            return redirect()->route('pedidos.show', $pedido)
+                ->with('success', "Pedido #{$pedido->numero_pedido} cambiado de {$estadoAnterior} a {$request->estado}");
+                
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'mensaje' => 'Error: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->back()
+                ->with('error', 'Error al cambiar estado: ' . $e->getMessage());
         }
-        
-        return redirect()->route('pedidos.show', $pedido)
-            ->with('success', "Pedido #{$pedido->numero_pedido} cambiado de {$estadoAnterior} a {$request->estado}");
     }
     
     public function cambiarEstadoDetalle(Request $request, DetallePedido $detalle)
@@ -305,14 +506,61 @@ public function store(Request $request)
             'estado' => 'required|in:' . implode(',', array_keys(DetallePedido::getEstados()))
         ]);
         
-        $detalle->actualizarEstado($request->estado);
+        DB::beginTransaction();
         
-        return response()->json([
-            'success' => true,
-            'estado' => $request->estado,
-            'mensaje' => 'Estado actualizado correctamente'
-        ]);
+        try {
+            $estadoAnterior = $detalle->estado;
+            
+            // Si se marca como listo, descontar inventario
+            if ($request->estado == DetallePedido::ESTADO_LISTO 
+                && $estadoAnterior != DetallePedido::ESTADO_LISTO) {
+                
+                if ($detalle->plato) {
+                    $detalle->plato->descontarInventario();
+                }
+            }
+            
+            // Si se revierte de listo a otro estado, revertir inventario
+            if ($estadoAnterior == DetallePedido::ESTADO_LISTO 
+                && $request->estado != DetallePedido::ESTADO_LISTO) {
+                
+                if ($detalle->plato) {
+                    $detalle->plato->revertirInventario();
+                }
+            }
+            
+            $detalle->actualizarEstado($request->estado);
+            
+            // Verificar si todos los detalles están listos para actualizar el pedido
+            $pedido = $detalle->pedido;
+            $todosListos = $pedido->detalles->every(fn($d) => $d->estado === DetallePedido::ESTADO_LISTO);
+            
+            if ($todosListos && !in_array($pedido->estado, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
+                $pedido->estado = Pedido::ESTADO_LISTO;
+                $pedido->save();
+            }
+            
+            // Limpiar caché
+            Cache::forget('low_stock_count_direct');
+            
+            DB::commit();
+            
+            return response()->json([
+                'success' => true,
+                'estado' => $request->estado,
+                'mensaje' => 'Estado actualizado correctamente'
+            ]);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return response()->json([
+                'success' => false,
+                'mensaje' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
     }
+
 
 
     public function misPedidos()

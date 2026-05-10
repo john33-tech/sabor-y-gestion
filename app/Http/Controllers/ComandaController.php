@@ -6,6 +6,7 @@ use App\Models\Pedido;
 use App\Models\DetallePedido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class ComandaController extends Controller
 {
@@ -69,7 +70,7 @@ class ComandaController extends Controller
         }
     }
     
-    public function marcarListo(Pedido $comanda)
+     public function marcarListo(Pedido $comanda)
     {
         if (!in_array($comanda->estado, ['pendiente', 'en_preparacion'])) {
             return redirect()->back()->with('error', 'No se puede marcar como listo este pedido');
@@ -77,19 +78,29 @@ class ComandaController extends Controller
         
         DB::beginTransaction();
         try {
+            // 👇 Descontar inventario para cada plato en el pedido
+            foreach ($comanda->detalles as $detalle) {
+                if ($detalle->plato) {
+                    $detalle->plato->descontarInventario();
+                }
+            }
+            
             $comanda->estado = 'listo';
             $comanda->save();
             
             // Actualizar todos los detalles a "listo"
             $comanda->detalles()->update(['estado' => 'listo']);
             
+            // 👇 LIMPIAR EL CACHÉ DEL CONTADOR DE STOCK BAJO
+            Cache::forget('low_stock_count_direct');
+            
             DB::commit();
             
             return redirect()->route('comandas.index')
-                ->with('success', 'Pedido #' . $comanda->numero_pedido . ' marcado como listo');
+                ->with('success', 'Pedido #' . $comanda->numero_pedido . ' marcado como listo. Inventario actualizado.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Error al marcar como listo');
+            return redirect()->back()->with('error', 'Error al marcar como listo: ' . $e->getMessage());
         }
     }
     

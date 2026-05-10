@@ -155,6 +155,25 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
+
+
+    // Función para actualizar el contador del sidebar
+    function actualizarContadorInventario() {
+        fetch('/api/stock-count')
+            .then(response => response.json())
+            .then(data => {
+                const contador = document.querySelector('.sidebar-inventario-counter');
+                if (contador) {
+                    if (data.count > 0) {
+                        contador.textContent = data.count;
+                        contador.classList.remove('hidden');
+                    } else {
+                        contador.classList.add('hidden');
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
     
     function showNotification(message, type = 'success') {
         const notification = document.createElement('div');

@@ -1,5 +1,5 @@
 <?php
-// app/Models/Plato.php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -36,5 +36,52 @@ class Plato extends Model
         return $this->belongsToMany(Ingrediente::class, 'plato_ingrediente')
                     ->withPivot('cantidad')
                     ->withTimestamps();
+    }
+    
+    // Método: Descontar ingredientes del inventario
+    public function descontarInventario()
+    {
+        foreach ($this->ingredientes as $ingrediente) {
+            $inventario = $ingrediente->inventario;
+            
+            if ($inventario) {
+                $cantidadADescontar = $ingrediente->pivot->cantidad;
+                $nuevaCantidad = $inventario->cantidad_actual - $cantidadADescontar;
+                
+                // Actualizar el inventario (no permite negativo)
+                $inventario->cantidad_actual = max(0, $nuevaCantidad);
+                $inventario->save();
+            }
+        }
+    }
+    
+    // Método para revertir el inventario (cuando se cancela un pedido)
+    public function revertirInventario()
+    {
+        foreach ($this->ingredientes as $ingrediente) {
+            $inventario = $ingrediente->inventario;
+            
+            if ($inventario) {
+                $cantidadARevertir = $ingrediente->pivot->cantidad;
+                $nuevaCantidad = $inventario->cantidad_actual + $cantidadARevertir;
+                
+                $inventario->cantidad_actual = $nuevaCantidad;
+                $inventario->save();
+            }
+        }
+    }
+    
+    // Método para verificar si hay suficiente stock (Solo UNA vez)
+    public function verificarStock($cantidad = 1)
+    {
+        foreach ($this->ingredientes as $ingrediente) {
+            $inventario = $ingrediente->inventario;
+            $cantidadNecesaria = $ingrediente->pivot->cantidad * $cantidad;
+            
+            if (!$inventario || $inventario->cantidad_actual < $cantidadNecesaria) {
+                return false;
+            }
+        }
+        return true;
     }
 }

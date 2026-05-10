@@ -3,6 +3,19 @@
     $role = $user ? $user->role : null;
 @endphp
 
+
+@php
+    use Illuminate\Support\Facades\Cache;
+    
+    $lowStockCount = Cache::remember('low_stock_count_direct', 300, function() {
+        return \App\Models\Inventario::with('ingrediente')
+            ->get()
+            ->filter(fn($inv) => $inv->isLowStock())
+            ->count();
+    });
+@endphp
+
+
 <aside class="flex flex-col h-full text-white transition-all duration-300 ease-in-out shadow-xl bg-primary"
        :class="{
            'w-72': sidebarExpanded,
@@ -168,8 +181,6 @@
                     </a>
                 </div>
 
-
-
                 <div x-show="open"
                     x-collapse
                     x-cloak
@@ -185,6 +196,37 @@
                         </span>
                     </a>
                 </div>
+
+
+           
+
+
+
+
+<div x-show="open"
+     x-collapse
+     x-cloak
+     class="mt-1 ml-2 space-y-1 sm:ml-3">
+    
+    <a href="{{ route('inventario.index') }}"
+       class="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
+        
+        <div class="flex items-center gap-2 sm:gap-3">
+            <i class="fas fa-boxes text-[10px] sm:text-xs w-4"></i>
+            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">
+                Inventario
+            </span>
+        </div>
+        
+        @if($lowStockCount > 0)
+            <span class="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-black bg-yellow-400 animate-pulse rounded-full">
+                {{ $lowStockCount }}
+            </span>
+        @endif
+    </a>
+</div>
+
+
 
 
 

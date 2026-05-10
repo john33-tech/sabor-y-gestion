@@ -259,6 +259,24 @@
 
 @push('scripts')
 <script>
+// Función para actualizar el contador del sidebar
+function actualizarContadorSidebar() {
+    fetch('/api/stock-count')
+        .then(response => response.json())
+        .then(data => {
+            const contadorInventario = document.querySelector('a[href="{{ route("inventario.index") }}"] .rounded-full');
+            if (contadorInventario) {
+                if (data.count > 0) {
+                    contadorInventario.textContent = data.count;
+                    contadorInventario.classList.remove('hidden');
+                } else {
+                    contadorInventario.classList.add('hidden');
+                }
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
 // Cambiar estado del pedido
 const estadoSelect = document.getElementById('estadoPedido');
 if(estadoSelect) {
@@ -274,7 +292,12 @@ if(estadoSelect) {
             }).then(response => response.json())
               .then(data => {
                   if(data.success) {
+                      // Actualizar el contador del sidebar
+                      actualizarContadorSidebar();
+                      // Recargar la página para mostrar cambios
                       location.reload();
+                  } else {
+                      alert('Error: ' + data.mensaje);
                   }
               });
         }
@@ -297,8 +320,12 @@ document.querySelectorAll('.estado-detalle').forEach(select => {
         }).then(response => response.json())
           .then(data => {
               if(data.success) {
+                  // Actualizar el contador del sidebar
+                  actualizarContadorSidebar();
                   // Recargar para actualizar estados
                   location.reload();
+              } else {
+                  alert('Error: ' + data.mensaje);
               }
           });
     });

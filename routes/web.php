@@ -15,6 +15,7 @@ use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\IngredienteController; 
 use App\Http\Controllers\ReservaMesaController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Cache;
 
 Route::get('/', function () {
     return view('home');
@@ -38,9 +39,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/platos/{plato}/toggle-disponible', [PlatoController::class, 'toggleDisponible'])
         ->name('platos.toggle-disponible')
         ->middleware('role:admin,cocinero');
-    
-    // Inventario
-    Route::resource('inventario', InventarioController::class)->middleware('role:admin,cocinero');
     
     // Mesas
     Route::resource('mesas', MesaController::class)->middleware('role:admin,mesero');
@@ -78,6 +76,9 @@ Route::middleware(['auth'])->group(function () {
     // Gestión de Ingredientes (Admin y Cocinero) - CON todas las rutas CRUD
     Route::resource('ingredientes', IngredienteController::class)->middleware('role:admin,cocinero');
 
+    //inventario
+    Route::resource('inventario', InventarioController::class)->middleware('role:admin,cocinero');
+
     // Usuarios
     Route::resource('usuarios', UsuarioController::class)->middleware('role:admin');
 
@@ -99,5 +100,12 @@ Route::middleware(['auth'])->group(function () {
     ->name('pedidos.misPedidos')
     ->middleware('auth');
 });
+
+
+
+
+//Rutas de las apis utilizadas
+Route::prefix('api')->group(base_path('routes/api.php'));
+
 
 require __DIR__.'/auth.php';
