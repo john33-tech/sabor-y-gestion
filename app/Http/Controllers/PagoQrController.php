@@ -42,10 +42,12 @@ class PagoQrController extends Controller
         $factura->estado = Factura::ESTADO_PAGADA;
         $factura->save();
 
-        // Actualizar estado del pedido
-        if ($factura->pedido) {
-            $factura->pedido->update(['estado' => Pedido::ESTADO_FACTURADO]);
-        }
+        // FIX: NO movemos el pedido a 'facturado' acá. Si lo hacemos, cocina
+        // pierde de vista el pedido (ComandaController filtra por
+        // pendiente/en_preparacion/listo) y nunca lo cocina.
+        // El pedido pasa a 'facturado' recién cuando se entrega (flujo
+        // normal: pendiente → en_preparacion → listo → entregado → facturado).
+        // El estado de cobro ya queda reflejado en la factura.
 
         // Disparar evento Pusher para notificar al frontend
         broadcast(new PagoConfirmadoEvent($emisor, [

@@ -6,6 +6,9 @@ use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\MesaController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\ComandaController;
+// NOTA: DeliveryController/PagoController/CierreCajaController son STUBS que
+// redirigen a otros módulos (Facturas, Pedidos, Reportes). El equipo todavía
+// no implementó estas pantallas. TODO equipo: reemplazar los stubs.
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\PagoController;
@@ -55,19 +58,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{comanda}/print', [ComandaController::class, 'print'])->name('print');
     });
     
-    // Delivery
+    // Delivery — STUB: DeliveryController redirige a Pedidos.
     Route::resource('delivery', DeliveryController::class)->middleware('role:admin,cajero');
-    
+
     Route::resource('facturas', FacturaController::class)->middleware('role:admin,cajero');
     Route::post('/facturas/{factura}/pagar', [FacturaController::class, 'pagar'])->name('facturas.pagar')->middleware('role:admin,cajero');
     Route::post('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular')->middleware('role:admin,cajero');
     Route::get('/facturas/{factura}/generar-qr', [FacturaController::class, 'generarQr'])->name('facturas.generar-qr')->middleware('role:admin,cajero');
     Route::post('/facturas/{factura}/enviar-correo', [FacturaController::class, 'enviarPorCorreo'])->name('facturas.enviar-correo')->middleware('role:admin,cajero');
     
-    // Pagos
+    // Pagos — STUB: redirige a Facturas. PagoQrController (webhook) sigue separado.
     Route::resource('pagos', PagoController::class)->middleware('role:admin,cajero');
-    
-    // Cierre de Caja
+
+    // Cierre de Caja — STUB: redirige a Reportes/Dashboard.
     Route::resource('cierres', CierreCajaController::class)->middleware('role:admin,cajero');
     
     // Gestión de Categorías (Solo Admin) - CON todas las rutas CRUD

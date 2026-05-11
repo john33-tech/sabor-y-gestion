@@ -163,22 +163,24 @@ class PlatoSeeder extends Seeder  // ← Debe ser PlatoSeeder, NO DatabaseSeeder
             ],
         ];
         
-        // Insertar los platos
+        // Insertar los platos (idempotente: updateOrCreate por nombre).
         foreach ($platos as $plato) {
             $categoria = $categorias[$plato['categoria_nombre']] ?? null;
-            
+
             if ($categoria) {
-                Plato::create([
-                    'nombre' => $plato['nombre'],
-                    'precio' => $plato['precio'],
-                    'categoria_id' => $categoria->id,
-                    'imagen' => $plato['imagen'],
-                    'disponible' => $plato['disponible'],
-                    'score' => $plato['score'],
-                    'descripcion' => $plato['descripcion'],
-                    'created_at' => $plato['created_at'],
-                    'updated_at' => $plato['updated_at'],
-                ]);
+                Plato::updateOrCreate(
+                    ['nombre' => $plato['nombre']],
+                    [
+                        'precio'       => $plato['precio'],
+                        'categoria_id' => $categoria->id,
+                        'imagen'       => $plato['imagen'],
+                        'disponible'   => $plato['disponible'],
+                        'score'        => $plato['score'],
+                        'descripcion'  => $plato['descripcion'],
+                        'created_at'   => $plato['created_at'],
+                        'updated_at'   => $plato['updated_at'],
+                    ]
+                );
             }
         }
     }

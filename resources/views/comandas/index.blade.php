@@ -185,6 +185,49 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     inicializarEventos();
+
+    // ─── WebSockets: cocina escucha el canal "pedidos.cocineros" en tiempo real ──
+    let tabActivoWS = 'todos';
+    document.querySelectorAll('.tab-btn').forEach(t => {
+        t.addEventListener('click', function () { tabActivoWS = this.dataset.tab; });
+    });
+
+    function conectarCocinaWS() {
+        if (typeof window.Echo === 'undefined') {
+            console.warn('Echo aún no cargó, reintentando...');
+            setTimeout(conectarCocinaWS, 500);
+            return;
+        }
+
+        console.log('🔌 Cocina: conectando a canal pedidos.cocineros...');
+
+        window.Echo.private('pedidos.cocineros')
+            .listen('.pedido.creado', (e) => {
+                console.log('🆕 Pedido nuevo recibido:', e);
+                showNotification(e.mensaje || `Nuevo pedido #${e.numero_pedido}`, 'success');
+                reproducirCampana();
+                loadComandas(tabActivoWS);
+            });
+
+        console.log('✅ Cocina: suscrita correctamente al canal pedidos.cocineros');
+    }
+
+    function reproducirCampana() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+        } catch (err) { /* sin audio, no es crítico */ }
+    }
+
+    conectarCocinaWS();
 });
 </script>
 @endpush

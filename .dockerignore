@@ -1,0 +1,48 @@
+# Dependencias y artefactos de build
+/node_modules
+/vendor
+/public/build
+/public/hot
+/public/storage
+
+# Variables locales
+.env
+.env.local
+.env.*.local
+
+# Caches de Laravel
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/framework/testing/*
+/storage/logs/*
+/bootstrap/cache/*.php
+
+# Git y editor
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+.editorconfig
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos Docker auxiliares al contexto raíz (no hacen falta dentro de la imagen).
+# OJO: NO excluir la carpeta `docker/` porque el Dockerfile copia entrypoint.sh y php.ini desde ahí.
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Tests y CI
+/tests
+phpunit.xml
+.github
+
+# Otros
+README.md
+structure.txt
+*.log
+*.sqlite

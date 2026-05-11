@@ -1,114 +1,111 @@
-# ─────────────────────────────────────────────────────────────────────────────
-# Dockerfile para Laravel 11 + TiDB Cloud (SSL)
-# Base: PHP 8.3 FPM en Alpine Linux
-# ─────────────────────────────────────────────────────────────────────────────
+# syntax=docker/dockerfile:1.6
+# ---------------------------------------------------------------------------
+# Sabor & Gestión — Dockerfile para Laravel 12 + PHP 8.2 + Apache
+# Multi-stage: composer (deps PHP) -> node (build Vite) -> runtime (Apache+PHP)
+# Compatible con Railway, Fly.io, Render, y `docker compose up` local.
+# ---------------------------------------------------------------------------
 
-# ── Etapa 1: Dependencias con Composer ───────────────────────────────────────
-FROM composer:2.7 AS composer_builder
+# ============================================================================
+# STAGE 1 — Composer: instala dependencias PHP sin dev
+# ============================================================================
+FROM composer:2 AS vendor
 
 WORKDIR /app
 
 COPY composer.json composer.lock ./
 
 RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --no-progress \
     --no-scripts \
-    --no-autoloader \
     --prefer-dist \
-    --ignore-platform-reqs
+    --optimize-autoloader \
+    --ignore-platform-req=ext-gd
 
-COPY . .
+# ============================================================================
+# STAGE 2 — Node: compila assets con Vite
+# ============================================================================
+FROM node:20-alpine AS assets
 
-RUN composer dump-autoload --optimize
-
-# ── NUEVA Etapa 2: Compilación de activos (Vite) ──────────────────────────────
-FROM node:20-alpine AS node_builder
 WORKDIR /app
+
 COPY package.json package-lock.json ./
-RUN npm install
+RUN npm ci
+
 COPY . .
+COPY --from=vendor /app/vendor ./vendor
+
 RUN npm run build
 
-# ── Etapa 2: Imagen final ─────────────────────────────────────────────────────
-FROM php:8.3-fpm-alpine
+# ============================================================================
+# STAGE 3 — Runtime: Apache + PHP 8.2
+# ============================================================================
+FROM php:8.2-apache AS runtime
 
-LABEL maintainer="Tu Nombre <tu@email.com>"
-
-# ── 1. Paquetes del sistema (UNA sola vez, incluyendo supervisor) ─────────────
-RUN apk update && apk add --no-cache \
-    nginx \
-    supervisor \
-    bash \
-    curl \
-    git \
-    zip \
-    unzip \
-    openssl \
-    ca-certificates \
-    openssl-dev \
-    libzip-dev \
-    libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
-    icu-dev \
-    $PHPIZE_DEPS \
-    && rm -rf /var/cache/apk/*
-
-# ── 2. Extensiones PHP ────────────────────────────────────────────────────────
-RUN docker-php-ext-configure gd \
-        --with-freetype \
-        --with-jpeg \
+# Dependencias del sistema y extensiones PHP
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git \
+        curl \
+        unzip \
+        libzip-dev \
+        libpng-dev \
+        libjpeg-dev \
+        libfreetype6-dev \
+        libonig-dev \
+        libxml2-dev \
+        libicu-dev \
+        default-mysql-client \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
-        pdo \
         pdo_mysql \
         mysqli \
-        zip \
-        gd \
-        opcache \
-        bcmath \
-        pcntl \
-        intl \
+        mbstring \
         exif \
-    && docker-php-ext-enable pdo pdo_mysql opcache
+        pcntl \
+        bcmath \
+        gd \
+        zip \
+        intl \
+        opcache \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# ── 3. Configuración PHP ──────────────────────────────────────────────────────
-RUN echo "upload_max_filesize = 50M"      >> /usr/local/etc/php/conf.d/laravel.ini \
-    && echo "post_max_size = 50M"         >> /usr/local/etc/php/conf.d/laravel.ini \
-    && echo "memory_limit = 256M"         >> /usr/local/etc/php/conf.d/laravel.ini \
-    && echo "max_execution_time = 60"     >> /usr/local/etc/php/conf.d/laravel.ini
+# Apache: forzar SOLO mpm_prefork + habilitar proxy_wstunnel para Reverb
+RUN rm -f /etc/apache2/mods-enabled/mpm_*.load \
+          /etc/apache2/mods-enabled/mpm_*.conf \
+ && ln -sf /etc/apache2/mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load \
+ && ln -sf /etc/apache2/mods-available/mpm_prefork.conf /etc/apache2/mods-enabled/mpm_prefork.conf \
+ && a2enmod rewrite headers proxy proxy_http proxy_wstunnel
 
-# ── 4. OPcache para producción ────────────────────────────────────────────────
-RUN echo "opcache.enable=1"                      >> /usr/local/etc/php/conf.d/opcache.ini \
-    && echo "opcache.memory_consumption=128"     >> /usr/local/etc/php/conf.d/opcache.ini \
-    && echo "opcache.interned_strings_buffer=8"  >> /usr/local/etc/php/conf.d/opcache.ini \
-    && echo "opcache.max_accelerated_files=4000" >> /usr/local/etc/php/conf.d/opcache.ini \
-    && echo "opcache.validate_timestamps=0"      >> /usr/local/etc/php/conf.d/opcache.ini
-# ── 7. Copiar la aplicación (UNA sola vez, destino correcto) ──────────────────
+# Proxy WS: /app/* y /apps/* → Reverb local en 8081
+COPY docker/reverb-proxy.conf /etc/apache2/conf-available/reverb-proxy.conf
+RUN a2enconf reverb-proxy
+
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
+ && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# Configuración PHP para producción
+COPY docker/php.ini /usr/local/etc/php/conf.d/zz-app.ini
+
+# Copiamos código de la app
 WORKDIR /var/www/html
-COPY --from=composer_builder /app /var/www/html
 
-# COPIAR activos compilados (Crucial para Laravel 11 + Vite)
-COPY --from=node_builder /app/public/build /var/www/html/public/build
-# ── 5. Copiar configuraciones de servicios ────────────────────────────────────
-COPY docker/nginx/nginx.conf              /etc/nginx/nginx.conf
-COPY docker/supervisor/laravel.ini        /etc/supervisor.d/laravel.ini
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --chown=www-data:www-data . .
+COPY --from=vendor --chown=www-data:www-data /app/vendor ./vendor
+COPY --from=assets --chown=www-data:www-data /app/public/build ./public/build
 
-# ── 6. Copiar el script de inicio ─────────────────────────────────────────────
+RUN chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R ug+rwx storage bootstrap/cache
+
+# Entrypoint
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-
-
-# ── 8. Permisos ───────────────────────────────────────────────────────────────
-RUN mkdir -p storage/framework/{sessions,views,cache} \
-    && mkdir -p /var/log/supervisor \
-    && mkdir -p /run/nginx \
-    && chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 /var/www/html/storage \
-    && chmod -R 775 /var/www/html/bootstrap/cache
-
-RUN chown -R www-data:www-data /var/www/html/public \
-    && chmod -R 755 /var/www/html/public/build
-# ── 9. Puerto y punto de entrada (SIEMPRE al final) ───────────────────────────
+ENV PORT=8080
 EXPOSE 8080
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["apache2-foreground"]

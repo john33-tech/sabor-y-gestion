@@ -335,18 +335,68 @@ let marker;
 let searchTimeout;
 
 // Funciones del mapa
+// Default: Cochabamba (Plaza 14 de Septiembre). Si el navegador permite
+// geolocalización, recentramos en la ubicación real del usuario.
+const DEFAULT_CENTER = [-17.3895, -66.1568]; // Cochabamba, Bolivia
+const DEFAULT_ZOOM = 14;
+
+// Reverse geocoding con Nominatim (gratis, sin API key) — llena el textarea
+// "direccion" cuando el usuario hace click en el mapa.
+async function reverseGeocode(lat, lng) {
+    const direccionEl = document.getElementById('direccion');
+    if (!direccionEl) return;
+    try {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=es`;
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.display_name) {
+            // Sólo sobrescribe si está vacío o si el usuario no editó manualmente
+            // (consideramos vacío como permiso para autocompletar).
+            if (!direccionEl.value.trim() || direccionEl.dataset.autoFilled === 'true') {
+                direccionEl.value = data.display_name;
+                direccionEl.dataset.autoFilled = 'true';
+            }
+        }
+    } catch (err) {
+        console.warn('Reverse geocoding falló:', err);
+    }
+}
+
+function setMarker(lat, lng, doReverseGeocode = true) {
+    document.getElementById('latitud').value = lat;
+    document.getElementById('longitud').value = lng;
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([lat, lng]).addTo(map);
+    if (doReverseGeocode) reverseGeocode(lat, lng);
+}
+
 function initMap() {
-    map = L.map('map').setView([-16.5000, -68.1500], 13);
+    map = L.map('map').setView(DEFAULT_CENTER, DEFAULT_ZOOM);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
     }).addTo(map);
 
     map.on('click', function(e) {
-        document.getElementById('latitud').value = e.latlng.lat;
-        document.getElementById('longitud').value = e.latlng.lng;
-        if(marker) map.removeLayer(marker);
-        marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+        setMarker(e.latlng.lat, e.latlng.lng, true);
     });
+
+    // Pedir geolocalización del navegador (si el usuario aprueba el permiso).
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const { latitude, longitude } = pos.coords;
+                map.setView([latitude, longitude], 16);
+                // No ponemos marker automáticamente — esperamos que el user haga click
+                // sobre la dirección exacta de entrega.
+            },
+            (err) => {
+                console.info('Geolocalización no disponible o denegada, usando Cochabamba por defecto.');
+            },
+            { timeout: 6000, enableHighAccuracy: false }
+        );
+    }
 }
 
 function toggleMap() {

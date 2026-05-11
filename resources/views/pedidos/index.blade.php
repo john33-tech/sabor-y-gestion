@@ -185,8 +185,8 @@
                                 {{-- Eliminar: solo si el pedido está pendiente (regla del controller) --}}
                                 @if($pedido->estado === 'pendiente')
                                 <form method="POST" action="{{ route('pedidos.destroy',$pedido) }}"
-                                      class="inline"
-                                      onsubmit="return confirm('¿Eliminar pedido #{{ $pedido->numero_pedido }}? Esta acción no se puede deshacer.');">
+                                      class="inline form-eliminar-pedido"
+                                      data-numero-pedido="{{ $pedido->numero_pedido }}">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-600 hover:text-red-800" title="Eliminar">
@@ -228,6 +228,9 @@
 [x-cloak] { display:none !important; }
 </style>
 
+<!-- SweetAlert2 para confirmaciones bonitas (CDN, sin npm install) -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -238,6 +241,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if(estado) estado.addEventListener('change', () => form.submit());
     if(tipo) tipo.addEventListener('change', () => form.submit());
+
+    // Modal SweetAlert2 para eliminar pedido
+    document.querySelectorAll('.form-eliminar-pedido').forEach(formEl => {
+        formEl.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const numero = formEl.dataset.numeroPedido || '';
+
+            Swal.fire({
+                title: `¿Eliminar pedido #${numero}?`,
+                text: 'Esta acción no se puede deshacer. La mesa quedará liberada.',
+                icon: 'warning',
+                iconColor: '#dc2626',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i class="fas fa-trash mr-1"></i> Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true,
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Eliminando...',
+                        allowOutsideClick: false,
+                        didOpen: () => Swal.showLoading(),
+                    });
+                    formEl.submit();
+                }
+            });
+        });
+    });
 
 });
 </script>

@@ -9,32 +9,24 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::create([
-            'name' => 'Administrador',
-            'email' => 'admin@saborgestion.com',
-            'password' => Hash::make('password'),
-            'role' => 'admin',
-        ]);
+        // updateOrCreate hace al seeder idempotente: si el email ya existe,
+        // actualiza name/password/role sin lanzar error de constraint UNIQUE.
+        $usuarios = [
+            ['email' => 'admin@saborgestion.com',    'name' => 'Administrador', 'role' => 'admin'],
+            ['email' => 'mesero@saborgestion.com',   'name' => 'Mesero',        'role' => 'mesero'],
+            ['email' => 'cocinero@saborgestion.com', 'name' => 'Cocinero',      'role' => 'cocinero'],
+            ['email' => 'cajero@saborgestion.com',   'name' => 'Cajero',        'role' => 'cajero'],
+        ];
 
-        User::create([
-            'name' => 'Mesero',
-            'email' => 'mesero@saborgestion.com',
-            'password' => Hash::make('password'),
-            'role' => 'mesero',
-        ]);
-
-        User::create([
-            'name' => 'Cocinero',
-            'email' => 'cocinero@saborgestion.com',
-            'password' => Hash::make('password'),
-            'role' => 'cocinero',
-        ]);
-
-        User::create([
-            'name' => 'Cajero',
-            'email' => 'cajero@saborgestion.com',
-            'password' => Hash::make('password'),
-            'role' => 'cajero',
-        ]);
+        foreach ($usuarios as $u) {
+            User::updateOrCreate(
+                ['email' => $u['email']],
+                [
+                    'name' => $u['name'],
+                    'role' => $u['role'],
+                    'password' => Hash::make('password'),
+                ]
+            );
+        }
     }
 }

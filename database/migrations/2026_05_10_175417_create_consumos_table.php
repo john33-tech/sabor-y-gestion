@@ -12,7 +12,9 @@ return new class extends Migration
             $table->id();
             $table->string('numero_pedido');
             $table->foreignId('pedido_id')->constrained()->onDelete('cascade');
-            $table->foreignId('usuario_id')->constrained()->onDelete('cascade');
+            // FIX: constrained() inferiría tabla "usuarios" (plural en español) pero la
+            // tabla real de Laravel es "users". Lo decimos explícito.
+            $table->foreignId('usuario_id')->constrained('users')->onDelete('cascade');
             $table->string('tipo_pedido'); // mesa, delivery, para_llevar
             $table->string('estado'); // completado, cancelado
             $table->decimal('subtotal', 10, 2);
