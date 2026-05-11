@@ -7,7 +7,6 @@ use App\Models\Inventario;
 use App\Models\Pedido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Route;
 
 // Webhook para confirmación de pago QR (sin autenticación, llamado por sistema externo)
 Route::post('/confirmar-pago-qr', [PagoQrController::class, 'confirmar']);
