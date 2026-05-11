@@ -72,16 +72,21 @@ class Plato extends Model
     }
     
     // Método para verificar si hay suficiente stock (Solo UNA vez)
-    public function verificarStock($cantidad = 1)
-    {
-        foreach ($this->ingredientes as $ingrediente) {
-            $inventario = $ingrediente->inventario;
-            $cantidadNecesaria = $ingrediente->pivot->cantidad * $cantidad;
-            
-            if (!$inventario || $inventario->cantidad_actual < $cantidadNecesaria) {
-                return false;
-            }
-        }
-        return true;
+public function verificarStock($cantidad = 1)
+{
+    // Si el plato no tiene ingredientes, no se puede vender
+    if ($this->ingredientes->count() === 0) {
+        return false;
     }
+    
+    foreach ($this->ingredientes as $ingrediente) {
+        $inventario = $ingrediente->inventario;
+        $cantidadNecesaria = $ingrediente->pivot->cantidad * $cantidad;
+        
+        if (!$inventario || $inventario->cantidad_actual < $cantidadNecesaria) {
+            return false;
+        }
+    }
+    return true;
+}
 }

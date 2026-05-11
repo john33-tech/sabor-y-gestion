@@ -88,13 +88,17 @@
                                                     @if(!$tieneStock && count($stockInsuficiente) > 0)
                                                         <div class="mt-2 p-2 rounded text-xs" style="background-color: #FEF2F2; border: 1px solid #FECACA;">
                                                             <p class="font-semibold text-red-700 mb-1">
-                                                                <i class="fas fa-box mr-1"></i> Stock insuficiente:
+                                                                <i class="fas fa-box mr-1"></i> No disponible por:
                                                             </p>
                                                             @foreach($stockInsuficiente as $ingrediente)
                                                                 <p class="text-red-600 ml-2">
                                                                     • {{ $ingrediente['nombre'] }}: 
-                                                                    disponible {{ number_format($ingrediente['disponible'], 2) }} {{ $ingrediente['unidad'] }} 
-                                                                    (necesita {{ number_format($ingrediente['necesario'], 2) }} {{ $ingrediente['unidad'] }})
+                                                                    @if(isset($ingrediente['motivo']))
+                                                                        {{ $ingrediente['motivo'] }}
+                                                                    @else
+                                                                        disponible {{ number_format($ingrediente['disponible'], 2) }} {{ $ingrediente['unidad'] }} 
+                                                                        (necesita {{ number_format($ingrediente['necesario'], 2) }} {{ $ingrediente['unidad'] }})
+                                                                    @endif
                                                                 </p>
                                                             @endforeach
                                                         </div>
@@ -117,6 +121,18 @@
                                                                     </span>
                                                                 @endforeach
                                                             </div>
+                                                        </div>
+                                                    @endif
+                                                    
+                                                    <!-- Mensaje para platos sin ingredientes registrados -->
+                                                    @if($plato->ingredientes->count() === 0)
+                                                        <div class="mt-2 p-2 rounded text-xs" style="background-color: #FEF2F2; border: 1px solid #FECACA;">
+                                                            <p class="font-semibold text-red-700 mb-1">
+                                                                <i class="fas fa-exclamation-circle mr-1"></i> Configuración incompleta:
+                                                            </p>
+                                                            <p class="text-red-600 ml-2">
+                                                                Este plato no tiene ingredientes registrados. Contacte al administrador.
+                                                            </p>
                                                         </div>
                                                     @endif
                                                 </div>
@@ -260,7 +276,7 @@
                         </div>
 
                         <!-- Descuento -->
-                        <div class="mb-6">
+                        <div class="mb-6" style="display:none">
                             <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                 <i class="fas fa-tag mr-1"></i> Descuento (Bs.)
                             </label>
@@ -268,7 +284,7 @@
                                 class="w-full px-3 py-2 rounded-lg outline-none transition-all"
                                 style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
                         </div>
-
+                    
                         <!-- Totales -->
                         <div class="rounded-lg p-4 mb-6" style="background-color: #FFF7ED;">
                             <div class="space-y-2">

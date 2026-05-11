@@ -48,7 +48,7 @@ class PedidoController extends Controller
     }
     
   
- public function create(Request $request)
+public function create(Request $request)
 {
     $platos = Plato::where('disponible', true)
         ->with(['categoria', 'ingredientes.inventario'])
@@ -63,37 +63,52 @@ class PedidoController extends Controller
         $platosProcesados = [];
         foreach ($platosCategoria as $plato) {
             // Verificar stock para 1 unidad
-            $tieneStock = $plato->verificarStock(1);
+            $tieneStock = true;
             $stockInsuficiente = [];
             
-            // Obtener detalles de ingredientes con stock insuficiente
-            if (!$tieneStock) {
-                foreach ($plato->ingredientes as $ingrediente) {
-                    $inventario = $ingrediente->inventario;
-                    $cantidadNecesaria = $ingrediente->pivot->cantidad;
-                    
-                    if (!$inventario || $inventario->cantidad_actual < $cantidadNecesaria) {
-                        $stockInsuficiente[] = [
-                            'nombre' => $ingrediente->nombre,
-                            'disponible' => $inventario?->cantidad_actual ?? 0,
-                            'necesario' => $cantidadNecesaria,
-                            'unidad' => $ingrediente->unidad_medida
-                        ];
-                    }
+            // Verificar cada ingrediente del plato
+            foreach ($plato->ingredientes as $ingrediente) {
+                $inventario = $ingrediente->inventario;
+                $cantidadNecesaria = $ingrediente->pivot->cantidad;
+                
+                // Si no tiene inventario registrado o el stock es insuficiente
+                if (!$inventario) {
+                    $tieneStock = false;
+                    $stockInsuficiente[] = [
+                        'nombre' => $ingrediente->nombre,
+                        'disponible' => 0,
+                        'necesario' => $cantidadNecesaria,
+                        'unidad' => $ingrediente->unidad_medida,
+                        'motivo' => 'Sin inventario registrado'
+                    ];
+                } elseif ($inventario->cantidad_actual < $cantidadNecesaria) {
+                    $tieneStock = false;
+                    $stockInsuficiente[] = [
+                        'nombre' => $ingrediente->nombre,
+                        'disponible' => $inventario->cantidad_actual,
+                        'necesario' => $cantidadNecesaria,
+                        'unidad' => $ingrediente->unidad_medida,
+                        'motivo' => 'Stock insuficiente'
+                    ];
                 }
             }
             
-            // Crear un objeto con los datos necesarios
-            $platosProcesados[] = (object)[
-                'id' => $plato->id,
-                'nombre' => $plato->nombre,
-                'precio' => $plato->precio,
-                'descripcion' => $plato->descripcion,
-                'categoria_id' => $plato->categoria_id,
-                'tiene_stock' => $tieneStock,
-                'stock_insuficiente' => $stockInsuficiente,
-                'ingredientes' => $plato->ingredientes
-            ];
+            // Si el plato no tiene ingredientes registrados, también sin stock
+            if ($plato->ingredientes->count() === 0) {
+                $tieneStock = false;
+                $stockInsuficiente[] = [
+                    'nombre' => 'Sin ingredientes',
+                    'disponible' => 0,
+                    'necesario' => 1,
+                    'unidad' => 'N/A',
+                    'motivo' => 'El plato no tiene ingredientes registrados'
+                ];
+            }
+            
+            // Agregar propiedades al plato
+            $plato->tiene_stock = $tieneStock;
+            $plato->stock_insuficiente = $stockInsuficiente;
+            $platosProcesados[] = $plato;
         }
         $platosConStock[$categoria] = $platosProcesados;
     }
@@ -112,7 +127,6 @@ class PedidoController extends Controller
     
     return view('pedidos.create', compact('platosConStock', 'mesas', 'numeroPedido', 'mesaSeleccionada'));
 }
-
 
  
 
