@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('numero_pedido');
             $table->foreignId('pedido_id')->constrained()->onDelete('cascade');
-            $table->foreignId('usuario_id')->constrained()->onDelete('cascade');
+            $table->foreignId('usuario_id')->constrained('users')->onDelete('cascade');
             $table->string('tipo_pedido'); // mesa, delivery, para_llevar
             $table->string('estado'); // completado, cancelado
             $table->decimal('subtotal', 10, 2);
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->json('detalles'); // Guardar los platos consumidos
             $table->dateTime('fecha_consumo');
             $table->timestamps();
-            
+
             $table->index(['fecha_consumo', 'tipo_pedido', 'estado']);
         });
     }
