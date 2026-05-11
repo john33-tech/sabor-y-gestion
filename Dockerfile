@@ -67,6 +67,7 @@ RUN docker-php-ext-configure gd \
         bcmath \
         pcntl \
         intl \
+        exif \
     && docker-php-ext-enable pdo pdo_mysql opcache
 
 # ── 3. Configuración PHP ──────────────────────────────────────────────────────
