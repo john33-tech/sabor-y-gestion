@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Pedido;
 use App\Models\DetallePedido;
 use Illuminate\Http\Request;
+use App\Models\Consumo; 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class ComandaController extends Controller
 {
@@ -69,7 +71,17 @@ class ComandaController extends Controller
         }
     }
     
-    public function marcarListo(Pedido $comanda)
+
+
+
+
+
+
+
+
+
+
+   public function marcarListo(Pedido $comanda)
     {
         if (!in_array($comanda->estado, ['pendiente', 'en_preparacion'])) {
             return redirect()->back()->with('error', 'No se puede marcar como listo este pedido');
@@ -77,21 +89,67 @@ class ComandaController extends Controller
         
         DB::beginTransaction();
         try {
+            // Descontar inventario
+            foreach ($comanda->detalles as $detalle) {
+                if ($detalle->plato) {
+                    $detalle->plato->descontarInventario();
+                }
+            }
+            
             $comanda->estado = 'listo';
             $comanda->save();
             
             // Actualizar todos los detalles a "listo"
             $comanda->detalles()->update(['estado' => 'listo']);
             
+            // GUARDAR EN CONSUMOS
+            $this->guardarConsumo($comanda);
+            
+            // Limpiar caché
+            Cache::forget('low_stock_count_direct');
+            
             DB::commit();
             
             return redirect()->route('comandas.index')
-                ->with('success', 'Pedido #' . $comanda->numero_pedido . ' marcado como listo');
+                ->with('success', 'Pedido #' . $comanda->numero_pedido . ' marcado como listo. Inventario actualizado.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Error al marcar como listo');
+            return redirect()->back()->with('error', 'Error al marcar como listo: ' . $e->getMessage());
         }
     }
+    
+    private function guardarConsumo(Pedido $pedido)
+    {
+        // Preparar detalles para guardar
+        $detalles = [];
+        foreach ($pedido->detalles as $detalle) {
+            $detalles[] = [
+                'plato_id' => $detalle->plato_id,
+                'plato_nombre' => $detalle->plato->nombre,
+                'cantidad' => $detalle->cantidad,
+                'precio_unitario' => $detalle->precio_unitario,
+                'subtotal' => $detalle->subtotal,
+                'notas' => $detalle->notas
+            ];
+        }
+        
+        Consumo::create([
+            'numero_pedido' => $pedido->numero_pedido,
+            'pedido_id' => $pedido->id,
+            'usuario_id' => $pedido->usuario_id,
+            'tipo_pedido' => $pedido->tipo_pedido,
+            'estado' => 'completado',
+            'subtotal' => $pedido->subtotal,
+            'impuesto' => $pedido->impuesto,
+            'descuento' => $pedido->descuento,
+            'total' => $pedido->total,
+            'detalles' => $detalles,
+            'fecha_consumo' => now()
+        ]);
+    }
+
+
+
     
     public function actualizarDetalle(Request $request, DetallePedido $detalle)
     {

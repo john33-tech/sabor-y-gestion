@@ -38,7 +38,7 @@
 }">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-primary">Editar Producto: {{ $plato->nombre }}</h1>
-        <a href="{{ route('platos.index') }}" class="btn-secondary">
+        <a href="{{ route('platos.index') }}" class="text-sm font-medium text-primary hover:text-secondary transition-colors duration-200" style="color: #C2410C;">
             <i class="fas fa-arrow-left mr-2"></i> Volver
         </a>
     </div>
@@ -64,7 +64,7 @@
                         <div>
                             <label class="block text-sm font-medium text-text mb-2">Precio *</label>
                             <div class="relative">
-                                <span class="absolute left-3 top-2 text-gray-500">$</span>
+                                <span class="absolute left-3 top-2 text-gray-500">Bs </span>
                                 <input type="number" name="precio" step="0.01" required value="{{ old('precio', $plato->precio) }}" class="w-full pl-8 pr-4 py-2 rounded-lg border border-border focus:outline-none focus:border-primary">
                             </div>
                             @error('precio')
@@ -258,7 +258,7 @@
                 </div>
                 
                 <div class="flex justify-end space-x-3 pt-4">
-                    <button type="submit" class="btn-primary px-6">
+                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors duration-200 shadow-sm">
                         <i class="fas fa-save mr-2"></i> Actualizar Producto
                     </button>
                 </div>

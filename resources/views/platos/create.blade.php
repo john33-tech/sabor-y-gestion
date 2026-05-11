@@ -41,7 +41,7 @@
 }">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-primary">Crear Nuevo Producto</h1>
-        <a href="{{ route('platos.index') }}" class="btn-secondary">
+        <a href="{{ route('platos.index') }}" class="text-sm font-medium text-primary hover:text-secondary transition-colors duration-200" style="color: #C2410C;">
             <i class="fas fa-arrow-left mr-2"></i> Volver
         </a>
     </div>
@@ -172,12 +172,6 @@
                                     @endforeach
                                 </div>
                             </div>
-                            <a href="{{ route('ingredientes.create') }}" 
-                               target="_blank" 
-                               class="btn-secondary px-4 inline-flex items-center justify-center"
-                               title="Crear nuevo ingrediente">
-                                <i class="fas fa-plus"></i>
-                            </a>
                         </div>
                         
                         <div class="flex gap-2 mt-2">
@@ -188,7 +182,7 @@
                                    class="flex-1 px-4 py-2 rounded-lg border border-border">
                             <button type="button" 
                                     @click="agregarIngrediente()"
-                                    class="btn-primary px-4">
+                                    class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors duration-200 shadow-sm">
                                 <i class="fas fa-plus mr-1"></i> Agregar
                             </button>
                         </div>
@@ -251,7 +245,7 @@
                 </div>
                 
                 <div class="flex justify-end space-x-3 pt-4">
-                    <button type="submit" class="btn-primary px-6">
+                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors duration-200 shadow-sm">
                         <i class="fas fa-save mr-2"></i> Guardar Producto
                     </button>
                 </div>

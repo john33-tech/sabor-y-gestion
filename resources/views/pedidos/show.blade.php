@@ -78,7 +78,42 @@
                     </table>
                 </div>
             </div>
+            <!--direccion para delivery-->
+            @if($pedido->tipo_pedido == 'delivery' && $pedido->latitud)
 
+            <div class="card mt-4">
+
+                <h3 class="text-lg font-bold mb-3">
+                    Ubicación del Cliente
+                </h3>
+
+                <div id="mapShow" style="height: 350px;" class="rounded-lg border"></div>
+
+            </div>
+
+            <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+            <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+                <script>
+
+                const mapShow = L.map('mapShow').setView([
+                {{ $pedido->latitud }},
+                {{ $pedido->longitud }}
+                ], 15);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(mapShow);
+
+                L.marker([
+                    {{ $pedido->latitud }},
+                    {{ $pedido->longitud }}
+                ]).addTo(mapShow)
+                .bindPopup('Ubicación del cliente')
+                .openPopup();
+
+                </script>
+            @endif
             <!-- Notas del Pedido -->
             @if($pedido->notas)
             <div class="card">
@@ -242,6 +277,24 @@
 
 @push('scripts')
 <script>
+// Función para actualizar el contador del sidebar
+function actualizarContadorSidebar() {
+    fetch('/api/stock-count')
+        .then(response => response.json())
+        .then(data => {
+            const contadorInventario = document.querySelector('a[href="{{ route("inventario.index") }}"] .rounded-full');
+            if (contadorInventario) {
+                if (data.count > 0) {
+                    contadorInventario.textContent = data.count;
+                    contadorInventario.classList.remove('hidden');
+                } else {
+                    contadorInventario.classList.add('hidden');
+                }
+            }
+        })
+        .catch(error => console.error('Error:', error));
+}
+
 // Cambiar estado del pedido
 const estadoSelect = document.getElementById('estadoPedido');
 if(estadoSelect) {
@@ -257,7 +310,12 @@ if(estadoSelect) {
             }).then(response => response.json())
               .then(data => {
                   if(data.success) {
+                      // Actualizar el contador del sidebar
+                      actualizarContadorSidebar();
+                      // Recargar la página para mostrar cambios
                       location.reload();
+                  } else {
+                      alert('Error: ' + data.mensaje);
                   }
               });
         }
@@ -280,8 +338,12 @@ document.querySelectorAll('.estado-detalle').forEach(select => {
         }).then(response => response.json())
           .then(data => {
               if(data.success) {
+                  // Actualizar el contador del sidebar
+                  actualizarContadorSidebar();
                   // Recargar para actualizar estados
                   location.reload();
+              } else {
+                  alert('Error: ' + data.mensaje);
               }
           });
     });

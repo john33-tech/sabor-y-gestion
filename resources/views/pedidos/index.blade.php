@@ -10,7 +10,7 @@
         <h1 class="text-3xl font-bold text-primary">
             <i class="fas fa-receipt mr-2"></i> Pedidos
         </h1>
-        <a href="{{ route('pedidos.create') }}" class="btn-primary">
+        <a href="{{ route('pedidos.create') }}" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors duration-200 shadow-sm">
             <i class="fas fa-plus mr-2"></i> Nuevo Pedido
         </a>
     </div>
@@ -168,19 +168,32 @@
 
                         <td class="py-3 px-4">
                             <div class="flex space-x-3">
-                                <a href="{{ route('pedidos.show',$pedido) }}" class="text-primary hover:text-secondary">
+                                <a href="{{ route('pedidos.show',$pedido) }}" class="text-primary hover:text-secondary" title="Ver">
                                     <i class="fas fa-eye"></i>
                                 </a>
 
                                 @if(in_array($pedido->estado,['pendiente','en_preparacion']))
-                                <a href="{{ route('pedidos.edit',$pedido) }}" class="text-yellow-600 hover:text-yellow-800">
+                                <a href="{{ route('pedidos.edit',$pedido) }}" class="text-yellow-600 hover:text-yellow-800" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 @endif
 
-                                <a href="{{ route('pedidos.imprimir',$pedido) }}" target="_blank" class="text-gray-600 hover:text-black">
+                                <a href="{{ route('pedidos.imprimir',$pedido) }}" target="_blank" class="text-gray-600 hover:text-black" title="Imprimir">
                                     <i class="fas fa-print"></i>
                                 </a>
+
+                                {{-- Eliminar: solo si el pedido está pendiente (regla del controller) --}}
+                                @if($pedido->estado === 'pendiente')
+                                <form method="POST" action="{{ route('pedidos.destroy',$pedido) }}"
+                                      class="inline"
+                                      onsubmit="return confirm('¿Eliminar pedido #{{ $pedido->numero_pedido }}? Esta acción no se puede deshacer.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-600 hover:text-red-800" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                @endif
                             </div>
                         </td>
 

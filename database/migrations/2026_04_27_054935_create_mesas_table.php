@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('mesas', function (Blueprint $table) {
             $table->id();
             $table->string('numero_mesa', 10)->unique();
-            $table->enum('estado', ['libre', 'ocupado', 'reservado'])->default('libre');
+            $table->enum('estado', ['libre', 'ocupado', 'reservado','fuera_servicio'])->default('libre');
             $table->string('area')->nullable();
             $table->integer('capacidad')->default(4);
             $table->datetime('hora_reserva')->nullable();

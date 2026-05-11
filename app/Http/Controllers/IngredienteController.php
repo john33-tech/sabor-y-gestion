@@ -14,31 +14,70 @@ class IngredienteController extends Controller
      * Mostrar lista de ingredientes
      */
     public function index(Request $request)
-    {
-        $query = Ingrediente::query();
-        
-        // Búsqueda
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where('nombre', 'LIKE', "%{$search}%");
-        }
-        
-        // Filtro por unidad de medida
-        if ($request->filled('unidad')) {
-            $query->where('unidad_medida', $request->unidad);
-        }
-        
-        $ingredientes = $query->withCount('platos')
-            ->orderBy('nombre')
-            ->paginate(15)
-            ->withQueryString();
-        
-        $totalIngredientes = Ingrediente::count();
-        $unidadesMedida = ['gr', 'ml', 'unidad', 'cda', 'cdta'];
-        
-        return view('ingredientes.index', compact('ingredientes', 'totalIngredientes', 'unidadesMedida'));
+{
+    $query = Ingrediente::query();
+    
+    // Búsqueda
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where('nombre', 'LIKE', "%{$search}%");
     }
     
+    // Filtro por unidad de medida
+    if ($request->filled('unidad')) {
+        $query->where('unidad_medida', $request->unidad);
+    }
+    
+    // Agregar filtro por estado de stock
+    if ($request->filled('estado_stock')) {
+        switch($request->estado_stock) {
+            case 'bajo':
+                $query->whereHas('inventario', function($q) {
+                    $q->whereColumn('cantidad_actual', '<=', 'stock_minimo');
+                });
+                break;
+            case 'agotado':
+                $query->whereHas('inventario', function($q) {
+                    $q->where('cantidad_actual', '<=', 0);
+                });
+                break;
+            case 'normal':
+                $query->whereHas('inventario', function($q) {
+                    $q->whereColumn('cantidad_actual', '>', 'stock_minimo');
+                });
+                break;
+            case 'sin_inventario':
+                $query->doesntHave('inventario');
+                break;
+        }
+    }
+    
+    // Cargar la relación inventario
+    $ingredientes = $query->with('inventario')  // 👈 Agrega esta línea
+        ->withCount('platos')
+        ->orderBy('nombre')
+        ->paginate(15)
+        ->withQueryString();
+    
+    $totalIngredientes = Ingrediente::count();
+    $unidadesMedida = ['gr', 'ml', 'unidad', 'cda', 'cdta'];
+    
+    // Estadísticas para el sidebar y dashboard
+    $stats = [
+        'con_inventario' => Ingrediente::has('inventario')->count(),
+        'sin_inventario' => Ingrediente::doesntHave('inventario')->count(),
+        'stock_bajo' => Ingrediente::whereHas('inventario', function($q) {
+            $q->whereColumn('cantidad_actual', '<=', 'stock_minimo');
+        })->count(),
+        'stock_agotado' => Ingrediente::whereHas('inventario', function($q) {
+            $q->where('cantidad_actual', '<=', 0);
+        })->count(),
+    ];
+    
+    return view('ingredientes.index', compact('ingredientes', 'totalIngredientes', 'unidadesMedida', 'stats'));
+}
+    
+
     /**
      * Mostrar formulario de creación
      */
