@@ -48,199 +48,199 @@ class PedidoController extends Controller
     }
 
 
- public function create(Request $request)
-    
-  
-public function create(Request $request)
-{
-    $platos = Plato::where('disponible', true)
-        ->with(['categoria', 'ingredientes.inventario'])
-        ->orderBy('categoria_id')
-        ->orderBy('nombre')
-        ->get()
-        ->groupBy('categoria.nombre');
 
-    // Procesar cada plato para agregar información de stock
-    $platosConStock = [];
-    foreach ($platos as $categoria => $platosCategoria) {
-        $platosProcesados = [];
-        foreach ($platosCategoria as $plato) {
-            // Verificar stock para 1 unidad
-            $tieneStock = true;
-            $stockInsuficiente = [];
 
-            // Obtener detalles de ingredientes con stock insuficiente
-            if (!$tieneStock) {
+    public function create(Request $request)
+    {
+        $platos = Plato::where('disponible', true)
+            ->with(['categoria', 'ingredientes.inventario'])
+            ->orderBy('categoria_id')
+            ->orderBy('nombre')
+            ->get()
+            ->groupBy('categoria.nombre');
+
+        // Procesar cada plato para agregar información de stock
+        $platosConStock = [];
+        foreach ($platos as $categoria => $platosCategoria) {
+            $platosProcesados = [];
+            foreach ($platosCategoria as $plato) {
+                // Verificar stock para 1 unidad
+                $tieneStock = true;
+                $stockInsuficiente = [];
+
+                // Obtener detalles de ingredientes con stock insuficiente
+                if (!$tieneStock) {
+                    foreach ($plato->ingredientes as $ingrediente) {
+                        $inventario = $ingrediente->inventario;
+                        $cantidadNecesaria = $ingrediente->pivot->cantidad;
+
+                        if (!$inventario || $inventario->cantidad_actual < $cantidadNecesaria) {
+                            $stockInsuficiente[] = [
+                                'nombre' => $ingrediente->nombre,
+                                'disponible' => $inventario?->cantidad_actual ?? 0,
+                                'necesario' => $cantidadNecesaria,
+                                'unidad' => $ingrediente->unidad_medida
+                            ];
+                        }
+                    }
+                }
+                // Verificar cada ingrediente del plato
                 foreach ($plato->ingredientes as $ingrediente) {
                     $inventario = $ingrediente->inventario;
                     $cantidadNecesaria = $ingrediente->pivot->cantidad;
 
-                    if (!$inventario || $inventario->cantidad_actual < $cantidadNecesaria) {
+                    // Si no tiene inventario registrado o el stock es insuficiente
+                    if (!$inventario) {
+                        $tieneStock = false;
                         $stockInsuficiente[] = [
                             'nombre' => $ingrediente->nombre,
-                            'disponible' => $inventario?->cantidad_actual ?? 0,
+                            'disponible' => 0,
                             'necesario' => $cantidadNecesaria,
-                            'unidad' => $ingrediente->unidad_medida
+                            'unidad' => $ingrediente->unidad_medida,
+                            'motivo' => 'Sin inventario registrado'
+                        ];
+                    } elseif ($inventario->cantidad_actual < $cantidadNecesaria) {
+                        $tieneStock = false;
+                        $stockInsuficiente[] = [
+                            'nombre' => $ingrediente->nombre,
+                            'disponible' => $inventario->cantidad_actual,
+                            'necesario' => $cantidadNecesaria,
+                            'unidad' => $ingrediente->unidad_medida,
+                            'motivo' => 'Stock insuficiente'
                         ];
                     }
-            
-            // Verificar cada ingrediente del plato
-            foreach ($plato->ingredientes as $ingrediente) {
-                $inventario = $ingrediente->inventario;
-                $cantidadNecesaria = $ingrediente->pivot->cantidad;
-                
-                // Si no tiene inventario registrado o el stock es insuficiente
-                if (!$inventario) {
+                }
+
+                // Crear un objeto con los datos necesarios
+                $platosProcesados[] = (object)[
+                    'id' => $plato->id,
+                    'nombre' => $plato->nombre,
+                    'precio' => $plato->precio,
+                    'descripcion' => $plato->descripcion,
+                    'categoria_id' => $plato->categoria_id,
+                    'tiene_stock' => $tieneStock,
+                    'stock_insuficiente' => $stockInsuficiente,
+                    'ingredientes' => $plato->ingredientes
+                ];
+
+                // Si el plato no tiene ingredientes registrados, también sin stock
+                if ($plato->ingredientes->count() === 0) {
                     $tieneStock = false;
                     $stockInsuficiente[] = [
-                        'nombre' => $ingrediente->nombre,
+                        'nombre' => 'Sin ingredientes',
                         'disponible' => 0,
-                        'necesario' => $cantidadNecesaria,
-                        'unidad' => $ingrediente->unidad_medida,
-                        'motivo' => 'Sin inventario registrado'
+                        'necesario' => 1,
+                        'unidad' => 'N/A',
+                        'motivo' => 'El plato no tiene ingredientes registrados'
                     ];
-                } elseif ($inventario->cantidad_actual < $cantidadNecesaria) {
-                    $tieneStock = false;
-                    $stockInsuficiente[] = [
-                        'nombre' => $ingrediente->nombre,
-                        'disponible' => $inventario->cantidad_actual,
-                        'necesario' => $cantidadNecesaria,
-                        'unidad' => $ingrediente->unidad_medida,
-                        'motivo' => 'Stock insuficiente'
-                    ];
+                }
+
+                // Agregar propiedades al plato
+                $plato->tiene_stock = $tieneStock;
+                $plato->stock_insuficiente = $stockInsuficiente;
+                $platosProcesados[] = $plato;
+            }
+            $platosConStock[$categoria] = $platosProcesados;
+        }
+
+        $mesas = Mesa::where('estado', 'libre')
+            ->orderBy('area')
+            ->orderBy('numero_mesa')
+            ->get();
+
+        $numeroPedido = $this->generarNumeroPedidoTemporal();
+
+        $mesaSeleccionada = null;
+        if ($request->has('mesa_id')) {
+            $mesaSeleccionada = Mesa::find($request->mesa_id);
+        }
+
+        return view('pedidos.create', compact('platosConStock', 'mesas', 'numeroPedido', 'mesaSeleccionada'));
+            }
+
+
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'tipo_pedido' => 'required|in:mesa,delivery,para_llevar',
+            'mesa_id' => 'required_if:tipo_pedido,mesa|nullable|exists:mesas,id',
+            'cliente_nombre' => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:255',
+            'cliente_telefono' => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:20',
+            'direccion' => 'nullable|string|max:500',
+            'items' => 'required|array|min:1',
+            'items.*.plato_id' => 'required|exists:platos,id',
+            'items.*.cantidad' => 'required|integer|min:1',
+            'items.*.notas' => 'nullable|string',
+            'notas' => 'nullable|string',
+            'descuento' => 'nullable|numeric|min:0',
+            'latitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
+            'longitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            // Crear el pedido SIN número de pedido aún
+            $pedido = new Pedido();
+            $pedido->tipo_pedido = $request->tipo_pedido;
+            $pedido->mesa_id = $request->tipo_pedido == 'mesa' ? $request->mesa_id : null;
+            $pedido->cliente_nombre = $request->cliente_nombre ?? ($request->tipo_pedido == 'mesa' ? 'Cliente Mesa ' . $request->mesa_id : null);
+            $pedido->cliente_telefono = $request->cliente_telefono;
+            $pedido->direccion = $request->tipo_pedido == 'delivery' ? $request->direccion : null;
+            $pedido->latitud = $request->latitud;
+            $pedido->longitud = $request->longitud;
+            $pedido->estado = Pedido::ESTADO_PENDIENTE;
+            $pedido->descuento = $request->descuento ?? 0;
+            $pedido->notas = $request->notas;
+            $pedido->usuario_id = Auth::id();
+            $pedido->save(); // Guardar primero sin número de pedido
+
+            // Crear los detalles del pedido
+            foreach ($request->items as $item) {
+                $plato = Plato::find($item['plato_id']);
+
+                DetallePedido::create([
+                    'pedido_id' => $pedido->id,
+                    'plato_id' => $item['plato_id'],
+                    'cantidad' => $item['cantidad'],
+                    'precio_unitario' => $plato->precio,
+                    'subtotal' => $plato->precio * $item['cantidad'],
+                    'notas' => $item['notas'] ?? null,
+                    'estado' => DetallePedido::ESTADO_PENDIENTE
+                ]);
+            }
+
+            // Calcular totales
+            $pedido->calcularTotales();
+
+            // Generar número de pedido (después de tener los totales)
+            $pedido->generarNumeroPedido();
+
+            // Generar factura automática
+            $pedido->generarOrUpdateFactura();
+
+            // Emitir evento para tiempo real (Notificar a cocineros)
+            event(new \App\Events\PedidoCreado($pedido));
+
+            // Actualizar estado de la mesa si es pedido de mesa
+            if ($pedido->tipo_pedido == 'mesa') {
+                $mesa = Mesa::find($request->mesa_id);
+                if ($mesa) {
+                    $mesa->update(['estado' => 'ocupado']);
                 }
             }
 
-            // Crear un objeto con los datos necesarios
-            $platosProcesados[] = (object)[
-                'id' => $plato->id,
-                'nombre' => $plato->nombre,
-                'precio' => $plato->precio,
-                'descripcion' => $plato->descripcion,
-                'categoria_id' => $plato->categoria_id,
-                'tiene_stock' => $tieneStock,
-                'stock_insuficiente' => $stockInsuficiente,
-                'ingredientes' => $plato->ingredientes
-            ];
-            
-            // Si el plato no tiene ingredientes registrados, también sin stock
-            if ($plato->ingredientes->count() === 0) {
-                $tieneStock = false;
-                $stockInsuficiente[] = [
-                    'nombre' => 'Sin ingredientes',
-                    'disponible' => 0,
-                    'necesario' => 1,
-                    'unidad' => 'N/A',
-                    'motivo' => 'El plato no tiene ingredientes registrados'
-                ];
-            }
-            
-            // Agregar propiedades al plato
-            $plato->tiene_stock = $tieneStock;
-            $plato->stock_insuficiente = $stockInsuficiente;
-            $platosProcesados[] = $plato;
+            DB::commit();
+
+            return redirect()->route('pedidos.show', $pedido)
+                ->with('success', 'Pedido #' . $pedido->numero_pedido . ' creado exitosamente');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error al crear el pedido: ' . $e->getMessage())->withInput();
         }
-        $platosConStock[$categoria] = $platosProcesados;
     }
-
-    $mesas = Mesa::where('estado', 'libre')
-        ->orderBy('area')
-        ->orderBy('numero_mesa')
-        ->get();
-
-    $numeroPedido = $this->generarNumeroPedidoTemporal();
-
-    $mesaSeleccionada = null;
-    if ($request->has('mesa_id')) {
-        $mesaSeleccionada = Mesa::find($request->mesa_id);
-    }
-
-    return view('pedidos.create', compact('platosConStock', 'mesas', 'numeroPedido', 'mesaSeleccionada'));
-}
-
-
-
-public function store(Request $request)
-{
-    $request->validate([
-        'tipo_pedido' => 'required|in:mesa,delivery,para_llevar',
-        'mesa_id' => 'required_if:tipo_pedido,mesa|nullable|exists:mesas,id',
-        'cliente_nombre' => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:255',
-        'cliente_telefono' => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:20',
-        'direccion' => 'nullable|string|max:500',
-        'items' => 'required|array|min:1',
-        'items.*.plato_id' => 'required|exists:platos,id',
-        'items.*.cantidad' => 'required|integer|min:1',
-        'items.*.notas' => 'nullable|string',
-        'notas' => 'nullable|string',
-        'descuento' => 'nullable|numeric|min:0',
-        'latitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
-        'longitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
-    ]);
-
-    DB::beginTransaction();
-
-    try {
-        // Crear el pedido SIN número de pedido aún
-        $pedido = new Pedido();
-        $pedido->tipo_pedido = $request->tipo_pedido;
-        $pedido->mesa_id = $request->tipo_pedido == 'mesa' ? $request->mesa_id : null;
-        $pedido->cliente_nombre = $request->cliente_nombre ?? ($request->tipo_pedido == 'mesa' ? 'Cliente Mesa ' . $request->mesa_id : null);
-        $pedido->cliente_telefono = $request->cliente_telefono;
-        $pedido->direccion = $request->tipo_pedido == 'delivery' ? $request->direccion : null;
-        $pedido->latitud = $request->latitud;
-        $pedido->longitud = $request->longitud;
-        $pedido->estado = Pedido::ESTADO_PENDIENTE;
-        $pedido->descuento = $request->descuento ?? 0;
-        $pedido->notas = $request->notas;
-        $pedido->usuario_id = Auth::id();
-        $pedido->save(); // Guardar primero sin número de pedido
-
-        // Crear los detalles del pedido
-        foreach ($request->items as $item) {
-            $plato = Plato::find($item['plato_id']);
-
-            DetallePedido::create([
-                'pedido_id' => $pedido->id,
-                'plato_id' => $item['plato_id'],
-                'cantidad' => $item['cantidad'],
-                'precio_unitario' => $plato->precio,
-                'subtotal' => $plato->precio * $item['cantidad'],
-                'notas' => $item['notas'] ?? null,
-                'estado' => DetallePedido::ESTADO_PENDIENTE
-            ]);
-        }
-
-        // Calcular totales
-        $pedido->calcularTotales();
-
-        // Generar número de pedido (después de tener los totales)
-        $pedido->generarNumeroPedido();
-
-        // Generar factura automática
-        $pedido->generarOrUpdateFactura();
-
-        // Emitir evento para tiempo real (Notificar a cocineros)
-        event(new \App\Events\PedidoCreado($pedido));
-
-        // Actualizar estado de la mesa si es pedido de mesa
-        if ($pedido->tipo_pedido == 'mesa') {
-            $mesa = Mesa::find($request->mesa_id);
-            if ($mesa) {
-                $mesa->update(['estado' => 'ocupado']);
-            }
-        }
-
-        DB::commit();
-
-        return redirect()->route('pedidos.show', $pedido)
-            ->with('success', 'Pedido #' . $pedido->numero_pedido . ' creado exitosamente');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return back()->with('error', 'Error al crear el pedido: ' . $e->getMessage())->withInput();
-    }
-}
 
 
 
