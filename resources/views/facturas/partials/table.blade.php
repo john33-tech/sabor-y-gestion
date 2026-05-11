@@ -65,7 +65,10 @@
                              <a href="{{ route('facturas.show', $factura) }}" class="text-blue-600 hover:text-blue-900" title="Ver Detalle">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            <button class="text-gray-400 cursor-not-allowed" title="Pagada">
+                            <button @click="openSendMail({{ $factura }})" class="text-indigo-600 hover:text-indigo-900 ml-2" title="Enviar por Correo">
+                                <i class="fas fa-envelope"></i>
+                            </button>
+                            <button class="text-gray-400 cursor-not-allowed ml-2" title="Pagada">
                                 <i class="fas fa-check-double"></i>
                             </button>
                         @else

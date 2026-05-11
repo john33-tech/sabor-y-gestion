@@ -6,7 +6,10 @@ use App\Models\Factura;
 use App\Models\Pedido;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use App\Mail\FacturaPdfMail;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class FacturaController extends Controller
 {
@@ -175,5 +178,32 @@ class FacturaController extends Controller
                 'pedido_id'       => $factura->pedido_id,
             ],
         ]);
+    }
+
+    /**
+     * Generar PDF y enviar factura por correo electrónico.
+     */
+    public function enviarPorCorreo(Request $request, Factura $factura)
+    {
+        $request->validate([
+            'email' => 'required|email'
+        ]);
+
+        $email = $request->input('email');
+
+        // Cargar las relaciones necesarias para el PDF
+        $factura->load(['pedido.detalles.plato', 'usuario']);
+
+        // Generar el PDF
+        $pdf = Pdf::loadView('facturas.pdf', compact('factura'));
+        $pdfOutput = $pdf->output();
+
+        // Enviar el correo
+        try {
+            Mail::to($email)->send(new FacturaPdfMail($factura, $pdfOutput));
+            return redirect()->back()->with('success', 'Factura enviada correctamente a ' . $email);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error al enviar el correo: ' . $e->getMessage());
+        }
     }
 }

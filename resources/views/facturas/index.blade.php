@@ -163,6 +163,37 @@
         </x-modal>
 
         <!-- ============================================ -->
+        <!-- MODAL: Enviar Factura por Correo            -->
+        <!-- ============================================ -->
+        <x-modal name="send-mail" focusable>
+            <div class="p-6" x-show="selectedFactura">
+                <h2 class="text-lg font-medium text-gray-900 mb-2">
+                    <i class="fas fa-envelope mr-2 text-indigo-600"></i>
+                    Enviar Factura - <span x-text="selectedFactura?.numero_factura"></span>
+                </h2>
+                <p class="text-sm text-gray-600 mb-4">
+                    Se generará un PDF de la factura y se enviará por correo electrónico a <strong x-text="selectedFactura?.cliente_nombre"></strong>.
+                </p>
+
+                <form :action="'{{ url('facturas') }}/' + (selectedFactura?.id || '') + '/enviar-correo'" method="POST">
+                    @csrf
+                    <div>
+                        <x-input-label for="email" value="Correo Electrónico del Cliente" />
+                        <x-text-input id="email" name="email" type="email" class="mt-1 block w-full" placeholder="ejemplo@correo.com" required />
+                    </div>
+
+                    <div class="mt-6 flex justify-end gap-3">
+                        <x-secondary-button x-on:click="$dispatch('close')">Cancelar</x-secondary-button>
+                        <button type="submit"
+                                class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 transition">
+                            <i class="fas fa-paper-plane mr-2"></i> Enviar Factura
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </x-modal>
+
+        <!-- ============================================ -->
         <!-- MODAL: QR de Pago (Fullscreen elegante)      -->
         <!-- ============================================ -->
         <div x-show="qrModalOpen"
@@ -314,6 +345,12 @@
                     this.selectedFactura = JSON.parse(JSON.stringify(factura));
                     this.payMetodo = factura.metodo_pago || 'efectivo';
                     this.$dispatch('open-modal', 'pay-factura');
+                },
+
+                // Abrir modal de envío de correo
+                openSendMail(factura) {
+                    this.selectedFactura = JSON.parse(JSON.stringify(factura));
+                    this.$dispatch('open-modal', 'send-mail');
                 },
 
                 // Generar QR y abrir modal QR
