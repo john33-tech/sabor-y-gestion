@@ -329,19 +329,19 @@ class="mb-1">
         </a>
         @endif
         <!-- MIS PEDIDOS cliente -->
-            @if(in_array($role, ['cliente']))
-            <a href="{{ route('pedidos.misPedidos') }}"
-               class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
-      <i class="w-5 text-base transition-colors fas fa-shopping-cart text-white/80 sm:text-lg group-hover:text-white"></i>
-      <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)"
-            class="whitespace-nowrap">
+@if(in_array($role, ['cliente']))
+<a href="{{ route('pedidos.misPedidos') }}"
+   class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
 
-            Mis Pedidos
+    <i class="w-5 text-base transition-colors fas fa-shopping-cart text-white/80 sm:text-lg group-hover:text-white"></i>
 
-      </span>
+    <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)"
+          class="whitespace-nowrap">
+        Mis Pedidos
+    </span>
 
-            </a>
-            @endif
+</a>
+@endif
 
         <!-- Comandas -->
         @if(in_array($role, ['admin', 'cajero', 'cocinero']))

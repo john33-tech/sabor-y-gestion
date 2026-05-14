@@ -16,7 +16,7 @@
 
         </h1>
 
-        <a href="{{ route('pedidos.create') }}"
+        <a href="{{ route('pedidos.cliente') }}"
            class="bg-primary hover:bg-secondary text-white px-5 py-3 rounded-lg shadow-lg transition">
 
             <i class="fas fa-plus mr-2"></i>
@@ -176,32 +176,44 @@
                             </td>
 
                             <!-- Acciones -->
-                            <td class="px-6 py-4">
+                            <td class="px-4 py-2">
+                                <div class="flex gap-2">
 
-                                <div class="flex justify-center gap-2">
-
-                                    <!-- Ver -->
-                                    <a href="{{ route('pedidos.show', $pedido) }}"
-                                       class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm">
-
-                                        <i class="fas fa-eye"></i>
-
+                                    {{-- VER --}}
+                                    <a href="{{ route('pedidos.show.cliente', $pedido) }}"
+                                    class="px-3 py-1 rounded text-white text-sm"
+                                    style="background-color:#3B82F6;">
+                                    <i class="fas fa-eye"></i>
                                     </a>
 
-                                    <!-- Editar -->
+                                    {{-- EDITAR --}}
                                     @if(in_array($pedido->estado, ['pendiente', 'en_preparacion']))
+                                    <a href="{{ route('pedidos.edit.cliente', $pedido) }}"
+                                    class="px-3 py-1 rounded text-white text-sm"
+                                      style="background-color:#F59E0B;">
+                                    <i class="fas fa-edit"></i>
+                                    </a>
+                                    @endif
 
-                                        <a href="{{ route('pedidos.edit', $pedido) }}"
-                                           class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm">
+                                    {{-- CANCELAR --}}
+                                    @if($pedido->estado == 'pendiente')
+                                    <form action="{{ route('pedidos.destroy.cliente', $pedido) }}"
+                                     method="POST"
+                                      onsubmit="return confirm('¿Cancelar este pedido?')">
 
-                                            <i class="fas fa-edit"></i>
+                                         @csrf
+                                         @method('DELETE')
 
-                                        </a>
+                                         <button type="submit"
+                                         class="px-3 py-1 rounded text-white text-sm"
+                                         style="background-color:#EF4444;">
+                                         <i class="fas fa-trash"></i>
+                                         </button>
 
+                                    </form>
                                     @endif
 
                                 </div>
-
                             </td>
 
                         </tr>
@@ -220,7 +232,7 @@
 
                                 </p>
 
-                                <a href="{{ route('pedidos.create') }}"
+                                <a href="{{ route('pedidos.cliente')  }}"
                                    class="bg-primary hover:bg-secondary text-white px-5 py-3 rounded-lg shadow">
 
                                     Realizar mi primer pedido

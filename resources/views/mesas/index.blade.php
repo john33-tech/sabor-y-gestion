@@ -91,12 +91,31 @@
                                         @endif
                                     </div>
 
-                                    <!-- Información de reserva (solo un preview) -->
-                                    @if($mesa->estado == 'reservado' && $mesa->hora_reserva)
-                                        <div class="mt-3 pt-2 border-t border-gray-300 text-xs">
-                                            <div class="font-semibold text-gray-700">
-                                                <i class="far fa-calendar-alt mr-1"></i> {{ \Carbon\Carbon::parse($mesa->hora_reserva)->format('d/m H:i') }}
-                                            </div>
+                                    <!-- Información de reserva -->
+                                    @if($mesa->estado == 'reservado')
+                                        <div class="mt-3 pt-2 border-t border-gray-300 text-xs space-y-1">
+
+                                            @if($mesa->cliente_reserva)
+                                                <div class="font-semibold text-gray-700">
+                                                    <i class="fas fa-user mr-1"></i>
+                                                    {{ $mesa->cliente_reserva }}
+                                                </div>
+                                            @endif
+
+                                            @if($mesa->telefono_reserva)
+                                                <div class="text-gray-600">
+                                                    <i class="fas fa-phone mr-1"></i>
+                                                    {{ $mesa->telefono_reserva }}
+                                                </div>
+                                            @endif
+
+                                            @if($mesa->hora_reserva)
+                                                <div class="text-gray-600">
+                                                    <i class="far fa-calendar-alt mr-1"></i>
+                                                    {{ \Carbon\Carbon::parse($mesa->hora_reserva)->format('d/m/Y H:i') }}
+                                                </div>
+                                            @endif
+
                                         </div>
                                     @endif
                                 </div>

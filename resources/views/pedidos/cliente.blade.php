@@ -24,7 +24,7 @@
     <form action="{{ route('pedidos.store.cliente') }}" method="POST" id="pedidoForm">
         @csrf
         
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Panel Izquierdo - Platos -->
             <div class="lg:col-span-2">
                 <div class="bg-surface rounded-lg shadow-md" style="border: 1px solid #FED7AA;">
@@ -174,13 +174,7 @@
                         <!-- Tipo de Pedido -->
                         <div class="mb-6">
                             <label class="block text-sm font-medium mb-2" style="color: #111827;">Tipo de Pedido</label>
-                            <div class="grid grid-cols-3 gap-2">
-                                <button type="button" class="tipo-btn p-2 rounded-lg border-2 transition-all text-center"
-                                    data-tipo="mesa"
-                                    style="border-color: #C2410C; background-color: #FFF7ED; color: #C2410C;">
-                                    <i class="fas fa-chair text-lg"></i>
-                                    <span class="block text-sm mt-1">Mesa</span>
-                                </button>
+                            <div class="grid grid-cols-2 gap-2">
                                 <button type="button" class="tipo-btn p-2 rounded-lg border-2 transition-all text-center"
                                     data-tipo="para_llevar"
                                     style="border-color: #FED7AA; background-color: #FFFFFF; color: #78716C;">
@@ -194,24 +188,12 @@
                                     <span class="block text-sm mt-1">Delivery</span>
                                 </button>
                             </div>
-                            <input type="hidden" name="tipo_pedido" id="tipo_pedido_input" value="mesa">
+                            <input type="hidden" 
+                                name="tipo_pedido"
+                                id="tipo_pedido_input"
+                                value="{{ isset($pedido) ? $pedido->tipo_pedido : 'para_llevar' }}">
                         </div>
 
-                        <!-- Mesa -->
-                        <div id="mesaContainer" class="mb-6">
-                            <label class="block text-sm font-medium mb-2" style="color: #111827;">
-                                <i class="fas fa-chair mr-1"></i> Seleccionar Mesa
-                            </label>
-                            <select name="mesa_id" class="w-full px-3 py-2 rounded-lg outline-none transition-all"
-                                style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
-                                <option value="">-- Seleccione una mesa --</option>
-                                @foreach($mesas as $mesa)
-                                    <option value="{{ $mesa->id }}">
-                                        Mesa {{ $mesa->numero_mesa }} - Cap. {{ $mesa->capacidad }} personas
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
 
                         <!-- Datos del Cliente -->
                         <div id="clienteContainer" class="hidden mb-6 space-y-3">
@@ -219,26 +201,32 @@
                                 <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                     <i class="fas fa-user mr-1"></i> Nombre del Cliente *
                                 </label>
-                                <input type="text" name="cliente_nombre" 
-                                    class="w-full px-3 py-2 rounded-lg outline-none transition-all"
-                                    style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
+                                <input type="text" 
+                                    name="cliente_nombre"
+                                    value="{{ $usuario->name }}"
+                                    readonly
+                                    class="w-full px-3 py-2 rounded-lg outline-none transition-all bg-gray-100"
+                                    style="border: 1px solid #FED7AA; color: #111827;">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                     <i class="fas fa-phone mr-1"></i> Teléfono *
                                 </label>
-                                <input type="tel" name="cliente_telefono" 
+                                <input type="tel"
+                                    name="cliente_telefono"
+                                    value="{{ $usuario->telefono ?? '' }}"
                                     class="w-full px-3 py-2 rounded-lg outline-none transition-all"
-                                    style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
+                                    style="border: 1px solid #FED7AA; color: #111827;">
                             </div>
                             
                             <div id="direccionContainer" class="hidden">
                                 <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                     <i class="fas fa-map-marker-alt mr-1"></i> Dirección de Entrega *
                                 </label>
-                                <textarea name="direccion" id="direccion" rows="3"
+                                <textarea name="direccion"
+                                    rows="2"
                                     class="w-full px-3 py-2 rounded-lg outline-none transition-all"
-                                    style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;"></textarea>
+                                    style="border: 1px solid #FED7AA; color: #111827;">{{ $usuario->direccion ?? '' }}</textarea>
                             </div>
                         </div>
 
@@ -315,7 +303,7 @@
                                 style="background-color: #C2410C;">
                                 <i class="fas fa-check-circle"></i> Crear Pedido
                             </button>
-                            <a href="{{ route('pedidos.index') }}" class="flex-1 text-white py-2 rounded-lg transition text-center flex items-center justify-center gap-2 hover:opacity-90"
+                            <a href="{{ route('pedidos.misPedidos') }}" class="flex-1 text-white py-2 rounded-lg transition text-center flex items-center justify-center gap-2 hover:opacity-90"
                                 style="background-color: #78716C;">
                                 <i class="fas fa-times-circle"></i> Cancelar
                             </a>
@@ -334,272 +322,516 @@ let map;
 let marker;
 let searchTimeout;
 
-// Funciones del mapa
+// ======================
+// FUNCIONES DEL MAPA
+// ======================
 function initMap() {
+
     map = L.map('map').setView([-16.5000, -68.1500], 13);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
     map.on('click', function(e) {
-        document.getElementById('latitud').value = e.latlng.lat;
-        document.getElementById('longitud').value = e.latlng.lng;
-        if(marker) map.removeLayer(marker);
-        marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        document.getElementById('latitud').value = lat;
+        document.getElementById('longitud').value = lng;
+
+        if (marker) {
+            map.removeLayer(marker);
+        }
+
+        marker = L.marker([lat, lng]).addTo(map);
     });
 }
 
 function toggleMap() {
+
     const tipoPedido = document.getElementById('tipo_pedido_input').value;
+
     const mapContainer = document.getElementById('delivery-map-container');
-    
-    if(tipoPedido === 'delivery') {
+
+    if (tipoPedido === 'delivery') {
+
         mapContainer.classList.remove('hidden');
-        setTimeout(() => { if(!map) initMap(); else map.invalidateSize(); }, 200);
+
+        setTimeout(() => {
+
+            if (!map) {
+                initMap();
+            } else {
+                map.invalidateSize();
+            }
+
+        }, 200);
+
     } else {
+
         mapContainer.classList.add('hidden');
     }
 }
 
-// Funciones del carrito
+// ======================
+// FUNCIONES DEL CARRITO
+// ======================
 function renderItems() {
+
     const container = document.getElementById('itemsList');
-    
+
     if (!items.length) {
-        container.innerHTML = `<div class="text-center py-8" style="color: #78716C;"><i class="fas fa-shopping-cart text-4xl mb-2 block"></i><p>No hay items agregados</p></div>`;
+
+        container.innerHTML = `
+            <div class="text-center py-8" style="color: #78716C;">
+                <i class="fas fa-shopping-cart text-4xl mb-2 block"></i>
+                <p>No hay items agregados</p>
+            </div>
+        `;
+
         updateTotals();
+
         return;
     }
-    
+
     container.innerHTML = items.map((item, index) => `
         <div class="bg-white border rounded-lg p-3 mb-2 shadow-sm" style="border-color: #FED7AA;">
+
             <div class="flex justify-between items-start mb-2">
+
                 <div class="flex-1">
-                    <div class="font-semibold" style="color: #111827;">${escapeHtml(item.nombre)}</div>
-                    <div class="font-bold text-sm mt-1" style="color: #C2410C;">Bs. ${item.precio_unitario.toFixed(2)}</div>
+
+                    <div class="font-semibold" style="color: #111827;">
+                        ${escapeHtml(item.nombre)}
+                    </div>
+
+                    <div class="font-bold text-sm mt-1" style="color: #C2410C;">
+                        Bs. ${item.precio_unitario.toFixed(2)}
+                    </div>
+
                 </div>
-                <button type="button" onclick="removeItem(${index})" class="hover:opacity-70 ml-2" style="color: #C2410C;">
+
+                <button
+                    type="button"
+                    onclick="removeItem(${index})"
+                    class="hover:opacity-70 ml-2"
+                    style="color: #C2410C;"
+                >
                     <i class="fas fa-trash"></i>
                 </button>
+
             </div>
+
             <div class="flex items-center gap-2 mt-2">
-                <label class="text-sm" style="color: #78716C;">Cant:</label>
-                <input type="number" value="${item.cantidad}" min="1" class="w-16 px-2 py-1 border rounded text-center outline-none" style="border-color: #FED7AA;" onchange="updateItemQuantity(${index}, this.value)">
-                <input type="text" placeholder="Notas..." value="${escapeHtml(item.notas)}" class="flex-1 px-2 py-1 border rounded text-sm outline-none" style="border-color: #FED7AA;" onblur="updateItemNotes(${index}, this.value)">
+
+                <label class="text-sm" style="color: #78716C;">
+                    Cant:
+                </label>
+
+                <input
+                    type="number"
+                    value="${item.cantidad}"
+                    min="1"
+                    class="w-16 px-2 py-1 border rounded text-center outline-none"
+                    style="border-color: #FED7AA;"
+                    onchange="updateItemQuantity(${index}, this.value)"
+                >
+
+                <input
+                    type="text"
+                    placeholder="Notas..."
+                    value="${escapeHtml(item.notas)}"
+                    class="flex-1 px-2 py-1 border rounded text-sm outline-none"
+                    style="border-color: #FED7AA;"
+                    onblur="updateItemNotes(${index}, this.value)"
+                >
+
             </div>
+
             <input type="hidden" name="items[${index}][plato_id]" value="${item.plato_id}">
             <input type="hidden" name="items[${index}][cantidad]" value="${item.cantidad}">
             <input type="hidden" name="items[${index}][notas]" value="${escapeHtml(item.notas)}">
+
         </div>
     `).join('');
-    
+
     updateTotals();
 }
 
 function addItem(platoId, nombre, precio, tieneStock) {
+
     if (!tieneStock) {
-        showNotification('❌ No hay suficiente stock para: ' + nombre, 'error');
+
+        showNotification(
+            '❌ No hay suficiente stock para: ' + nombre,
+            'error'
+        );
+
         return false;
     }
-    
-    const existingItem = items.find(item => item.plato_id == platoId);
-    
+
+    const existingItem = items.find(
+        item => item.plato_id == platoId
+    );
+
     if (existingItem) {
+
         existingItem.cantidad++;
-        showNotification('✓ Cantidad actualizada: ' + nombre, 'success');
+
+        showNotification(
+            '✓ Cantidad actualizada: ' + nombre,
+            'success'
+        );
+
     } else {
-        items.push({ plato_id: platoId, nombre: nombre, precio_unitario: precio, cantidad: 1, notas: '' });
-        showNotification('✓ Agregado al carrito: ' + nombre, 'success');
+
+        items.push({
+            plato_id: platoId,
+            nombre: nombre,
+            precio_unitario: precio,
+            cantidad: 1,
+            notas: ''
+        });
+
+        showNotification(
+            '✓ Agregado al carrito: ' + nombre,
+            'success'
+        );
     }
-    
+
     renderItems();
+
     return true;
 }
 
 function removeItem(index) {
+
     const itemName = items[index].nombre;
+
     items.splice(index, 1);
+
     renderItems();
-    showNotification('Eliminado: ' + itemName, 'info');
+
+    showNotification(
+        'Eliminado: ' + itemName,
+        'info'
+    );
 }
 
 function updateItemQuantity(index, newQuantity) {
+
     const quantity = parseInt(newQuantity);
+
     if (quantity > 0) {
+
         items[index].cantidad = quantity;
+
         renderItems();
     }
 }
 
 function updateItemNotes(index, notes) {
+
     items[index].notas = notes;
 }
 
 function updateTotals() {
-    let subtotal = items.reduce((sum, item) => sum + (item.precio_unitario * item.cantidad), 0);
-    let descuento = parseFloat(document.querySelector('input[name="descuento"]').value) || 0;
+
+    let subtotal = items.reduce((sum, item) => {
+        return sum + (item.precio_unitario * item.cantidad);
+    }, 0);
+
+    let descuento = parseFloat(
+    document.querySelector('input[name="descuento"]').value
+) || 0;
+
     let impuesto = subtotal * 0.13;
+
     let total = subtotal + impuesto - descuento;
-    
-    document.getElementById('subtotal').innerHTML = `Bs. ${subtotal.toFixed(2)}`;
-    document.getElementById('impuesto').innerHTML = `Bs. ${impuesto.toFixed(2)}`;
-    document.getElementById('descuentoDisplay').innerHTML = `Bs. ${descuento.toFixed(2)}`;
-    document.getElementById('total').innerHTML = `Bs. ${total.toFixed(2)}`;
+
+    document.getElementById('subtotal').innerHTML =
+        `Bs. ${subtotal.toFixed(2)}`;
+
+    document.getElementById('impuesto').innerHTML =
+        `Bs. ${impuesto.toFixed(2)}`;
+
+    document.getElementById('descuentoDisplay').innerHTML =
+        `Bs. ${descuento.toFixed(2)}`;
+
+    document.getElementById('total').innerHTML =
+        `Bs. ${total.toFixed(2)}`;
 }
 
 function showNotification(message, type = 'success') {
+
     const notification = document.createElement('div');
-    notification.className = 'fixed top-20 right-4 z-50 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in';
-    notification.style.backgroundColor = type === 'success' ? '#10B981' : (type === 'error' ? '#EF4444' : '#C2410C');
-    notification.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : (type === 'error' ? 'exclamation-circle' : 'info-circle')} mr-2"></i>${message}`;
+
+    notification.className =
+        'fixed top-20 right-4 z-50 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in';
+
+    notification.style.backgroundColor =
+        type === 'success'
+            ? '#10B981'
+            : (
+                type === 'error'
+                    ? '#EF4444'
+                    : '#C2410C'
+            );
+
+    notification.innerHTML = `
+        <i class="fas fa-${
+            type === 'success'
+                ? 'check-circle'
+                : (
+                    type === 'error'
+                        ? 'exclamation-circle'
+                        : 'info-circle'
+                )
+        } mr-2"></i>${message}
+    `;
+
     document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
+
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
 }
 
 function escapeHtml(text) {
+
     if (!text) return '';
+
     const div = document.createElement('div');
+
     div.textContent = text;
+
     return div.innerHTML;
 }
 
-// Eventos y configuración inicial
+// ======================
+// EVENTOS
+// ======================
 document.addEventListener('DOMContentLoaded', function() {
-    // Tipo de pedido
+
     const tipoBtns = document.querySelectorAll('.tipo-btn');
+
     const tipoInput = document.getElementById('tipo_pedido_input');
-    const mesaContainer = document.getElementById('mesaContainer');
-    const clienteContainer = document.getElementById('clienteContainer');
-    const direccionContainer = document.getElementById('direccionContainer');
-    
+
+    const clienteContainer =
+        document.getElementById('clienteContainer');
+
+    const direccionContainer =
+        document.getElementById('direccionContainer');
+
     function updateTipoPedido(tipo) {
+
         tipoInput.value = tipo;
+
         toggleMap();
-        
+
         tipoBtns.forEach(btn => {
+
             const btnTipo = btn.dataset.tipo;
+
             if (btnTipo === tipo) {
+
                 btn.style.borderColor = '#C2410C';
                 btn.style.backgroundColor = '#FFF7ED';
                 btn.style.color = '#C2410C';
+
             } else {
+
                 btn.style.borderColor = '#FED7AA';
                 btn.style.backgroundColor = '#FFFFFF';
                 btn.style.color = '#78716C';
             }
         });
-        
-        if (tipo === 'mesa') {
-            mesaContainer.classList.remove('hidden');
-            clienteContainer.classList.add('hidden');
-        } else {
-            mesaContainer.classList.add('hidden');
-            clienteContainer.classList.remove('hidden');
-            direccionContainer.classList.toggle('hidden', tipo !== 'delivery');
-        }
+
+        clienteContainer.classList.remove('hidden');
+
+        direccionContainer.classList.toggle(
+            'hidden',
+            tipo !== 'delivery'
+        );
     }
-    
+
     tipoBtns.forEach(btn => {
+
         btn.addEventListener('click', function() {
+
             updateTipoPedido(this.dataset.tipo);
         });
     });
-    
-    updateTipoPedido('mesa');
-    
-    // Evento para descuento
-    document.querySelector('input[name="descuento"]').addEventListener('input', updateTotals);
-    
-    // Event delegation para botones agregar
-    document.getElementById('platosContainer').addEventListener('click', function(e) {
-        let btn = e.target.closest('.agregar-plato');
+
+   updateTipoPedido('para_llevar');
+
+    // ======================
+    // AGREGAR PLATOS
+    // ======================
+    document.getElementById('platosContainer')
+    .addEventListener('click', function(e) {
+
+        const btn = e.target.closest('.agregar-plato');
+
         if (btn && !btn.disabled) {
+
             e.preventDefault();
+
             const platoItem = btn.closest('.plato-item');
-            addItem(btn.dataset.id, btn.dataset.nombre, parseFloat(btn.dataset.precio), platoItem.dataset.tieneStock === 'true');
+
+            addItem(
+                btn.dataset.id,
+                btn.dataset.nombre,
+                parseFloat(btn.dataset.precio),
+                platoItem.dataset.tieneStock === 'true'
+            );
         }
     });
-    
-    // Buscador
+
+    // ======================
+    // BUSCADOR
+    // ======================
     const buscador = document.getElementById('buscarPlato');
+
     if (buscador) {
+
         buscador.addEventListener('input', function(e) {
+
             clearTimeout(searchTimeout);
+
             searchTimeout = setTimeout(() => {
-                const term = e.target.value.toLowerCase().trim();
-                document.querySelectorAll('.plato-item').forEach(item => {
-                    const nombre = item.dataset.nombre.toLowerCase();
-                    item.style.display = term === '' || nombre.includes(term) ? '' : 'none';
+
+                const term = e.target.value
+                    .toLowerCase()
+                    .trim();
+
+                document.querySelectorAll('.plato-item')
+                .forEach(item => {
+
+                    const nombre = item.dataset.nombre
+                        .toLowerCase();
+
+                    item.style.display =
+                        term === '' || nombre.includes(term)
+                            ? ''
+                            : 'none';
                 });
+
             }, 300);
         });
     }
-    
-    // Validación del formulario
-    document.getElementById('pedidoForm').addEventListener('submit', async function(e) {
+
+    // ======================
+    // VALIDAR FORMULARIO
+    // ======================
+    document.getElementById('pedidoForm')
+    .addEventListener('submit', async function(e) {
+
         if (items.length === 0) {
+
             e.preventDefault();
-            showNotification('❌ Debe agregar al menos un plato al pedido', 'error');
+
+            showNotification(
+                '❌ Debe agregar al menos un plato al pedido',
+                'error'
+            );
+
             return false;
         }
-        
-        const submitBtn = this.querySelector('[type="submit"]');
+
+        const submitBtn =
+            this.querySelector('[type="submit"]');
+
         const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Verificando stock...';
+
+        submitBtn.innerHTML =
+            '<i class="fas fa-spinner fa-spin mr-2"></i> Verificando stock...';
+
         submitBtn.disabled = true;
-        
-        let stockInsuficiente = [];
-        for (const item of items) {
-            try {
-                const response = await fetch('/api/verificar-stock-plato', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                    body: JSON.stringify({ plato_id: item.plato_id, cantidad: item.cantidad })
-                });
-                const data = await response.json();
-                if (!data.disponible) stockInsuficiente.push(`${item.nombre} (x${item.cantidad}) - ${data.mensaje}`);
-            } catch (error) { console.error(error); }
-        }
-        
-        if (stockInsuficiente.length > 0) {
+
+        const tipoPedido = tipoInput.value;
+
+        const nombre = document
+            .querySelector('input[name="cliente_nombre"]')
+            .value
+            .trim();
+
+        const telefono = document
+            .querySelector('input[name="cliente_telefono"]')
+            .value
+            .trim();
+
+        if (!nombre || !telefono) {
+
             e.preventDefault();
-            showNotification('❌ Stock insuficiente:\n' + stockInsuficiente.join('\n'), 'error');
+
+            showNotification(
+                '❌ Debe ingresar nombre y teléfono',
+                'error'
+            );
+
             submitBtn.innerHTML = originalText;
+
             submitBtn.disabled = false;
+
             return false;
         }
-        
-        const tipoPedido = tipoInput.value;
-        if (tipoPedido === 'mesa') {
-            if (!document.querySelector('select[name="mesa_id"]').value) {
+
+        if (tipoPedido === 'delivery') {
+
+            const direccion = document
+                .querySelector('textarea[name="direccion"]')
+                .value
+                .trim();
+
+            if (!direccion) {
+
                 e.preventDefault();
-                showNotification('❌ Debe seleccionar una mesa', 'error');
+
+                showNotification(
+                    '❌ Debe ingresar dirección',
+                    'error'
+                );
+
                 submitBtn.innerHTML = originalText;
+
                 submitBtn.disabled = false;
+
                 return false;
             }
-        } else {
-            const nombre = document.querySelector('input[name="cliente_nombre"]').value.trim();
-            const telefono = document.querySelector('input[name="cliente_telefono"]').value.trim();
-            if (!nombre || !telefono) {
+
+            const latitud =
+                document.getElementById('latitud').value;
+
+            const longitud =
+                document.getElementById('longitud').value;
+
+            if (!latitud || !longitud) {
+
                 e.preventDefault();
-                showNotification('❌ Debe ingresar nombre y teléfono del cliente', 'error');
+
+                showNotification(
+                    '❌ Debe seleccionar ubicación en el mapa',
+                    'error'
+                );
+
                 submitBtn.innerHTML = originalText;
+
                 submitBtn.disabled = false;
-                return false;
-            }
-            if (tipoPedido === 'delivery' && !document.querySelector('textarea[name="direccion"]').value.trim()) {
-                e.preventDefault();
-                showNotification('❌ Debe ingresar una dirección de entrega', 'error');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
+
                 return false;
             }
         }
-        
+
+        submitBtn.innerHTML =
+            '<i class="fas fa-check-circle mr-2"></i> Creando pedido...';
+
         return true;
     });
 });
+
 
 // Funciones globales
 window.removeItem = removeItem;
