@@ -559,6 +559,9 @@ class PedidoController extends Controller
 
         $pedido->actualizarEstado($request->estado);
 
+        // Emitir evento para actualizar notificaciones en tiempo real
+        event(new \App\Events\PedidoEstadoActualizado($pedido));
+
         // Limpiar caché
         Cache::forget('low_stock_count_direct');
 
