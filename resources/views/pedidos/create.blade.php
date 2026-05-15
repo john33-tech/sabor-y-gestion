@@ -21,7 +21,7 @@
         </div>
     </div>
 
-    <form action="{{ route('pedidos.store.cliente') }}" method="POST" id="pedidoForm">
+    <form action="{{ route('pedidos.store') }}" method="POST" id="pedidoForm">
         @csrf
         
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

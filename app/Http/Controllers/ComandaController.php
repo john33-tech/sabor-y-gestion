@@ -92,7 +92,7 @@ class ComandaController extends Controller
             // Descontar inventario
             foreach ($comanda->detalles as $detalle) {
                 if ($detalle->plato) {
-                    $detalle->plato->descontarInventario();
+                    $detalle->plato->descontarInventario($detalle->cantidad);
                 }
             }
             

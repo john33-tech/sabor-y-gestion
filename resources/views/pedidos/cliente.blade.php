@@ -84,57 +84,7 @@
                                                         </p>
                                                     @endif
                                                     
-                                                    <!-- Mostrar información de stock de ingredientes cuando no hay stock -->
-                                                    @if(!$tieneStock && count($stockInsuficiente) > 0)
-                                                        <div class="mt-2 p-2 rounded text-xs" style="background-color: #FEF2F2; border: 1px solid #FECACA;">
-                                                            <p class="font-semibold text-red-700 mb-1">
-                                                                <i class="fas fa-box mr-1"></i> No disponible por:
-                                                            </p>
-                                                            @foreach($stockInsuficiente as $ingrediente)
-                                                                <p class="text-red-600 ml-2">
-                                                                    • {{ $ingrediente['nombre'] }}: 
-                                                                    @if(isset($ingrediente['motivo']))
-                                                                        {{ $ingrediente['motivo'] }}
-                                                                    @else
-                                                                        disponible {{ number_format($ingrediente['disponible'], 2) }} {{ $ingrediente['unidad'] }} 
-                                                                        (necesita {{ number_format($ingrediente['necesario'], 2) }} {{ $ingrediente['unidad'] }})
-                                                                    @endif
-                                                                </p>
-                                                            @endforeach
-                                                        </div>
-                                                    @endif
-                                                    
-                                                    <!-- Mostrar stock de ingredientes cuando SI hay stock -->
-                                                    @if($tieneStock && isset($plato->ingredientes) && count($plato->ingredientes) > 0)
-                                                        <div class="mt-2">
-                                                            <div class="flex flex-wrap gap-1 text-xs">
-                                                                @foreach($plato->ingredientes as $ingrediente)
-                                                                    @php
-                                                                        $inventario = $ingrediente->inventario;
-                                                                        $stockActual = $inventario?->cantidad_actual ?? 0;
-                                                                        $stockMinimo = $inventario?->stock_minimo ?? 0;
-                                                                        $isLowStock = $stockActual <= $stockMinimo;
-                                                                    @endphp
-                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full {{ $isLowStock ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700' }}" style="font-size: 10px;">
-                                                                        <i class="fas {{ $isLowStock ? 'fa-exclamation-triangle' : 'fa-check-circle' }} mr-0.5 text-xs"></i>
-                                                                        {{ $ingrediente->nombre }}: {{ number_format($stockActual, 0) }} {{ $ingrediente->unidad_medida }}
-                                                                    </span>
-                                                                @endforeach
-                                                            </div>
-                                                        </div>
-                                                    @endif
-                                                    
-                                                    <!-- Mensaje para platos sin ingredientes registrados -->
-                                                    @if($plato->ingredientes->count() === 0)
-                                                        <div class="mt-2 p-2 rounded text-xs" style="background-color: #FEF2F2; border: 1px solid #FECACA;">
-                                                            <p class="font-semibold text-red-700 mb-1">
-                                                                <i class="fas fa-exclamation-circle mr-1"></i> Configuración incompleta:
-                                                            </p>
-                                                            <p class="text-red-600 ml-2">
-                                                                Este plato no tiene ingredientes registrados. Contacte al administrador.
-                                                            </p>
-                                                        </div>
-                                                    @endif
+
                                                 </div>
                                                 
                                                 <button type="button"

@@ -3,6 +3,8 @@
 @section('title', 'Editar Pedido #' . $pedido->numero_pedido)
 
 @section('content')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="mb-8">
@@ -110,39 +112,7 @@
                                                         </p>
                                                     @endif
                                                     
-                                                    @if(!$tieneStock && count($stockInsuficiente) > 0)
-                                                        <div class="mt-2 p-2 rounded text-xs" style="background-color: #FEF2F2; border: 1px solid #FECACA;">
-                                                            <p class="font-semibold text-red-700 mb-1">
-                                                                <i class="fas fa-box mr-1"></i> Stock insuficiente:
-                                                            </p>
-                                                            @foreach($stockInsuficiente as $ingrediente)
-                                                                <p class="text-red-600 ml-2">
-                                                                    • {{ $ingrediente['nombre'] }}: 
-                                                                    disponible {{ number_format($ingrediente['disponible'], 2) }} {{ $ingrediente['unidad'] }} 
-                                                                    (necesita {{ number_format($ingrediente['necesario'], 2) }} {{ $ingrediente['unidad'] }})
-                                                                </p>
-                                                            @endforeach
-                                                        </div>
-                                                    @endif
-                                                    
-                                                    @if($tieneStock && isset($plato->ingredientes) && count($plato->ingredientes) > 0)
-                                                        <div class="mt-2">
-                                                            <div class="flex flex-wrap gap-1 text-xs">
-                                                                @foreach($plato->ingredientes as $ingrediente)
-                                                                    @php
-                                                                        $inventario = $ingrediente->inventario;
-                                                                        $stockActual = $inventario?->cantidad_actual ?? 0;
-                                                                        $stockMinimo = $inventario?->stock_minimo ?? 0;
-                                                                        $isLowStock = $stockActual <= $stockMinimo;
-                                                                    @endphp
-                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full {{ $isLowStock ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700' }}" style="font-size: 10px;">
-                                                                        <i class="fas {{ $isLowStock ? 'fa-exclamation-triangle' : 'fa-check-circle' }} mr-0.5 text-xs"></i>
-                                                                        {{ $ingrediente->nombre }}: {{ number_format($stockActual, 0) }} {{ $ingrediente->unidad_medida }}
-                                                                    </span>
-                                                                @endforeach
-                                                            </div>
-                                                        </div>
-                                                    @endif
+
                                                 </div>
                                                 
                                                 <button type="button"
@@ -179,6 +149,19 @@
                     </div>
 
                     <div class="p-4" style="background-color: #FFFFFF;">
+
+                        @if($pedido->tipo_pedido == 'delivery')
+                        <!-- MAPA Delivery -->
+                        <div id="delivery-map-container" class="mb-6">
+                            <label class="block text-sm font-medium mb-2 mt-4" style="color: #111827;">
+                                <i class="fas fa-map mr-1"></i> Editar ubicación de entrega
+                            </label>
+                            <div id="map" style="height: 350px;" class="rounded-lg border z-0"></div>
+                            <input type="hidden" name="latitud" id="latitud" value="{{ $pedido->latitud }}">
+                            <input type="hidden" name="longitud" id="longitud" value="{{ $pedido->longitud }}">
+                            <div class="mt-2 text-xs text-gray-500">Haz clic en el mapa para actualizar tu ubicación.</div>
+                        </div>
+                        @endif
 
                         <!-- Items del Pedido -->
                         <div class="mb-6">
@@ -468,6 +451,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     renderItems();
 });
+
+@if($pedido->tipo_pedido == 'delivery')
+    let map = L.map('map').setView([{{ $pedido->latitud ?? -16.5000 }}, {{ $pedido->longitud ?? -68.1500 }}], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = L.marker([{{ $pedido->latitud ?? -16.5000 }}, {{ $pedido->longitud ?? -68.1500 }}]).addTo(map);
+
+    map.on('click', function(e) {
+        document.getElementById('latitud').value = e.latlng.lat;
+        document.getElementById('longitud').value = e.latlng.lng;
+        if(marker) map.removeLayer(marker);
+        marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+    });
+@endif
 
 // Funciones globales
 window.removeItem = removeItem;

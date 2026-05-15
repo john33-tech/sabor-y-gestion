@@ -118,12 +118,25 @@
                 <div>
                     @if (Route::has('login'))
                         @auth
-                            <a href="{{ url('/dashboard/administrador') }}"
+                            @php
+                                $user = auth()->user();
+
+                                // Definir URLs según rol
+                                $panelUrl = match($user->role) {
+                                    'admin' => url('/dashboard/administrador'),
+                                    'mesero' => url('/dashboard/mesero'),
+                                    'cajero' => url('/dashboard/cajero'),
+                                    'cliente' => url('/dashboard/cliente'),
+                                    default => url('/'),
+                                };
+                            @endphp
+
+                        <a href="{{ $panelUrl   }}"
                             class="group inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 md:px-6 md:py-2.5 md:text-base bg-gradient-to-r from-primary to-secondary rounded-xl shadow-lg hover:shadow-xl hover:scale-105">
-                                <i class="text-sm transition-transform fas fa-tachometer-alt group-hover:rotate-12"></i>
-                                <span>Panel de Control</span>
-                            </a>
-                        @else
+                            <i class="text-sm transition-transform fas fa-tachometer-alt group-hover:rotate-12"></i>
+                            <span>Panel de Control</span>
+                        </a>
+                    @else
                             <a href="{{ route('login') }}"
                             class="group inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 md:px-6 md:py-2.5 md:text-base bg-gradient-to-r from-primary to-secondary rounded-xl shadow-lg hover:shadow-xl hover:scale-105">
                                 <i class="fas fa-sign-in-alt text-sm group-hover:translate-x-0.5 transition-transform"></i>

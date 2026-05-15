@@ -3,6 +3,8 @@
 @section('title', 'Editar Pedido #' . $pedido->numero_pedido)
 
 @section('content')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <div class="container mx-auto px-4 py-8">
     <!-- Header -->
     <div class="mb-8">
@@ -207,6 +209,19 @@
                                 Cambiar estado también actualizará el inventario automáticamente
                             </p>
                         </div>
+
+                        @if($pedido->tipo_pedido == 'delivery')
+                        <!-- MAPA Delivery -->
+                        <div id="delivery-map-container" class="mb-6">
+                            <label class="block text-sm font-medium mb-2 mt-4" style="color: #111827;">
+                                <i class="fas fa-map mr-1"></i> Editar ubicación de entrega
+                            </label>
+                            <div id="map" style="height: 350px;" class="rounded-lg border z-0"></div>
+                            <input type="hidden" name="latitud" id="latitud" value="{{ $pedido->latitud }}">
+                            <input type="hidden" name="longitud" id="longitud" value="{{ $pedido->longitud }}">
+                            <div class="mt-2 text-xs text-gray-500">Haz clic en el mapa para actualizar la ubicación.</div>
+                        </div>
+                        @endif
 
                         <!-- Items del Pedido -->
                         <div class="mb-6">
@@ -496,6 +511,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     renderItems();
 });
+
+@if($pedido->tipo_pedido == 'delivery')
+    let map = L.map('map').setView([{{ $pedido->latitud ?? -16.5000 }}, {{ $pedido->longitud ?? -68.1500 }}], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = L.marker([{{ $pedido->latitud ?? -16.5000 }}, {{ $pedido->longitud ?? -68.1500 }}]).addTo(map);
+
+    map.on('click', function(e) {
+        document.getElementById('latitud').value = e.latlng.lat;
+        document.getElementById('longitud').value = e.latlng.lng;
+        if(marker) map.removeLayer(marker);
+        marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+    });
+@endif
 
 // Funciones globales
 window.removeItem = removeItem;

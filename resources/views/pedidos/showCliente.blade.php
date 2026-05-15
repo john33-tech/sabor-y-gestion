@@ -62,6 +62,34 @@
 
     </div>
 
+    @if($pedido->tipo_pedido == 'delivery' && $pedido->latitud)
+    <div class="bg-white rounded-xl shadow border overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b" style="background-color:#FFF7ED;">
+            <h2 class="text-xl font-bold" style="color:#C2410C;">
+                <i class="fas fa-map-marker-alt mr-2"></i>
+                Ubicación de Entrega
+            </h2>
+        </div>
+        <div class="p-6">
+            <div id="mapShow" style="height: 350px;" class="border border-gray-200 rounded-lg z-0"></div>
+        </div>
+    </div>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mapShow = L.map('mapShow').setView([{{ $pedido->latitud }}, {{ $pedido->longitud }}], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(mapShow);
+            L.marker([{{ $pedido->latitud }}, {{ $pedido->longitud }}])
+                .addTo(mapShow)
+                .bindPopup('Ubicación de entrega')
+                .openPopup();
+        });
+    </script>
+    @endif
+
     {{-- DETALLES --}}
     <div class="bg-white rounded-xl shadow border overflow-hidden">
 

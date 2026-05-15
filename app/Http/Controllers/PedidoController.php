@@ -178,6 +178,12 @@ class PedidoController extends Controller
             'longitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
         ]);
 
+        // Verificar stock antes de proceder
+        $stockCheck = $this->verificarStockItems($request->items);
+        if (!$stockCheck['success']) {
+            return back()->with('error', $stockCheck['mensaje'])->withInput();
+        }
+
         DB::beginTransaction();
 
         try {
@@ -303,6 +309,8 @@ class PedidoController extends Controller
             'cliente_nombre'           => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:255',
             'cliente_telefono'         => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:20',
             'direccion'                => 'required_if:tipo_pedido,delivery|nullable|string|max:500',
+            'latitud'                  => 'required_if:tipo_pedido,delivery|nullable|numeric',
+            'longitud'                 => 'required_if:tipo_pedido,delivery|nullable|numeric',
             'items'                    => 'required|array|min:1',
             'items.*.plato_id'         => 'required|exists:platos,id',
             'items.*.cantidad'         => 'required|integer|min:1',
@@ -333,7 +341,7 @@ class PedidoController extends Controller
                 $detallesAntiguos = $pedido->detalles()->with('plato.ingredientes')->get();
                 foreach ($detallesAntiguos as $detalle) {
                     if ($detalle->plato) {
-                        $detalle->plato->revertirInventario();
+                        $detalle->plato->revertirInventario($detalle->cantidad);
                     }
                 }
             }
@@ -354,6 +362,12 @@ class PedidoController extends Controller
 
             $pedido->direccion = $request->tipo_pedido === 'delivery'
                 ? $request->direccion
+                : null;
+            $pedido->latitud = $request->tipo_pedido === 'delivery'
+                ? $request->latitud
+                : null;
+            $pedido->longitud = $request->tipo_pedido === 'delivery'
+                ? $request->longitud
                 : null;
 
             $pedido->descuento = $request->descuento ?? 0;
@@ -394,8 +408,8 @@ class PedidoController extends Controller
             if (in_array($pedido->estado, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
                 foreach ($request->items as $item) {
                     $plato = Plato::find($item['plato_id']);
-                    for ($i = 0; $i < $item['cantidad']; $i++) {
-                        $plato->descontarInventario();
+                    if ($plato) {
+                        $plato->descontarInventario($item['cantidad']);
                     }
                 }
             }
@@ -432,20 +446,43 @@ class PedidoController extends Controller
             //event(new \App\Events\PedidoActualizado($pedido));
         }
     }
-    // Método para verificar stock antes de actualizar
+    // Método para verificar stock antes de actualizar o guardar
     private function verificarStockItems($items)
     {
-        foreach ($items as $item) {
-            $plato = Plato::find($item['plato_id']);
+        $ingredientesNecesarios = [];
 
-            // Verificar stock para cada unidad del plato
-            for ($i = 0; $i < $item['cantidad']; $i++) {
-                if (!$plato->verificarStock()) {
-                    return [
-                        'success' => false,
-                        'mensaje' => "No hay suficiente stock para el plato: {$plato->nombre}"
+        foreach ($items as $item) {
+            $plato = Plato::with('ingredientes.inventario')->find($item['plato_id']);
+            if (!$plato) {
+                return ['success' => false, 'mensaje' => 'Un plato seleccionado no existe.'];
+            }
+            if ($plato->ingredientes->count() === 0) {
+                return ['success' => false, 'mensaje' => 'El plato ' . $plato->nombre . ' no tiene ingredientes registrados y no puede prepararse.'];
+            }
+
+            foreach ($plato->ingredientes as $ingrediente) {
+                $id = $ingrediente->id;
+                $cantidadNecesaria = $ingrediente->pivot->cantidad * $item['cantidad'];
+
+                if (!isset($ingredientesNecesarios[$id])) {
+                    $ingredientesNecesarios[$id] = [
+                        'nombre' => $ingrediente->nombre,
+                        'necesario' => 0,
+                        'disponible' => $ingrediente->inventario ? $ingrediente->inventario->cantidad_actual : 0,
+                        'unidad' => $ingrediente->unidad_medida
                     ];
                 }
+
+                $ingredientesNecesarios[$id]['necesario'] += $cantidadNecesaria;
+            }
+        }
+
+        foreach ($ingredientesNecesarios as $req) {
+            if ($req['disponible'] < $req['necesario']) {
+                return [
+                    'success' => false,
+                    'mensaje' => 'Stock insuficiente de ' . $req['nombre'] . '. Se requiere ' . number_format($req['necesario'], 2) . ' ' . $req['unidad'] . ' pero solo hay ' . number_format($req['disponible'], 2) . ' ' . $req['unidad'] . ' disponibles.'
+                ];
             }
         }
 
@@ -501,7 +538,7 @@ class PedidoController extends Controller
 
             foreach ($pedido->detalles as $detalle) {
                 if ($detalle->plato) {
-                    $detalle->plato->descontarInventario();
+                    $detalle->plato->descontarInventario($detalle->cantidad);
                 }
             }
 
@@ -515,7 +552,7 @@ class PedidoController extends Controller
 
             foreach ($pedido->detalles as $detalle) {
                 if ($detalle->plato) {
-                    $detalle->plato->revertirInventario();
+                    $detalle->plato->revertirInventario($detalle->cantidad);
                 }
             }
         }
@@ -604,7 +641,7 @@ private function guardarConsumo(Pedido $pedido)
                 && $estadoAnterior != DetallePedido::ESTADO_LISTO) {
 
                 if ($detalle->plato) {
-                    $detalle->plato->descontarInventario();
+                    $detalle->plato->descontarInventario($detalle->cantidad);
                 }
             }
 
@@ -613,7 +650,7 @@ private function guardarConsumo(Pedido $pedido)
                 && $request->estado != DetallePedido::ESTADO_LISTO) {
 
                 if ($detalle->plato) {
-                    $detalle->plato->revertirInventario();
+                    $detalle->plato->revertirInventario($detalle->cantidad);
                 }
             }
 
@@ -778,6 +815,8 @@ public function updateCliente(Request $request, Pedido $pedido)
         'cliente_telefono' => 'required|string|max:20',
 
         'direccion' => 'nullable|string|max:500',
+        'latitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
+        'longitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
 
         'items' => 'required|array|min:1',
 
@@ -787,6 +826,12 @@ public function updateCliente(Request $request, Pedido $pedido)
 
         'items.*.notas' => 'nullable|string',
     ]);
+
+    // Verificar stock antes de proceder
+    $stockCheck = $this->verificarStockItems($request->items);
+    if (!$stockCheck['success']) {
+        return back()->with('error', $stockCheck['mensaje'])->withInput();
+    }
 
     DB::beginTransaction();
 
@@ -798,6 +843,8 @@ public function updateCliente(Request $request, Pedido $pedido)
         $pedido->cliente_telefono = $request->cliente_telefono;
 
         $pedido->direccion = $request->direccion;
+        $pedido->latitud = $request->latitud;
+        $pedido->longitud = $request->longitud;
 
         $pedido->notas = $request->notas;
 
@@ -924,4 +971,6 @@ public function destroyCliente(Pedido $pedido)
         $numero = $ultimo ? intval(substr($ultimo->numero_pedido, -4)) + 1 : 1;
         return 'PED-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
     }
+
+
 }
