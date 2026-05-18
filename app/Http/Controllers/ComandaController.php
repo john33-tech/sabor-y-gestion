@@ -62,6 +62,9 @@ class ComandaController extends Controller
             $comanda->detalles()->update(['estado' => 'en_preparacion']);
             
             DB::commit();
+
+            // Emitir evento
+            event(new \App\Events\PedidoEstadoActualizado($comanda));
             
             return redirect()->route('comandas.index')
                 ->with('success', 'Preparación iniciada para el pedido #' . $comanda->numero_pedido);
@@ -92,7 +95,7 @@ class ComandaController extends Controller
             // Descontar inventario
             foreach ($comanda->detalles as $detalle) {
                 if ($detalle->plato) {
-                    $detalle->plato->descontarInventario();
+                    $detalle->plato->descontarInventario($detalle->cantidad);
                 }
             }
             

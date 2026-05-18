@@ -116,7 +116,18 @@ Route::middleware(['auth'])->group(function () {
 
 
 });
+//Ruta para la notificacion de pedidos
+use App\Models\Pedido;
 
+Route::get('/notificaciones/pedidos', function () {
+
+    $cantidad = Pedido::where('estado', 'pendiente')->count();
+
+    return response()->json([
+        'cantidad' => $cantidad
+    ]);
+
+})->middleware('auth');
 
 
 

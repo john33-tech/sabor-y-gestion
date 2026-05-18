@@ -281,14 +281,30 @@
     toggle() {
         this.open = !this.open;
         localStorage.setItem('sidebar_section_operaciones', this.open);
+    },
+    pendingOrdersCount: 0,
+    fetchPendingOrders() {
+        fetch('/notificaciones/pedidos')
+            .then(res => res.json())
+            .then(data => this.pendingOrdersCount = data.cantidad)
+            .catch(err => console.error(err));
+    },
+    initNotifications() {
+        this.fetchPendingOrders();
+        if (typeof window.Echo !== 'undefined') {
+            window.Echo.channel('pedidos.cocineros')
+                .listen('.pedido.creado', (e) => { this.fetchPendingOrders(); })
+                .listen('.pedido.estado_actualizado', (e) => { this.fetchPendingOrders(); });
+        }
     }
 }"
-x-init="() => {
+x-init="
+    initNotifications();
     if (localStorage.getItem('sidebar_section_operaciones') === null) {
         open = false;
         localStorage.setItem('sidebar_section_operaciones', false);
     }
-}"
+"
 class="mb-1">
     <button @click="toggle()"
             class="w-full flex items-center justify-between px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-all duration-200 hover:bg-white/10 group">
@@ -315,7 +331,12 @@ class="mb-1">
         <a href="{{ route('pedidos.index') }}"
            class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
             <i class="fas fa-clipboard-list text-[10px] sm:text-xs w-4"></i>
-            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Pedidos</span>
+            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap flex-1 flex justify-between items-center pr-2">
+                <span>Pedidos</span>
+                @if(in_array($role, ['admin']))
+                <span x-show="pendingOrdersCount > 0" x-text="pendingOrdersCount" x-cloak class="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-orange-500 rounded-full"></span>
+                @endif
+            </span>
         </a>
         @endif
 
@@ -329,26 +350,31 @@ class="mb-1">
         </a>
         @endif
         <!-- MIS PEDIDOS cliente -->
-            @if(in_array($role, ['cliente']))
-            <a href="{{ route('pedidos.misPedidos') }}"
-               class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
-      <i class="w-5 text-base transition-colors fas fa-shopping-cart text-white/80 sm:text-lg group-hover:text-white"></i>
-      <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)"
-            class="whitespace-nowrap">
+@if(in_array($role, ['cliente']))
+<a href="{{ route('pedidos.misPedidos') }}"
+   class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
 
-            Mis Pedidos
+    <i class="w-5 text-base transition-colors fas fa-shopping-cart text-white/80 sm:text-lg group-hover:text-white"></i>
 
-      </span>
+    <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)"
+          class="whitespace-nowrap">
+        Mis Pedidos
+    </span>
 
-            </a>
-            @endif
+</a>
+@endif
 
         <!-- Comandas -->
         @if(in_array($role, ['admin', 'cajero', 'cocinero']))
         <a href="{{ route('comandas.index') }}"
         class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
             <i class="fas fa-receipt text-[10px] sm:text-xs w-4"></i>
-            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Comandas</span>
+            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap flex-1 flex justify-between items-center pr-2">
+                <span>Comandas</span>
+                @if(in_array($role, ['cocinero']))
+                <span x-show="pendingOrdersCount > 0" x-text="pendingOrdersCount" x-cloak class="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-orange-500 rounded-full"></span>
+                @endif
+            </span>
         </a>
         @endif
 
