@@ -34,7 +34,7 @@
     @forelse($agrupadas as $area => $mesasArea)
         <div class="mb-10">
             <h2 class="text-xl font-semibold text-primary mb-4 border-l-4 border-primary pl-3">
-                📍 {{ $area ?: 'Sin área asignada' }}
+                📍 {{ $area ?: 'Sin ubicación asignada' }}
             </h2>
             
             <div class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">

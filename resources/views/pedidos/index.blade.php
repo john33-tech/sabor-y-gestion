@@ -182,6 +182,23 @@
                                     <i class="fas fa-print"></i>
                                 </a>
 
+                                {{-- Marcar entregado: visible para staff cuando el pedido está "listo" --}}
+                                @auth
+                                    @if($pedido->estado === 'listo' && in_array(auth()->user()->role, ['admin','mesero','cajero']))
+                                        <form method="POST" action="{{ route('pedidos.cambiar-estado', $pedido) }}"
+                                              class="inline"
+                                              onsubmit="return confirm('¿Confirmas que entregaste el pedido {{ $pedido->numero_pedido }} a la mesa?');">
+                                            @csrf
+                                            <input type="hidden" name="estado" value="entregado">
+                                            <button type="submit"
+                                                    class="inline-flex items-center px-2 py-1 text-xs text-white bg-emerald-600 rounded hover:bg-emerald-700 transition"
+                                                    title="Marcar como entregado">
+                                                <i class="fas fa-check-double mr-1"></i> Entregado
+                                            </button>
+                                        </form>
+                                    @endif
+                                @endauth
+
                                 {{-- Eliminar: solo si el pedido está pendiente (regla del controller) --}}
                                 @if($pedido->estado === 'pendiente')
                                 <form method="POST" action="{{ route('pedidos.destroy',$pedido) }}"

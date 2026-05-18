@@ -320,12 +320,14 @@ class="mb-1">
         @endif
 
 
-        <!-- RESERVAR MESA cliente -->
-        @if(in_array($role, ['cliente']))
+        <!-- RESERVAS (cliente: las propias / admin·mesero: todas) -->
+        @if(in_array($role, ['cliente', 'admin', 'mesero']))
         <a href="{{ route('reserva.index') }}"
         class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
               <i class="w-5 text-base transition-colors fas fa-calendar-check text-white/80 sm:text-lg group-hover:text-white"></i>
-              <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Reservar mesa</span>
+              <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">
+                  {{ $role === 'cliente' ? 'Reservar mesa' : 'Reservas' }}
+              </span>
         </a>
         @endif
         <!-- MIS PEDIDOS cliente -->
@@ -378,11 +380,14 @@ class="mb-1">
             <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Pagos</span>
         </a>
 
-        <!-- Cierre de Caja - stub que redirige a Reportes -->
+        @endif
+
+        <!-- Cierre de Cuenta - admin, cajero y mesero -->
+        @if(in_array($role, ['admin', 'cajero', 'mesero']))
         <a href="{{ route('cierres.index') }}"
            class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
             <i class="fas fa-cash-register text-[10px] sm:text-xs w-4"></i>
-            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Cierre de Caja</span>
+            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Cierre de Cuenta</span>
         </a>
         @endif
     </div>

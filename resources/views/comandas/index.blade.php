@@ -192,24 +192,31 @@ document.addEventListener('DOMContentLoaded', function() {
         t.addEventListener('click', function () { tabActivoWS = this.dataset.tab; });
     });
 
-    function conectarCocinaWS() {
-        if (typeof window.Echo === 'undefined') {
-            console.warn('Echo aún no cargó, reintentando...');
-            setTimeout(conectarCocinaWS, 500);
-            return;
+    // El toast visual lo dispara app.js (suscripción global). Acá solo
+    // refrescamos la lista de comandas y resaltamos el card nuevo con animación.
+    window.addEventListener('nuevo-pedido', (ev) => {
+        const e = ev.detail || {};
+        console.log('🆕 Comandas: refrescando por pedido nuevo', e);
+        reproducirCampana();
+        loadComandas(tabActivoWS);
+
+        // Después del refresh (loadComandas usa fetch async), buscamos el card
+        // que coincide con el numero_pedido y le agregamos la clase de highlight.
+        if (e.numero_pedido) {
+            setTimeout(() => destacarCard(e.numero_pedido), 800);
         }
+    });
 
-        console.log('🔌 Cocina: conectando a canal pedidos.cocineros...');
-
-        window.Echo.private('pedidos.cocineros')
-            .listen('.pedido.creado', (e) => {
-                console.log('🆕 Pedido nuevo recibido:', e);
-                showNotification(e.mensaje || `Nuevo pedido #${e.numero_pedido}`, 'success');
-                reproducirCampana();
-                loadComandas(tabActivoWS);
-            });
-
-        console.log('✅ Cocina: suscrita correctamente al canal pedidos.cocineros');
+    function destacarCard(numeroPedido) {
+        const cards = document.querySelectorAll('[data-pedido-numero], .comanda-card');
+        cards.forEach(card => {
+            const txt = card.textContent || '';
+            if (txt.includes(numeroPedido)) {
+                card.classList.add('pedido-card-nuevo');
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => card.classList.remove('pedido-card-nuevo'), 2500);
+            }
+        });
     }
 
     function reproducirCampana() {
@@ -227,7 +234,6 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (err) { /* sin audio, no es crítico */ }
     }
 
-    conectarCocinaWS();
 });
 </script>
 @endpush

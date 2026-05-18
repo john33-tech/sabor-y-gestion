@@ -62,6 +62,33 @@
             @csrf
             @method('PUT')
 
+            {{-- Cliente y estado: solo personal (admin/mesero) --}}
+            @if(!empty($esPersonal) && $esPersonal)
+                <div>
+                    <label class="block text-sm font-medium mb-2">Cliente</label>
+                    <select name="usuario_id"
+                            class="w-full border border-border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary">
+                        @foreach($clientes as $cliente)
+                            <option value="{{ $cliente->id }}" {{ $reserva->usuario_id == $cliente->id ? 'selected' : '' }}>
+                                {{ $cliente->name }} ({{ $cliente->email }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Estado</label>
+                    <select name="estado"
+                            class="w-full border border-border rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary">
+                        @foreach(['pendiente' => 'Pendiente', 'confirmada' => 'Confirmada', 'cancelada' => 'Cancelada', 'completada' => 'Completada'] as $valor => $etiqueta)
+                            <option value="{{ $valor }}" {{ $reserva->estado == $valor ? 'selected' : '' }}>
+                                {{ $etiqueta }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
+
             <!-- Mesa -->
             <div>
 

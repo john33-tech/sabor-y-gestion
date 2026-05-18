@@ -48,8 +48,8 @@
                         <span class="font-semibold ml-1">Mesa {{ $comanda->mesa->numero_mesa ?? 'N/A' }}</span>
                     </div>
                     <div>
-                        <span class="text-muted">Área:</span>
-                        <span class="font-semibold ml-1">{{ $comanda->mesa->area ?? 'Sin área' }}</span>
+                        <span class="text-muted">Ubicación:</span>
+                        <span class="font-semibold ml-1">{{ $comanda->mesa->area ?? 'Sin ubicación' }}</span>
                     </div>
                     <div>
                         <span class="text-muted">Capacidad:</span>

@@ -141,6 +141,14 @@ class FacturaController extends Controller
     {
         $factura->load('pedido');
 
+        // Cliente solo puede generar QR de su propia factura
+        $user = Auth::user();
+        if ($user && $user->isCliente()) {
+            if (!$factura->pedido || $factura->pedido->usuario_id !== $user->id) {
+                abort(403, 'No puedes generar el QR de una factura ajena.');
+            }
+        }
+
         // Identificador único del canal Pusher para este pago
         $emisor = 'fact' . $factura->id;
 
@@ -154,7 +162,9 @@ class FacturaController extends Controller
             'pedido'    => $factura->pedido_id,
         ];
 
-        $url = 'https://proyecto-tis-umss.infinityfreeapp.com/?' . http_build_query($params);
+        // QR apunta a nuestra propia página de pago (autocontenida): no
+        // dependemos de un sistema externo que pueda fallar.
+        $url = url('/pago-externo') . '?' . http_build_query($params);
 
         // Generar QR 300x300 en formato SVG
         $qrSvg = (string) QrCode::size(300)
@@ -181,6 +191,27 @@ class FacturaController extends Controller
     }
 
     /**
+     * Previsualizar o descargar el PDF de una factura.
+     * Útil para verificar el formato y para que admin/cajero ofrezcan
+     * una descarga al cliente sin pasar por email.
+     */
+    public function descargarPdf(Factura $factura)
+    {
+        $factura->load(['pedido.detalles.plato.categoria', 'pedido.mesa', 'pedido.usuario', 'usuario']);
+
+        // Cliente solo puede descargar su propia factura
+        $user = Auth::user();
+        if ($user && $user->isCliente()) {
+            if (!$factura->pedido || $factura->pedido->usuario_id !== $user->id) {
+                abort(403, 'No puedes descargar facturas ajenas.');
+            }
+        }
+
+        $pdf = Pdf::loadView('facturas.pdf', compact('factura'));
+        return $pdf->stream('factura-' . $factura->numero_factura . '.pdf');
+    }
+
+    /**
      * Generar PDF y enviar factura por correo electrónico.
      */
     public function enviarPorCorreo(Request $request, Factura $factura)
@@ -189,10 +220,18 @@ class FacturaController extends Controller
             'email' => 'required|email'
         ]);
 
-        $email = $request->input('email');
-
         // Cargar las relaciones necesarias para el PDF
         $factura->load(['pedido.detalles.plato', 'usuario']);
+
+        // Cliente solo puede enviar la factura de su propio pedido
+        $user = Auth::user();
+        if ($user && $user->isCliente()) {
+            if (!$factura->pedido || $factura->pedido->usuario_id !== $user->id) {
+                abort(403, 'No puedes enviar la factura de un pedido ajeno.');
+            }
+        }
+
+        $email = $request->input('email');
 
         // Generar el PDF
         $pdf = Pdf::loadView('facturas.pdf', compact('factura'));

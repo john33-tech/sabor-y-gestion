@@ -4,142 +4,211 @@ namespace App\Http\Controllers;
 
 use App\Models\Mesa;
 use App\Models\Reserva;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class ReservaMesaController extends Controller
 {
+    /**
+     * Indica si el usuario actual puede gestionar reservas a nombre de otros
+     * clientes (admin o mesero). Los clientes solo gestionan las propias.
+     */
+    private function esPersonal(): bool
+    {
+        $user = Auth::user();
+        return $user && ($user->isAdmin() || $user->isMesero());
+    }
+
     public function index()
     {
-        // Mostrar reservas del cliente logueado
-        $reservas = Reserva::with('mesa')
-            ->where('usuario_id', Auth::id())
+        $query = Reserva::with(['mesa', 'usuario'])
             ->orderBy('fecha_reserva', 'desc')
-            ->orderBy('hora_reserva', 'desc')
-            ->paginate(10);
-            
-        return view('reservas.index', compact('reservas'));
+            ->orderBy('hora_reserva', 'desc');
+
+        if (!$this->esPersonal()) {
+            $query->where('usuario_id', Auth::id());
+        }
+
+        $reservas = $query->paginate(10);
+        $esPersonal = $this->esPersonal();
+
+        return view('reservas.index', compact('reservas', 'esPersonal'));
     }
 
     public function create()
-{
-    // SOLO mesas libres
-    $mesas = Mesa::where('estado', 'libre')
-        ->orderBy('area')
-        ->orderBy('numero_mesa')
-        ->get();
+    {
+        $mesas = Mesa::where('estado', 'libre')
+            ->orderBy('area')
+            ->orderBy('numero_mesa')
+            ->get();
 
-    return view('reservas.create', compact('mesas'));
-}
+        $esPersonal = $this->esPersonal();
+        $clientes = $esPersonal
+            ? User::where('role', 'cliente')->orderBy('name')->get()
+            : collect();
 
-    public function store(Request $request)
-{
-    $request->validate([
-        'mesa_id' => 'required|exists:mesas,id',
-        'fecha_reserva' => 'required|date|after_or_equal:today',
-        'hora_reserva' => 'required|string',
-        'personas' => 'required|integer|min:1|max:20',
-        'notas' => 'nullable|string|max:500'
-    ]);
-
-    // Verificar si la mesa sigue libre
-    $mesa = Mesa::find($request->mesa_id);
-
-    if ($mesa->estado != 'libre') {
-        return back()->with('error', 'La mesa ya no está disponible.');
+        return view('reservas.create', compact('mesas', 'clientes', 'esPersonal'));
     }
 
-    // Guardar reserva
-    $reserva = new Reserva();
-    $reserva->usuario_id = Auth::id();
-    $reserva->mesa_id = $request->mesa_id;
-    $reserva->fecha_reserva = $request->fecha_reserva;
-    $reserva->hora_reserva = $request->hora_reserva;
-    $reserva->personas = $request->personas;
-    $reserva->notas = $request->notas;
-    $reserva->estado = 'pendiente';
-    $reserva->save();
+    public function store(Request $request)
+    {
+        $esPersonal = $this->esPersonal();
 
-    // Cambiar estado de la mesa
+        $rules = [
+            'mesa_id' => 'required|exists:mesas,id',
+            'fecha_reserva' => 'required|date|after_or_equal:today',
+            'hora_reserva' => 'required|string',
+            'personas' => 'required|integer|min:1|max:20',
+            'notas' => 'nullable|string|max:500',
+        ];
+
+        if ($esPersonal) {
+            $rules['usuario_id'] = 'required|exists:users,id';
+        }
+
+        $request->validate($rules);
+
+        $mesa = Mesa::find($request->mesa_id);
+
+        if ($mesa->estado != 'libre') {
+            return back()->with('error', 'La mesa ya no está disponible.');
+        }
+
+        // Si es personal, validar que el usuario elegido sea efectivamente cliente
+        if ($esPersonal) {
+            $cliente = User::find($request->usuario_id);
+            if (!$cliente || $cliente->role !== 'cliente') {
+                return back()->with('error', 'El usuario seleccionado no es un cliente válido.');
+            }
+            $usuarioId = $cliente->id;
+        } else {
+            $usuarioId = Auth::id();
+        }
+
+        $reserva = new Reserva();
+        $reserva->usuario_id = $usuarioId;
+        $reserva->mesa_id = $request->mesa_id;
+        $reserva->fecha_reserva = $request->fecha_reserva;
+        $reserva->hora_reserva = $request->hora_reserva;
+        $reserva->personas = $request->personas;
+        $reserva->notas = $request->notas;
+        $reserva->estado = 'pendiente';
+        $reserva->save();
+
         $mesa->estado = 'reservado';
         $mesa->save();
 
-    return redirect()
-        ->route('reserva.index')
-        ->with('success', 'Reserva solicitada exitosamente.');
-}
-public function edit($id)
-{
-    $reserva = Reserva::where('usuario_id', Auth::id())
-        ->findOrFail($id);
-
-    $mesas = Mesa::where('estado', 'libre')
-        ->orWhere('id', $reserva->mesa_id)
-        ->get();
-
-    return view('reservas.edit', compact('reserva', 'mesas'));
-}
-public function update(Request $request, $id)
-{
-    $request->validate([
-        'mesa_id' => 'required|exists:mesas,id',
-        'fecha_reserva' => 'required|date',
-        'hora_reserva' => 'required',
-        'personas' => 'required|integer|min:1|max:20',
-        'notas' => 'nullable|string|max:500'
-    ]);
-
-    $reserva = Reserva::where('usuario_id', Auth::id())
-        ->findOrFail($id);
-
-    // Liberar mesa anterior
-    $mesaAnterior = Mesa::find($reserva->mesa_id);
-
-    if ($mesaAnterior) {
-        $mesaAnterior->estado = 'libre';
-        $mesaAnterior->save();
+        return redirect()
+            ->route('reserva.index')
+            ->with('success', 'Reserva registrada exitosamente.');
     }
 
-    // Reservar nueva mesa
-    $mesaNueva = Mesa::find($request->mesa_id);
+    public function edit($id)
+    {
+        $reserva = $this->encontrarReserva($id);
 
-    if ($mesaNueva->estado != 'libre' && $mesaNueva->id != $reserva->mesa_id) {
-        return back()->with('error', 'La mesa ya no está disponible.');
+        $mesas = Mesa::where('estado', 'libre')
+            ->orWhere('id', $reserva->mesa_id)
+            ->orderBy('area')
+            ->orderBy('numero_mesa')
+            ->get();
+
+        $esPersonal = $this->esPersonal();
+        $clientes = $esPersonal
+            ? User::where('role', 'cliente')->orderBy('name')->get()
+            : collect();
+
+        return view('reservas.edit', compact('reserva', 'mesas', 'clientes', 'esPersonal'));
     }
 
-    $mesaNueva->estado = 'reservado';
-    $mesaNueva->save();
+    public function update(Request $request, $id)
+    {
+        $esPersonal = $this->esPersonal();
 
-    // Actualizar reserva
-    $reserva->mesa_id = $request->mesa_id;
-    $reserva->fecha_reserva = $request->fecha_reserva;
-    $reserva->hora_reserva = $request->hora_reserva;
-    $reserva->personas = $request->personas;
-    $reserva->notas = $request->notas;
+        $rules = [
+            'mesa_id' => 'required|exists:mesas,id',
+            'fecha_reserva' => 'required|date',
+            'hora_reserva' => 'required',
+            'personas' => 'required|integer|min:1|max:20',
+            'notas' => 'nullable|string|max:500',
+        ];
 
-    $reserva->save();
+        if ($esPersonal) {
+            $rules['usuario_id'] = 'required|exists:users,id';
+            $rules['estado'] = 'nullable|in:pendiente,confirmada,cancelada,completada';
+        }
 
-    return redirect()
-        ->route('reserva.index')
-        ->with('success', 'Reserva actualizada correctamente.');
-}
-public function destroy($id)
-{
-    $reserva = Reserva::where('usuario_id', Auth::id())
-        ->findOrFail($id);
+        $request->validate($rules);
 
-    // Liberar mesa
-    $mesa = Mesa::find($reserva->mesa_id);
+        $reserva = $this->encontrarReserva($id);
 
-    if ($mesa) {
-        $mesa->estado = 'libre';
-        $mesa->save();
+        // Liberar mesa anterior
+        $mesaAnterior = Mesa::find($reserva->mesa_id);
+        if ($mesaAnterior) {
+            $mesaAnterior->estado = 'libre';
+            $mesaAnterior->save();
+        }
+
+        $mesaNueva = Mesa::find($request->mesa_id);
+        if ($mesaNueva->estado != 'libre' && $mesaNueva->id != $reserva->mesa_id) {
+            return back()->with('error', 'La mesa ya no está disponible.');
+        }
+        $mesaNueva->estado = 'reservado';
+        $mesaNueva->save();
+
+        if ($esPersonal) {
+            $cliente = User::find($request->usuario_id);
+            if (!$cliente || $cliente->role !== 'cliente') {
+                return back()->with('error', 'El usuario seleccionado no es un cliente válido.');
+            }
+            $reserva->usuario_id = $cliente->id;
+
+            if ($request->filled('estado')) {
+                $reserva->estado = $request->estado;
+            }
+        }
+
+        $reserva->mesa_id = $request->mesa_id;
+        $reserva->fecha_reserva = $request->fecha_reserva;
+        $reserva->hora_reserva = $request->hora_reserva;
+        $reserva->personas = $request->personas;
+        $reserva->notas = $request->notas;
+        $reserva->save();
+
+        return redirect()
+            ->route('reserva.index')
+            ->with('success', 'Reserva actualizada correctamente.');
     }
 
-    $reserva->delete();
+    public function destroy($id)
+    {
+        $reserva = $this->encontrarReserva($id);
 
-    return redirect()
-        ->route('reserva.index')
-        ->with('success', 'Reserva eliminada correctamente.');
-}
+        $mesa = Mesa::find($reserva->mesa_id);
+        if ($mesa) {
+            $mesa->estado = 'libre';
+            $mesa->save();
+        }
+
+        $reserva->delete();
+
+        return redirect()
+            ->route('reserva.index')
+            ->with('success', 'Reserva eliminada correctamente.');
+    }
+
+    /**
+     * Resuelve la reserva respetando el alcance del usuario:
+     * - Personal (admin/mesero): cualquier reserva.
+     * - Cliente: únicamente las suyas.
+     */
+    private function encontrarReserva($id): Reserva
+    {
+        $query = Reserva::query();
+        if (!$this->esPersonal()) {
+            $query->where('usuario_id', Auth::id());
+        }
+        return $query->findOrFail($id);
+    }
 }

@@ -6,6 +6,7 @@ use App\Models\Pedido;
 use App\Models\DetallePedido;
 use App\Models\Plato;
 use App\Models\Mesa;
+use App\Models\Consumo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -167,6 +168,7 @@ class PedidoController extends Controller
             'mesa_id' => 'required_if:tipo_pedido,mesa|nullable|exists:mesas,id',
             'cliente_nombre' => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:255',
             'cliente_telefono' => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:20',
+            'cliente_email' => 'nullable|email|max:255',
             'direccion' => 'nullable|string|max:500',
             'items' => 'required|array|min:1',
             'items.*.plato_id' => 'required|exists:platos,id',
@@ -187,6 +189,7 @@ class PedidoController extends Controller
             $pedido->mesa_id = $request->tipo_pedido == 'mesa' ? $request->mesa_id : null;
             $pedido->cliente_nombre = $request->cliente_nombre ?? ($request->tipo_pedido == 'mesa' ? 'Cliente Mesa ' . $request->mesa_id : null);
             $pedido->cliente_telefono = $request->cliente_telefono;
+            $pedido->cliente_email = $request->cliente_email;
             $pedido->direccion = $request->tipo_pedido == 'delivery' ? $request->direccion : null;
             $pedido->latitud = $request->latitud;
             $pedido->longitud = $request->longitud;
@@ -250,10 +253,22 @@ class PedidoController extends Controller
         $pedido->load(['mesa', 'usuario', 'detalles.plato.categoria', 'factura']);
 
         $estados = Pedido::getEstados();
-        $tipos = Pedido::getTipos();  // <-- Agregar esta línea
+        $tipos = Pedido::getTipos();
         $estadosDetalle = DetallePedido::getEstados();
 
-        return view('pedidos.show', compact('pedido', 'estados', 'tipos', 'estadosDetalle'));
+        // Para D4: si el pedido está abierto, cargar platos disponibles para
+        // que el panel "Agregar productos" pueda renderizar el selector.
+        $platosDisponibles = collect();
+        if (in_array($pedido->estado, [Pedido::ESTADO_PENDIENTE, Pedido::ESTADO_EN_PREPARACION])) {
+            $platosDisponibles = Plato::where('disponible', true)
+                ->with('categoria')
+                ->orderBy('categoria_id')
+                ->orderBy('nombre')
+                ->get()
+                ->groupBy('categoria.nombre');
+        }
+
+        return view('pedidos.show', compact('pedido', 'estados', 'tipos', 'estadosDetalle', 'platosDisponibles'));
     }
 
 
@@ -294,6 +309,7 @@ class PedidoController extends Controller
             'mesa_id'                  => 'required_if:tipo_pedido,mesa|nullable|exists:mesas,id',
             'cliente_nombre'           => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:255',
             'cliente_telefono'         => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:20',
+            'cliente_email'            => 'nullable|email|max:255',
             'direccion'                => 'required_if:tipo_pedido,delivery|nullable|string|max:500',
             'items'                    => 'required|array|min:1',
             'items.*.plato_id'         => 'required|exists:platos,id',
@@ -343,6 +359,7 @@ class PedidoController extends Controller
                     : null);
 
             $pedido->cliente_telefono = $request->cliente_telefono;
+            $pedido->cliente_email = $request->cliente_email;
 
             $pedido->direccion = $request->tipo_pedido === 'delivery'
                 ? $request->direccion
@@ -481,6 +498,30 @@ class PedidoController extends Controller
     $request->validate([
         'estado' => 'required|in:' . implode(',', array_keys(Pedido::getEstados()))
     ]);
+
+    // Cliente: solo dos transiciones permitidas sobre su propio pedido.
+    //   1) Cancelar mientras esté pendiente.
+    //   2) Confirmar recepción (listo → entregado) si es delivery o para_llevar.
+    if (Auth::user()->isCliente()) {
+        if ($pedido->usuario_id !== Auth::id()) {
+            abort(403, 'No puedes modificar pedidos de otros usuarios.');
+        }
+
+        $puedeCancelar = $request->estado === Pedido::ESTADO_CANCELADO
+            && $pedido->estado === Pedido::ESTADO_PENDIENTE;
+
+        $puedeConfirmarRecepcion = $request->estado === Pedido::ESTADO_ENTREGADO
+            && $pedido->estado === Pedido::ESTADO_LISTO
+            && in_array($pedido->tipo_pedido, [Pedido::TIPO_DELIVERY, Pedido::TIPO_PARA_LLEVAR]);
+
+        if (!$puedeCancelar && !$puedeConfirmarRecepcion) {
+            $msg = 'No tienes permiso para esta transición de estado.';
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'mensaje' => $msg], 403);
+            }
+            return back()->with('error', $msg);
+        }
+    }
 
     $estadoAnterior = $pedido->estado;
 
@@ -668,5 +709,98 @@ private function guardarConsumo(Pedido $pedido)
         $ultimo = Pedido::orderBy('id', 'desc')->first();
         $numero = $ultimo ? intval(substr($ultimo->numero_pedido, -4)) + 1 : 1;
         return 'PED-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Agrega productos a un pedido abierto (D4 del spec).
+     *
+     * Si el plato ya existe en el detalle (constraint unique pedido_id+plato_id),
+     * suma la cantidad al detalle existente. Sino crea uno nuevo. Recalcula
+     * totales y factura. Solo permitido en estados pendiente/en_preparacion.
+     */
+    public function agregarItems(Request $request, Pedido $pedido)
+    {
+        // Cliente solo puede modificar su propio pedido
+        if (Auth::user()->isCliente() && $pedido->usuario_id !== Auth::id()) {
+            abort(403, 'No puedes modificar pedidos de otros usuarios.');
+        }
+
+        if (!in_array($pedido->estado, [Pedido::ESTADO_PENDIENTE, Pedido::ESTADO_EN_PREPARACION])) {
+            return redirect()->route('pedidos.show', $pedido)
+                ->with('error', 'No se pueden agregar productos a un pedido en estado ' . $pedido->estado);
+        }
+
+        $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.plato_id' => 'required|exists:platos,id',
+            'items.*.cantidad' => 'required|integer|min:1',
+            'items.*.notas' => 'nullable|string|max:500',
+        ]);
+
+        $stockCheck = $this->verificarStockItems($request->items);
+        if (!$stockCheck['success']) {
+            return redirect()->route('pedidos.show', $pedido)
+                ->with('error', $stockCheck['mensaje']);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $agregados = 0;
+            $sumados = 0;
+
+            foreach ($request->items as $item) {
+                $plato = Plato::find($item['plato_id']);
+                $cantidad = (int) $item['cantidad'];
+                $notasItem = $item['notas'] ?? null;
+
+                $existente = $pedido->detalles()->where('plato_id', $plato->id)->first();
+
+                if ($existente) {
+                    $existente->cantidad += $cantidad;
+                    $existente->subtotal = $existente->cantidad * $existente->precio_unitario;
+                    if ($notasItem) {
+                        $existente->notas = trim(($existente->notas ? $existente->notas . ' | ' : '') . $notasItem);
+                    }
+                    $existente->estado = DetallePedido::ESTADO_PENDIENTE;
+                    $existente->save();
+                    $sumados++;
+                } else {
+                    DetallePedido::create([
+                        'pedido_id' => $pedido->id,
+                        'plato_id' => $plato->id,
+                        'cantidad' => $cantidad,
+                        'precio_unitario' => $plato->precio,
+                        'subtotal' => $plato->precio * $cantidad,
+                        'notas' => $notasItem,
+                        'estado' => DetallePedido::ESTADO_PENDIENTE,
+                    ]);
+                    $agregados++;
+                }
+            }
+
+            $pedido->load('detalles');
+            $pedido->calcularTotales();
+            $pedido->generarOrUpdateFactura();
+
+            Cache::forget('low_stock_count_direct');
+
+            DB::commit();
+
+            $mensaje = [];
+            if ($agregados > 0) {
+                $mensaje[] = $agregados . ' producto' . ($agregados === 1 ? '' : 's') . ' nuevo' . ($agregados === 1 ? '' : 's');
+            }
+            if ($sumados > 0) {
+                $mensaje[] = $sumados . ' ' . ($sumados === 1 ? 'producto sumado' : 'productos sumados');
+            }
+
+            return redirect()->route('pedidos.show', $pedido)
+                ->with('success', 'Pedido actualizado: ' . implode(', ', $mensaje) . '.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('pedidos.show', $pedido)
+                ->with('error', 'Error al agregar productos: ' . $e->getMessage());
+        }
     }
 }

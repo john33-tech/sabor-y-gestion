@@ -28,7 +28,7 @@
                     
                     <div>
                         <label class="text-muted text-sm uppercase tracking-wide">
-                            <i class="fas fa-map-marker-alt mr-1"></i> Área
+                            <i class="fas fa-map-marker-alt mr-1"></i> Ubicación
                         </label>
                         <p class="text-text font-semibold text-lg mt-1">{{ $mesa->area ?? 'No especificada' }}</p>
                     </div>

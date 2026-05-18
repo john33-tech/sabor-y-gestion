@@ -213,13 +213,41 @@
                             </select>
                         </div>
 
-                        <!-- Datos del Cliente -->
+                        @php
+                            $authUser = auth()->user();
+                            $esCliente = $authUser && $authUser->isCliente();
+                            $nombreDefault = $esCliente ? $authUser->name : '';
+                            $telefonoDefault = $esCliente ? ($authUser->celular ?? '') : '';
+                            $direccionDefault = $esCliente ? ($authUser->direccion ?? '') : '';
+                            $emailDefault = $esCliente ? ($authUser->email ?? '') : '';
+                        @endphp
+
+                        <!-- Email del cliente (siempre visible, sirve para enviar la factura) -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium mb-1" style="color: #111827;">
+                                <i class="fas fa-envelope mr-1"></i> Email del cliente <span class="text-xs text-gray-500">(para enviarle la factura por correo)</span>
+                            </label>
+                            <input type="email" name="cliente_email"
+                                value="{{ old('cliente_email', $emailDefault) }}"
+                                placeholder="cliente@ejemplo.com"
+                                class="w-full px-3 py-2 rounded-lg outline-none transition-all"
+                                style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
+                        </div>
+
+                        <!-- Datos del Cliente (solo para delivery / para llevar) -->
                         <div id="clienteContainer" class="hidden mb-6 space-y-3">
+                            @if($esCliente)
+                                <div class="px-3 py-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Hemos pre-llenado tus datos desde tu perfil. Modifícalos solo si el pedido es para otra persona.
+                                </div>
+                            @endif
                             <div>
                                 <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                     <i class="fas fa-user mr-1"></i> Nombre del Cliente *
                                 </label>
-                                <input type="text" name="cliente_nombre" 
+                                <input type="text" name="cliente_nombre"
+                                    value="{{ old('cliente_nombre', $nombreDefault) }}"
                                     class="w-full px-3 py-2 rounded-lg outline-none transition-all"
                                     style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
                             </div>
@@ -227,18 +255,19 @@
                                 <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                     <i class="fas fa-phone mr-1"></i> Teléfono *
                                 </label>
-                                <input type="tel" name="cliente_telefono" 
+                                <input type="tel" name="cliente_telefono"
+                                    value="{{ old('cliente_telefono', $telefonoDefault) }}"
                                     class="w-full px-3 py-2 rounded-lg outline-none transition-all"
                                     style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
                             </div>
-                            
+
                             <div id="direccionContainer" class="hidden">
                                 <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                     <i class="fas fa-map-marker-alt mr-1"></i> Dirección de Entrega *
                                 </label>
                                 <textarea name="direccion" id="direccion" rows="3"
                                     class="w-full px-3 py-2 rounded-lg outline-none transition-all"
-                                    style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;"></textarea>
+                                    style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">{{ old('direccion', $direccionDefault) }}</textarea>
                             </div>
                         </div>
 
@@ -342,6 +371,8 @@ const DEFAULT_ZOOM = 14;
 
 // Reverse geocoding con Nominatim (gratis, sin API key) — llena el textarea
 // "direccion" cuando el usuario hace click en el mapa.
+// Política: click en el mapa = el usuario quiere ESA dirección, así que siempre
+// sobrescribe (incluso si había un valor previo del perfil o tipeado).
 async function reverseGeocode(lat, lng) {
     const direccionEl = document.getElementById('direccion');
     if (!direccionEl) return;
@@ -351,12 +382,8 @@ async function reverseGeocode(lat, lng) {
         if (!res.ok) return;
         const data = await res.json();
         if (data && data.display_name) {
-            // Sólo sobrescribe si está vacío o si el usuario no editó manualmente
-            // (consideramos vacío como permiso para autocompletar).
-            if (!direccionEl.value.trim() || direccionEl.dataset.autoFilled === 'true') {
-                direccionEl.value = data.display_name;
-                direccionEl.dataset.autoFilled = 'true';
-            }
+            direccionEl.value = data.display_name;
+            direccionEl.dataset.autoFilled = 'true';
         }
     } catch (err) {
         console.warn('Reverse geocoding falló:', err);

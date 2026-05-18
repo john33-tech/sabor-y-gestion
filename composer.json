@@ -13,6 +13,7 @@
         "laravel/tinker": "^2.10.1",
         "pusher/pusher-php-server": "^7.2",
         "railsware/mailtrap-php": "^3.11",
+        "resend/resend-laravel": "^0.20",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "symfony/http-client": "^7.4"
     },

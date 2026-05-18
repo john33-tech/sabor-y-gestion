@@ -52,14 +52,11 @@ services:
       VITE_REVERB_PORT: 8080
       VITE_REVERB_SCHEME: http
 
-      # Mailtrap SMTP local (en Railway usamos transport HTTP por SMTP bloqueado)
-      MAIL_MAILER: smtp
-      MAIL_HOST: sandbox.smtp.mailtrap.io
-      MAIL_PORT: 2525
-      MAIL_USERNAME: b2c148acac972f
-      MAIL_PASSWORD: 608b289c8d5999
-      MAIL_ENCRYPTION: tls
-      MAIL_FROM_ADDRESS: no-reply@saborgestion.com
+      # Resend (HTTP API). Para usar, agregar RESEND_API_KEY al archivo .env de la raíz.
+      # El remitente onboarding@resend.dev sirve sin verificar dominio (free tier).
+      MAIL_MAILER: resend
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      MAIL_FROM_ADDRESS: onboarding@resend.dev
       MAIL_FROM_NAME: "Sabor Gestion"
 
       RUN_MIGRATIONS: "true"

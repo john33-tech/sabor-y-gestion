@@ -161,20 +161,19 @@
                 Esperando confirmación del pago...
             </p>
 
-            {{-- Botón solo para entorno local: el sitio externo del QR no
-                 puede llegar a localhost, así que simulamos el webhook acá. --}}
-            @if(app()->environment('local'))
+            {{-- Botón "Marcar como pagado" — confirma manualmente sin esperar
+                 el webhook externo. Útil cuando el sistema externo del QR no
+                 puede llegar a esta URL, o para demos. --}}
             <div class="mt-3 pt-3 border-t border-dashed">
-                <p class="text-[11px] text-gray-400 text-center mb-2">
-                    🧪 Modo desarrollo: el sitio externo no llega a localhost.
-                </p>
                 <button type="button"
                         onclick="simularPago()"
-                        class="w-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium py-2 rounded-md">
-                    <i class="fas fa-flask mr-1"></i> Simular pago confirmado
+                        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium py-2 rounded-md">
+                    <i class="fas fa-check-circle mr-1"></i> Confirmar pago manualmente
                 </button>
+                <p class="text-[10px] text-gray-400 text-center mt-1">
+                    Usá este botón si el sistema externo no confirma automáticamente.
+                </p>
             </div>
-            @endif
         </div>
     </div>
 </div>
