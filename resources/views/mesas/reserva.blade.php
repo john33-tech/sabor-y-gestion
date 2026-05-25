@@ -31,7 +31,7 @@
                             <i class="fas fa-users mr-2"></i> Capacidad: <span class="font-semibold">{{ $mesa->capacidad }} personas</span>
                         </p>
                         <p class="text-sm text-muted">
-                            <i class="fas fa-map-marker-alt mr-2"></i> Área: <span class="font-semibold">{{ $mesa->area ?? 'General' }}</span>
+                            <i class="fas fa-map-marker-alt mr-2"></i> Ubicación: <span class="font-semibold">{{ $mesa->area ?? 'General' }}</span>
                         </p>
                     </div>
 

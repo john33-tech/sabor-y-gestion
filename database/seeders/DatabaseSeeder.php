@@ -9,19 +9,23 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 🔥 Desactivar verificaciones de llaves foráneas al inicio
+        // Desactivamos FKs por si algún seeder hace updates cruzados.
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        
+
+        // Orden estricto por dependencias:
+        //  - Categoria   ← Plato
+        //  - Ingrediente ← Inventario, PlatoIngrediente
+        //  - Plato       ← PlatoIngrediente
         $this->call([
             UserSeeder::class,
             CategoriaSeeder::class,
-            MesaSeeder::class,        // ✅ Agregar MesaSeeder aquí
-            // Si tienes otros seeders que dependen de mesas, van después
-            // ReservaSeeder::class,
-            // PedidoSeeder::class,
+            MesaSeeder::class,
+            IngredienteSeeder::class,
+            PlatoSeeder::class,
+            InventarioSeeder::class,
+            PlatoIngredienteSeeder::class,
         ]);
-        
-        // 🔥 Reactivar verificaciones de llaves foráneas al final
+
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }
 }

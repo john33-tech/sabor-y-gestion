@@ -49,6 +49,14 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
+        // Mailtrap Sandbox API (HTTP) — usado en Railway porque bloquea SMTP outbound.
+        // Ver: app/Mail/MailtrapSandboxTransport.php y AppServiceProvider::boot()
+        'mailtrap_sandbox' => [
+            'transport' => 'mailtrap_sandbox',
+            'token'     => env('MAILTRAP_API_TOKEN'),
+            'inbox_id'  => env('MAILTRAP_INBOX_ID'),
+        ],
+
         'ses' => [
             'transport' => 'ses',
         ],

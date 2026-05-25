@@ -3,6 +3,14 @@
 @section('title', 'Mis Pedidos')
 
 @section('content')
+<script>
+    // Auto-refresh cuando llega un evento de cambio de estado de cualquier pedido
+    // del cliente (suscripción global vive en resources/js/app.js).
+    window.addEventListener('pedido-estado-cambiado', () => {
+        setTimeout(() => window.location.reload(), 1800);
+    });
+</script>
+
 
 <div class="space-y-6">
 
@@ -121,25 +129,9 @@
 
                             </td>
 
-                            <!-- Estado -->
-                            <td class="px-6 py-4">
-
-                                <span class="px-3 py-1 rounded-full text-xs font-bold
-
-                                    {{ $pedido->estado == 'pendiente' ? 'bg-yellow-100 text-yellow-700' : '' }}
-
-                                    {{ $pedido->estado == 'en_preparacion' ? 'bg-blue-100 text-blue-700' : '' }}
-
-                                    {{ $pedido->estado == 'entregado' ? 'bg-green-100 text-green-700' : '' }}
-
-                                    {{ $pedido->estado == 'cancelado' ? 'bg-red-100 text-red-700' : '' }}
-
-                                ">
-
-                                    {{ ucfirst(str_replace('_', ' ', $pedido->estado)) }}
-
-                                </span>
-
+                            <!-- Estado: timeline compacto + badge -->
+                            <td class="px-6 py-4 min-w-[260px]" data-pedido-estado="{{ $pedido->id }}">
+                                <x-pedido-timeline :estado="$pedido->estado" />
                             </td>
 
                             <!-- Ubicación -->

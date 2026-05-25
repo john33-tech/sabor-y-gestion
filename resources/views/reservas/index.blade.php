@@ -8,7 +8,8 @@
     <!-- Encabezado -->
     <div class="flex items-center justify-between">
         <h1 class="text-2xl font-bold text-primary">
-            <i class="fas fa-calendar-alt mr-2"></i>Mis Reservas
+            <i class="fas fa-calendar-alt mr-2"></i>
+            {{ (!empty($esPersonal) && $esPersonal) ? 'Reservas' : 'Mis Reservas' }}
         </h1>
 
         <a href="{{ route('reserva.create') }}"
@@ -28,6 +29,9 @@
                 <!-- Header -->
                 <thead class="bg-background">
                     <tr class="text-left text-xs font-semibold text-muted uppercase tracking-wider">
+                        @if(!empty($esPersonal) && $esPersonal)
+                            <th class="px-6 py-4">Cliente</th>
+                        @endif
                         <th class="px-6 py-4">Mesa</th>
                         <th class="px-6 py-4">Fecha y Hora</th>
                         <th class="px-6 py-4">Personas</th>
@@ -42,6 +46,13 @@
                     @forelse($reservas as $reserva)
 
                         <tr class="hover:bg-background/50 transition-colors">
+
+                            @if(!empty($esPersonal) && $esPersonal)
+                                <td class="px-6 py-4">
+                                    <span class="font-medium">{{ $reserva->usuario->name ?? 'N/D' }}</span>
+                                    <div class="text-xs text-muted">{{ $reserva->usuario->email ?? '' }}</div>
+                                </td>
+                            @endif
 
                             <!-- Mesa -->
                             <td class="px-6 py-4">
@@ -130,17 +141,19 @@
 
                         <tr>
 
-                            <td colspan="5"
+                            <td colspan="{{ (!empty($esPersonal) && $esPersonal) ? 6 : 5 }}"
                                 class="px-6 py-8 text-center text-muted">
 
                                 <i class="fas fa-calendar-times text-4xl mb-3 text-border"></i>
 
-                                <p>No tienes reservas registradas.</p>
+                                <p>
+                                    {{ (!empty($esPersonal) && $esPersonal) ? 'No hay reservas registradas.' : 'No tienes reservas registradas.' }}
+                                </p>
 
                                 <a href="{{ route('reserva.create') }}"
                                    class="text-primary hover:underline mt-2 inline-block">
 
-                                    Realiza tu primera reserva
+                                    {{ (!empty($esPersonal) && $esPersonal) ? 'Registrar una reserva' : 'Realiza tu primera reserva' }}
 
                                 </a>
 

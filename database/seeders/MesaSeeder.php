@@ -10,9 +10,9 @@ class MesaSeeder extends Seeder
 {
     public function run(): void
     {
-        // Limpiar la tabla antes de sembrar (opcional)
-        Mesa::truncate();
-        
+        // No truncate (rompe FKs si hay pedidos referenciando mesas).
+        // Usamos updateOrCreate por numero_mesa más abajo, idempotente.
+
         // Crear mesas específicas con datos realistas
         $mesasEspecificas = [
             // Mesas Planta Baja
@@ -188,12 +188,16 @@ class MesaSeeder extends Seeder
             ],
         ];
 
-        // Crear las mesas específicas
+        // Crear las mesas específicas (idempotente con updateOrCreate por numero_mesa).
         foreach ($mesasEspecificas as $mesa) {
-            Mesa::create($mesa);
+            Mesa::updateOrCreate(
+                ['numero_mesa' => $mesa['numero_mesa']],
+                $mesa
+            );
         }
 
-        // Crear 10 mesas adicionales aleatorias usando el factory
-        Mesa::factory()->count(10)->create();
+        // Nota: NO usamos Mesa::factory() porque Faker es dev-only y no está
+        // disponible en el contenedor de producción. Las 18 mesas específicas
+        // de arriba son suficientes.
     }
 }

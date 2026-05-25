@@ -5,11 +5,27 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Models\Factura;
+use App\Events\PedidoEstadoCambiado;
 use Illuminate\Support\Facades\Auth;
 
 class Pedido extends Model
 {
     use HasFactory;
+
+    /**
+     * Boot: emite `PedidoEstadoCambiado` cuando el campo `estado` cambia.
+     * Esto cubre todos los caminos que actualizan estado (controllers,
+     * cierres, cambios masivos), no solo actualizarEstado().
+     */
+    protected static function booted()
+    {
+        static::updated(function (Pedido $pedido) {
+            if ($pedido->wasChanged('estado') && $pedido->usuario_id) {
+                $anterior = (string) $pedido->getOriginal('estado');
+                broadcast(new PedidoEstadoCambiado($pedido, $anterior));
+            }
+        });
+    }
 
     protected $table = 'pedidos';
 
@@ -18,6 +34,7 @@ class Pedido extends Model
         'mesa_id',
         'cliente_nombre',
         'cliente_telefono',
+        'cliente_email',
         'direccion',  // Campo agregado
         'tipo_pedido',
         'estado',
@@ -160,14 +177,14 @@ public function generarOrUpdateFactura()
         $factura->fecha_emision = now();
         $factura->usuario_id = $this->usuario_id ?? Auth::id();
 
-        // --- SOLUCIÓN MANUAL DIRECTA ---
-        $ultimo = Factura::orderBy('id', 'desc')->first();
-        $numero = 1;
-        if ($ultimo && $ultimo->numero_factura) {
-            $ultimoNumero = str_replace('FACT-', '', $ultimo->numero_factura);
-            $numero = intval($ultimoNumero) + 1;
+        // Sincronizar el número de factura con el número de pedido (regla del
+        // negocio: una factura por pedido y misma numeración).
+        // Ej: PED-0007 → FACT-000007.
+        $numeroSecuencia = (int) preg_replace('/\D/', '', $this->numero_pedido ?? '');
+        if ($numeroSecuencia <= 0) {
+            $numeroSecuencia = $this->id; // fallback al ID si aún no hay numero_pedido
         }
-        $factura->numero_factura = 'FACT-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
+        $factura->numero_factura = 'FACT-' . str_pad($numeroSecuencia, 6, '0', STR_PAD_LEFT);
     }
 
     $factura->cliente_nombre = $this->cliente_nombre ?? 'Cliente';

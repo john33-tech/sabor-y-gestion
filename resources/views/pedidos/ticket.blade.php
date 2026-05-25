@@ -150,9 +150,13 @@
                 <span>{{ $pedido->cliente_telefono }}</span>
             </div>
             @endif
+            @php
+                $creador = $pedido->usuario;
+                $esAutopedido = $creador && method_exists($creador, 'isCliente') && $creador->isCliente();
+            @endphp
             <div class="info-row">
-                <span><strong>Atendido por:</strong></span>
-                <span>{{ $pedido->usuario->name ?? 'N/A' }}</span>
+                <span><strong>{{ $esAutopedido ? 'Pedido por:' : 'Atendido por:' }}</strong></span>
+                <span>{{ $creador->name ?? 'N/A' }}</span>
             </div>
         </div>
         
@@ -169,7 +173,7 @@
                 <tr>
                     <td>{{ $detalle->cantidad }}</td>
                     <td>{{ $detalle->plato->nombre }}</td>
-                    <td>${{ number_format($detalle->subtotal, 0) }}</td>
+                    <td>Bs {{ number_format($detalle->subtotal, 2) }}</td>
                 </tr>
                 @if($detalle->notas)
                 <tr>
@@ -185,21 +189,21 @@
         <div class="total-row">
             <div class="info-row">
                 <span>Subtotal:</span>
-                <span>${{ number_format($pedido->subtotal, 0) }}</span>
+                <span>Bs {{ number_format($pedido->subtotal, 2) }}</span>
             </div>
             <div class="info-row">
-                <span>IVA (19%):</span>
-                <span>${{ number_format($pedido->impuesto, 0) }}</span>
+                <span>IVA (13%):</span>
+                <span>Bs {{ number_format($pedido->impuesto, 2) }}</span>
             </div>
             @if($pedido->descuento > 0)
             <div class="info-row">
                 <span>Descuento:</span>
-                <span>-${{ number_format($pedido->descuento, 0) }}</span>
+                <span>− Bs {{ number_format($pedido->descuento, 2) }}</span>
             </div>
             @endif
             <div class="info-row font-bold mt-2">
                 <span>TOTAL:</span>
-                <span>${{ number_format($pedido->total, 0) }}</span>
+                <span>Bs {{ number_format($pedido->total, 2) }}</span>
             </div>
         </div>
         

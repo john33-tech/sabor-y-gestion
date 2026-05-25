@@ -30,7 +30,23 @@
             @csrf
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                
+
+                {{-- Cliente: solo visible para admin/mesero (reserva a nombre de un cliente) --}}
+                @if(!empty($esPersonal) && $esPersonal)
+                    <div class="col-span-1 md:col-span-2">
+                        <label for="usuario_id" class="block text-sm font-medium text-text mb-2">Cliente <span class="text-red-500">*</span></label>
+                        <select name="usuario_id" id="usuario_id" class="w-full bg-background border border-border rounded-lg px-4 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-300" required>
+                            <option value="">-- Selecciona un cliente --</option>
+                            @foreach($clientes as $cliente)
+                                <option value="{{ $cliente->id }}" {{ old('usuario_id') == $cliente->id ? 'selected' : '' }}>
+                                    {{ $cliente->name }} ({{ $cliente->email }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-muted mt-1">Estás registrando esta reserva a nombre del cliente seleccionado.</p>
+                    </div>
+                @endif
+
                 <!-- Selección de Mesa -->
                 <div class="col-span-1 md:col-span-2">
                     <label for="mesa_id" class="block text-sm font-medium text-text mb-2">Seleccionar Mesa <span class="text-red-500">*</span></label>

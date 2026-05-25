@@ -213,13 +213,41 @@
                             </select>
                         </div>
 
-                        <!-- Datos del Cliente -->
+                        @php
+                            $authUser = auth()->user();
+                            $esCliente = $authUser && $authUser->isCliente();
+                            $nombreDefault = $esCliente ? $authUser->name : '';
+                            $telefonoDefault = $esCliente ? ($authUser->celular ?? '') : '';
+                            $direccionDefault = $esCliente ? ($authUser->direccion ?? '') : '';
+                            $emailDefault = $esCliente ? ($authUser->email ?? '') : '';
+                        @endphp
+
+                        <!-- Email del cliente (siempre visible, sirve para enviar la factura) -->
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium mb-1" style="color: #111827;">
+                                <i class="fas fa-envelope mr-1"></i> Email del cliente <span class="text-xs text-gray-500">(para enviarle la factura por correo)</span>
+                            </label>
+                            <input type="email" name="cliente_email"
+                                value="{{ old('cliente_email', $emailDefault) }}"
+                                placeholder="cliente@ejemplo.com"
+                                class="w-full px-3 py-2 rounded-lg outline-none transition-all"
+                                style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
+                        </div>
+
+                        <!-- Datos del Cliente (solo para delivery / para llevar) -->
                         <div id="clienteContainer" class="hidden mb-6 space-y-3">
+                            @if($esCliente)
+                                <div class="px-3 py-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Hemos pre-llenado tus datos desde tu perfil. Modifícalos solo si el pedido es para otra persona.
+                                </div>
+                            @endif
                             <div>
                                 <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                     <i class="fas fa-user mr-1"></i> Nombre del Cliente *
                                 </label>
-                                <input type="text" name="cliente_nombre" 
+                                <input type="text" name="cliente_nombre"
+                                    value="{{ old('cliente_nombre', $nombreDefault) }}"
                                     class="w-full px-3 py-2 rounded-lg outline-none transition-all"
                                     style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
                             </div>
@@ -227,18 +255,19 @@
                                 <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                     <i class="fas fa-phone mr-1"></i> Teléfono *
                                 </label>
-                                <input type="tel" name="cliente_telefono" 
+                                <input type="tel" name="cliente_telefono"
+                                    value="{{ old('cliente_telefono', $telefonoDefault) }}"
                                     class="w-full px-3 py-2 rounded-lg outline-none transition-all"
                                     style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
                             </div>
-                            
+
                             <div id="direccionContainer" class="hidden">
                                 <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                     <i class="fas fa-map-marker-alt mr-1"></i> Dirección de Entrega *
                                 </label>
                                 <textarea name="direccion" id="direccion" rows="3"
                                     class="w-full px-3 py-2 rounded-lg outline-none transition-all"
-                                    style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;"></textarea>
+                                    style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">{{ old('direccion', $direccionDefault) }}</textarea>
                             </div>
                         </div>
 
@@ -335,18 +364,66 @@ let marker;
 let searchTimeout;
 
 // Funciones del mapa
+// Default: Cochabamba (Plaza 14 de Septiembre). Si el navegador permite
+// geolocalización, recentramos en la ubicación real del usuario.
+const DEFAULT_CENTER = [-17.3895, -66.1568]; // Cochabamba, Bolivia
+const DEFAULT_ZOOM = 14;
+
+// Reverse geocoding con Nominatim (gratis, sin API key) — llena el textarea
+// "direccion" cuando el usuario hace click en el mapa.
+// Política: click en el mapa = el usuario quiere ESA dirección, así que siempre
+// sobrescribe (incluso si había un valor previo del perfil o tipeado).
+async function reverseGeocode(lat, lng) {
+    const direccionEl = document.getElementById('direccion');
+    if (!direccionEl) return;
+    try {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=es`;
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data && data.display_name) {
+            direccionEl.value = data.display_name;
+            direccionEl.dataset.autoFilled = 'true';
+        }
+    } catch (err) {
+        console.warn('Reverse geocoding falló:', err);
+    }
+}
+
+function setMarker(lat, lng, doReverseGeocode = true) {
+    document.getElementById('latitud').value = lat;
+    document.getElementById('longitud').value = lng;
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([lat, lng]).addTo(map);
+    if (doReverseGeocode) reverseGeocode(lat, lng);
+}
+
 function initMap() {
-    map = L.map('map').setView([-16.5000, -68.1500], 13);
+    map = L.map('map').setView(DEFAULT_CENTER, DEFAULT_ZOOM);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
     }).addTo(map);
 
     map.on('click', function(e) {
-        document.getElementById('latitud').value = e.latlng.lat;
-        document.getElementById('longitud').value = e.latlng.lng;
-        if(marker) map.removeLayer(marker);
-        marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+        setMarker(e.latlng.lat, e.latlng.lng, true);
     });
+
+    // Pedir geolocalización del navegador (si el usuario aprueba el permiso).
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const { latitude, longitude } = pos.coords;
+                map.setView([latitude, longitude], 16);
+                // No ponemos marker automáticamente — esperamos que el user haga click
+                // sobre la dirección exacta de entrega.
+            },
+            (err) => {
+                console.info('Geolocalización no disponible o denegada, usando Cochabamba por defecto.');
+            },
+            { timeout: 6000, enableHighAccuracy: false }
+        );
+    }
 }
 
 function toggleMap() {

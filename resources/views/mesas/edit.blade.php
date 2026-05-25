@@ -37,7 +37,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-text font-medium mb-2">Área</label>
+                    <label class="block text-text font-medium mb-2">Ubicación</label>
                     <input type="text" 
                            name="area" 
                            value="{{ old('area', $mesa->area) }}" 

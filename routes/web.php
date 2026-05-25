@@ -6,6 +6,9 @@ use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\MesaController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\ComandaController;
+// NOTA: DeliveryController/PagoController/CierreCajaController son STUBS que
+// redirigen a otros módulos (Facturas, Pedidos, Reportes). El equipo todavía
+// no implementó estas pantallas. TODO equipo: reemplazar los stubs.
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\PagoController;
@@ -20,6 +23,12 @@ use Illuminate\Support\Facades\Cache;
 Route::get('/', function () {
     return view('home');
 })->name('home');
+
+// Página pública del simulador de pago QR. El QR de cada factura apunta acá
+// para que el cliente escanee con su celular, presione "Pagar" y nuestro
+// propio backend confirme la factura (sin depender de una app externa).
+Route::get('/pago-externo', [\App\Http\Controllers\PagoQrController::class, 'pagoExterno'])
+    ->name('pago-externo');
 
 // Ruta para mostrar la página principal con el botón de login
 Route::get('/inicio', function () {
@@ -42,8 +51,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Mesas
     Route::resource('mesas', MesaController::class)->middleware('role:admin,mesero');
-    // Reserva de mesa, disponible solo para cliente
-    Route::resource('reserva', ReservaMesaController::class)->middleware('role:cliente');
+    // Reserva de mesa: cliente (autoservicio) o personal (admin/mesero a nombre de un cliente)
+    Route::resource('reserva', ReservaMesaController::class)->middleware('role:cliente,mesero,admin');
 
 
     // Comandas (Cocina)
@@ -55,20 +64,28 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{comanda}/print', [ComandaController::class, 'print'])->name('print');
     });
 
-    // Delivery
+    // Delivery — STUB: DeliveryController redirige a Pedidos.
     Route::resource('delivery', DeliveryController::class)->middleware('role:admin,cajero');
 
     Route::resource('facturas', FacturaController::class)->middleware('role:admin,cajero');
     Route::post('/facturas/{factura}/pagar', [FacturaController::class, 'pagar'])->name('facturas.pagar')->middleware('role:admin,cajero,cliente');
     Route::post('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular')->middleware('role:admin,cajero');
+    // Generar QR y enviar factura: el cliente puede invocar sobre su PROPIA factura
+    // (validado por ownership en el controller).
     Route::get('/facturas/{factura}/generar-qr', [FacturaController::class, 'generarQr'])->name('facturas.generar-qr')->middleware('role:admin,cajero,cliente');
-    Route::post('/facturas/{factura}/enviar-correo', [FacturaController::class, 'enviarPorCorreo'])->name('facturas.enviar-correo')->middleware('role:admin,cajero');
+    Route::post('/facturas/{factura}/enviar-correo', [FacturaController::class, 'enviarPorCorreo'])->name('facturas.enviar-correo')->middleware('role:admin,cajero,cliente');
+    Route::get('/facturas/{factura}/pdf', [FacturaController::class, 'descargarPdf'])->name('facturas.pdf')->middleware('role:admin,cajero,cliente');
 
-    // Pagos
+    // Pagos — STUB: redirige a Facturas. PagoQrController (webhook) sigue separado.
     Route::resource('pagos', PagoController::class)->middleware('role:admin,cajero');
 
-    // Cierre de Caja
-    Route::resource('cierres', CierreCajaController::class)->middleware('role:admin,cajero');
+    // Cierre de Cuenta por mesa (punto #6): lista mesas con cuenta abierta,
+    // permite ver la comanda consolidada y cobrar para liberar la mesa.
+    Route::prefix('cierres')->name('cierres.')->middleware('role:admin,cajero,mesero')->group(function () {
+        Route::get('/', [CierreCajaController::class, 'index'])->name('index');
+        Route::get('/mesa/{cierre}', [CierreCajaController::class, 'show'])->name('show');
+        Route::post('/mesa/{cierre}/cerrar', [CierreCajaController::class, 'cerrar'])->name('cerrar');
+    });
 
     // Gestión de Categorías (Solo Admin) - CON todas las rutas CRUD
     Route::resource('categorias', CategoriaController::class)->middleware('role:admin');
@@ -85,79 +102,33 @@ Route::middleware(['auth'])->group(function () {
     // Usuarios
     Route::resource('usuarios', UsuarioController::class)->middleware('role:admin');
 
-    // =========================
-// PEDIDOS ADMIN / MESERO
-// =========================
 
-Route::middleware(['auth', 'role:admin,mesero,cocinero'])->group(function () {
 
-    Route::resource('pedidos', PedidoController::class);
-
-    Route::post('/pedidos/{pedido}/cambiar-estado',
-        [PedidoController::class, 'cambiarEstado'])
-        ->name('pedidos.cambiar-estado');
-
-    Route::post('/detalle-pedido/{detalle}/cambiar-estado',
-        [PedidoController::class, 'cambiarEstadoDetalle'])
-        ->name('pedidos.detalle.cambiar-estado');
-
-    Route::put('/pedidos/{pedido}',
-        [PedidoController::class, 'update'])
-        ->name('pedidos.update');
-
-    Route::get('/pedidos/{pedido}/imprimir',
-        [PedidoController::class, 'imprimir'])
+   //PEDIDOS
+    Route::resource('pedidos', PedidoController::class)->middleware('role:admin,mesero,cajero,cliente');
+    Route::post('/pedidos/{pedido}/cambiar-estado', [PedidoController::class, 'cambiarEstado'])
+        ->name('pedidos.cambiar-estado')
+        ->middleware('role:admin,mesero,cocinero,cliente');
+    Route::post('/detalle-pedido/{detalle}/cambiar-estado', [PedidoController::class, 'cambiarEstadoDetalle'])
+        ->name('pedidos.detalle.cambiar-estado')
+        ->middleware('role:admin,cocinero,cliente');
+    // D4: agregar productos a un pedido abierto sin re-armar todo el detalle.
+    // Cliente solo puede agregar a su propio pedido (validado en controller).
+    Route::post('/pedidos/{pedido}/agregar-items', [PedidoController::class, 'agregarItems'])
+        ->name('pedidos.agregar-items')
+        ->middleware('role:admin,mesero,cajero,cliente');
+    Route::get('/pedidos/{pedido}/imprimir', [PedidoController::class, 'imprimir'])
         ->name('pedidos.imprimir');
-});
+    // FIX: Route::resource('pedidos',...) ya genera 'pedidos.update'. Esta
+    // línea duplicaba el nombre y rompía route:cache en producción
+    // ("Another route has already been assigned name [pedidos.update]").
+    // Route::put('/pedidos/{pedido}', [PedidoController::class, 'update'])
+    //     ->name('pedidos.update');
+    Route::get('/misPedidos', [PedidoController::class, 'misPedidos'])
+    ->name('pedidos.misPedidos')
+    ->middleware('auth');
 
 
-// =========================
-// PEDIDOS CLIENTE
-// =========================
-
-Route::middleware(['auth', 'role:cliente'])->group(function () {
-
-    Route::get('/cliente/pedido',
-        [PedidoController::class, 'pedidoCliente'])
-        ->name('pedidos.cliente');
-
-    Route::post('/cliente/pedido',
-        [PedidoController::class, 'store'])
-        ->name('pedidos.store.cliente');
-
-    Route::get('/misPedidos',
-        [PedidoController::class, 'misPedidos'])
-        ->name('pedidos.misPedidos');
-
-    // NUEVAS RUTAS PAGO QR CLIENTE
-    Route::get('/misPedidosPendientes',
-        [PedidoController::class, 'misPedidosPendientes'])
-        ->name('pedidos.pendientes.cliente');
-
-    Route::get('/cliente/pedidos/{pedido}/generar-qr',
-        [PedidoController::class, 'generarQrPedido'])
-        ->name('pedidos.generar-qr.cliente');
-
-    // VER pedido propio
-    Route::get('/cliente/pedidos/{pedido}',
-        [PedidoController::class, 'showCliente'])
-        ->name('pedidos.show.cliente');
-
-    // EDITAR pedido propio
-    Route::get('/cliente/pedidos/{pedido}/edit',
-        [PedidoController::class, 'editCliente'])
-        ->name('pedidos.edit.cliente');
-
-    // ACTUALIZAR pedido propio
-    Route::put('/cliente/pedidos/{pedido}',
-        [PedidoController::class, 'updateCliente'])
-        ->name('pedidos.update.cliente');
-
-    // CANCELAR pedido propio
-    Route::delete('/cliente/pedidos/{pedido}',
-        [PedidoController::class, 'destroyCliente'])
-        ->name('pedidos.destroy.cliente');
-});
 
     // Reportes de Consumos
     Route::prefix('reportes')->name('reportes.')->middleware('role:admin,cocinero')->group(function () {

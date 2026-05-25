@@ -185,6 +185,62 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     inicializarEventos();
+
+    // ─── WebSockets: cocina escucha el canal "pedidos.cocineros" en tiempo real ──
+    let tabActivoWS = 'todos';
+    document.querySelectorAll('.tab-btn').forEach(t => {
+        t.addEventListener('click', function () { tabActivoWS = this.dataset.tab; });
+    });
+
+    // El toast visual lo dispara app.js (suscripción global). Acá solo
+    // refrescamos la lista de comandas y resaltamos el card nuevo con animación.
+    window.addEventListener('nuevo-pedido', (ev) => {
+        const e = ev.detail || {};
+        console.log('🆕 Comandas: refrescando por pedido nuevo', e);
+        reproducirCampana();
+        loadComandas(tabActivoWS);
+
+        // Después del refresh (loadComandas usa fetch async), buscamos el card
+        // que coincide con el numero_pedido y le agregamos la clase de highlight.
+        if (e.numero_pedido) {
+            setTimeout(() => destacarCard(e.numero_pedido), 800);
+        }
+    });
+
+    // Refresco silencioso (sin campana) cuando un pedido sale de cocina
+    // por cambio de estado: cancelado, entregado, facturado.
+    window.addEventListener('refresh-comandas', (ev) => {
+        console.log('🔄 Comandas: refrescando por cambio de estado', ev.detail);
+        loadComandas(tabActivoWS);
+    });
+
+    function destacarCard(numeroPedido) {
+        const cards = document.querySelectorAll('[data-pedido-numero], .comanda-card');
+        cards.forEach(card => {
+            const txt = card.textContent || '';
+            if (txt.includes(numeroPedido)) {
+                card.classList.add('pedido-card-nuevo');
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => card.classList.remove('pedido-card-nuevo'), 2500);
+            }
+        });
+    }
+
+    function reproducirCampana() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.5);
+        } catch (err) { /* sin audio, no es crítico */ }
+    }
+
 });
 </script>
 @endpush
