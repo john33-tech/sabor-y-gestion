@@ -95,6 +95,11 @@ class FacturaController extends Controller
      */
     public function pagar(Request $request, Factura $factura)
     {
+        // Seguridad: Si es cliente, solo puede pagar sus propias facturas
+        if (Auth::user()->role === 'cliente' && $factura->pedido->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
         $request->validate([
             'metodo_pago' => 'sometimes|required|in:efectivo,tarjeta,qr,transferencia',
         ]);
@@ -108,6 +113,10 @@ class FacturaController extends Controller
 
         if ($factura->pedido) {
             $factura->pedido->update(['estado' => Pedido::ESTADO_FACTURADO]);
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Factura pagada']);
         }
 
         return redirect()->back()->with('success', 'Factura ' . $factura->numero_factura . ' marcada como PAGADA');
@@ -139,6 +148,11 @@ class FacturaController extends Controller
      */
     public function generarQr(Factura $factura)
     {
+        // Seguridad: Si es cliente, solo puede ver sus propias facturas
+        if (Auth::user()->role === 'cliente' && $factura->pedido->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
         $factura->load('pedido');
 
         // Identificador único del canal Pusher para este pago

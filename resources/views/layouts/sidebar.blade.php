@@ -349,7 +349,6 @@ class="mb-1">
               <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Reservar mesa</span>
         </a>
         @endif
-        <!-- MIS PEDIDOS cliente -->
 @if(in_array($role, ['cliente']))
 <a href="{{ route('pedidos.misPedidos') }}"
    class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
@@ -362,6 +361,253 @@ class="mb-1">
     </span>
 
 </a>
+
+<div x-data="clientePagoManager()" x-init="init()">
+    <button @click="openSelectionModal()"
+       class="w-full flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg transition-all duration-200 hover:bg-white/10 group">
+        <i class="w-5 text-base transition-colors fas fa-qrcode text-white/80 sm:text-lg group-hover:text-white"></i>
+        <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)"
+              x-transition.duration.200
+              class="text-xs font-medium sm:text-sm text-white/80 group-hover:text-white whitespace-nowrap">
+            Pagar con QR
+        </span>
+    </button>
+
+    <!-- Modals Teleportados al final del Body -->
+    <template x-teleport="body">
+        <div>
+            <!-- Modal: Selección de Pedido -->
+            <x-modal name="select-pedido-pago" focusable>
+                <div class="p-6">
+                    <h2 class="text-lg font-medium text-gray-900 mb-4">
+                        <i class="fas fa-list-ul mr-2 text-primary"></i> Seleccione el Pedido a Pagar
+                    </h2>
+                    
+                    <div x-show="loadingPedidos" class="flex justify-center py-10">
+                        <i class="fas fa-spinner fa-spin text-3xl text-primary"></i>
+                    </div>
+
+                    <div x-show="!loadingPedidos && pedidosPendientes.length === 0" class="text-center py-10">
+                        <p class="text-gray-500">No tienes pedidos pendientes de pago.</p>
+                    </div>
+
+                    <div x-show="!loadingPedidos && pedidosPendientes.length > 0" class="space-y-3 max-h-96 overflow-y-auto pr-2">
+                        <template x-for="pedido in pedidosPendientes" :key="pedido.id">
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition border border-gray-200">
+                                <div>
+                                    <div class="font-bold text-primary" x-text="'#' + pedido.numero_pedido"></div>
+                                    <div class="text-xs text-gray-500" x-text="new Date(pedido.created_at).toLocaleString()"></div>
+                                    <div class="text-sm font-semibold text-green-600 mt-1" x-text="'Bs. ' + parseFloat(pedido.total).toFixed(2)"></div>
+                                </div>
+                                <button @click="generarQr(pedido)"
+                                        :disabled="qrLoading"
+                                        class="inline-flex items-center px-4 py-2 bg-purple-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-purple-700 transition disabled:opacity-50">
+                                    <i class="fas fa-cash-register mr-2"></i> Pagar
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="mt-6 flex justify-end">
+                        <x-secondary-button x-on:click="$dispatch('close')">Cerrar</x-secondary-button>
+                    </div>
+                </div>
+            </x-modal>
+
+            <!-- Modal: QR de Pago -->
+            <div x-show="qrModalOpen"
+                x-transition:enter="ease-out duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="ease-in duration-200"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 z-[100] overflow-y-auto"
+                style="display: none;">
+
+                <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm"></div>
+
+                <div class="flex min-h-screen items-center justify-center p-4">
+                    <div x-show="qrModalOpen"
+                        x-transition:enter="ease-out duration-300"
+                        x-transition:enter-start="opacity-0 scale-95"
+                        x-transition:enter-end="opacity-100 scale-100"
+                        class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+                        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-white font-bold text-lg flex items-center">
+                                    <i class="fas fa-qrcode mr-2"></i> Pago con QR
+                                </h3>
+                                <button @click="cerrarQrModal()"
+                                        class="text-white/80 hover:text-white transition"
+                                        x-show="!qrPagado">
+                                    <i class="fas fa-times text-xl"></i>
+                                </button>
+                            </div>
+                            <p class="text-purple-200 text-sm mt-1" x-text="'Pedido: ' + (selectedPedido?.numero_pedido || '')"></p>
+                        </div>
+
+                        <div class="p-6">
+                            <div x-show="!qrPagado">
+                                <div class="flex justify-center mb-5">
+                                    <div class="p-3 bg-white border-2 border-gray-200 rounded-xl shadow-inner"
+                                        x-html="qrSvg">
+                                    </div>
+                                </div>
+
+                                <div class="bg-gray-50 rounded-xl p-4 space-y-2 mb-5 text-gray-800">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-500">Monto Total:</span>
+                                        <span class="text-xl font-black text-purple-700" x-text="'Bs. ' + qrFacturaData?.total"></span>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-center gap-3 py-3">
+                                    <div class="relative flex h-3 w-3">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-3 w-3 bg-purple-500"></span>
+                                    </div>
+                                    <span class="text-sm text-gray-500 font-medium animate-pulse">Esperando confirmación...</span>
+                                </div>
+                            </div>
+
+                            <div x-show="qrPagado" class="text-center py-8">
+                                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-4 qr-success-check">
+                                    <i class="fas fa-check text-4xl text-green-600"></i>
+                                </div>
+                                <h3 class="text-2xl font-bold text-green-700 mb-2">¡Pago Confirmado!</h3>
+                                <p class="text-gray-600 mb-1">Tu pago fue procesado exitosamente.</p>
+                                <p class="text-sm text-gray-500">Actualizando información...</p>
+                                <div class="mt-4">
+                                    <div class="w-full bg-green-100 rounded-full h-1.5 overflow-hidden">
+                                        <div class="bg-green-500 h-1.5 rounded-full qr-progress-bar"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+<script>
+    function clientePagoManager() {
+        return {
+            pedidosPendientes: [],
+            loadingPedidos: false,
+            selectedPedido: null,
+            qrModalOpen: false,
+            qrSvg: '',
+            qrEmisor: '',
+            qrLoading: false,
+            qrPagado: false,
+            qrFacturaData: null,
+            echoChannel: null,
+
+            init() {
+                console.log('Pago QR Cliente inicializado');
+            },
+
+            async openSelectionModal() {
+                this.loadingPedidos = true;
+                this.$dispatch('open-modal', 'select-pedido-pago');
+                
+                try {
+                    const response = await fetch('/misPedidosPendientes');
+                    this.pedidosPendientes = await response.json();
+                } catch (error) {
+                    console.error('Error cargando pedidos:', error);
+                } finally {
+                    this.loadingPedidos = false;
+                }
+            },
+
+            async generarQr(pedido) {
+                this.selectedPedido = pedido;
+                this.qrLoading = true;
+
+                try {
+                    const response = await fetch(`/cliente/pedidos/${pedido.id}/generar-qr`, {
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    if (!response.ok) throw new Error('Error al generar QR');
+
+                    const data = await response.json();
+                    this.qrSvg = data.qr_svg;
+                    this.qrEmisor = data.emisor;
+                    this.qrFacturaData = data.factura;
+                    this.qrPagado = false;
+
+                    this.$dispatch('close-modal', 'select-pedido-pago');
+                    this.qrModalOpen = true;
+
+                    this.suscribirCanal(data.emisor);
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('No se pudo generar el QR.');
+                } finally {
+                    this.qrLoading = false;
+                }
+            },
+
+            suscribirCanal(emisor) {
+                if (this.echoChannel) {
+                    window.Echo.leave('emisor-' + this.qrEmisor);
+                }
+
+                if (!window.Echo) return;
+
+                this.echoChannel = window.Echo.channel('emisor-' + emisor)
+                    .listen('.pago.confirmado', (e) => {
+                        this.procesarPagoConfirmado(e);
+                    });
+            },
+
+            async procesarPagoConfirmado(eventData) {
+                this.qrPagado = true;
+                
+                // Actualizar estado en servidor
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+                    await fetch(`/facturas/${this.qrFacturaData.id}/pagar`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ metodo_pago: 'qr' })
+                    });
+                } catch (err) {
+                    console.log('Error o ya actualizado:', err);
+                }
+
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2800);
+            },
+
+            cerrarQrModal() {
+                if (this.echoChannel && this.qrEmisor) {
+                    window.Echo.leave('emisor-' + this.qrEmisor);
+                }
+                this.qrModalOpen = false;
+                this.qrSvg = '';
+            }
+        }
+    }
+</script>
+
+<style>
+    .qr-success-check { animation: successPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+    @keyframes successPop { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    .qr-progress-bar { animation: progressFill 2.5s linear forwards; }
+    @keyframes progressFill { 0% { width: 0%; } 100% { width: 100%; } }
+</style>
 @endif
 
         <!-- Comandas -->

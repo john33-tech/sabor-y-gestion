@@ -962,6 +962,36 @@ public function destroyCliente(Pedido $pedido)
         return view('pedidos.misPedidos', compact('pedidos', 'estados', 'tipos'));
     }
 
+    /**
+     * Obtener pedidos pendientes de pago para el cliente.
+     */
+    public function misPedidosPendientes()
+    {
+        $pedidos = Pedido::where('usuario_id', Auth::id())
+            ->whereNotIn('estado', [Pedido::ESTADO_FACTURADO, Pedido::ESTADO_CANCELADO])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($pedidos);
+    }
+
+    /**
+     * Generar QR para un pedido específico del cliente.
+     */
+    public function generarQrPedido(Pedido $pedido)
+    {
+        // Verificar que el pedido pertenezca al usuario
+        if ($pedido->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
+        // Asegurar que existe factura
+        $factura = $pedido->generarOrUpdateFactura();
+
+        // Reutilizar lógica de FacturaController
+        return app(FacturaController::class)->generarQr($factura);
+    }
+
     public function imprimir(Pedido $pedido)
     {
         $pedido->load(['mesa', 'detalles.plato']);

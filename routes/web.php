@@ -59,9 +59,9 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('delivery', DeliveryController::class)->middleware('role:admin,cajero');
 
     Route::resource('facturas', FacturaController::class)->middleware('role:admin,cajero');
-    Route::post('/facturas/{factura}/pagar', [FacturaController::class, 'pagar'])->name('facturas.pagar')->middleware('role:admin,cajero');
+    Route::post('/facturas/{factura}/pagar', [FacturaController::class, 'pagar'])->name('facturas.pagar')->middleware('role:admin,cajero,cliente');
     Route::post('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular')->middleware('role:admin,cajero');
-    Route::get('/facturas/{factura}/generar-qr', [FacturaController::class, 'generarQr'])->name('facturas.generar-qr')->middleware('role:admin,cajero');
+    Route::get('/facturas/{factura}/generar-qr', [FacturaController::class, 'generarQr'])->name('facturas.generar-qr')->middleware('role:admin,cajero,cliente');
     Route::post('/facturas/{factura}/enviar-correo', [FacturaController::class, 'enviarPorCorreo'])->name('facturas.enviar-correo')->middleware('role:admin,cajero');
 
     // Pagos
@@ -85,28 +85,79 @@ Route::middleware(['auth'])->group(function () {
     // Usuarios
     Route::resource('usuarios', UsuarioController::class)->middleware('role:admin');
 
+    // =========================
+// PEDIDOS ADMIN / MESERO
+// =========================
 
+Route::middleware(['auth', 'role:admin,mesero,cocinero'])->group(function () {
 
-   //PEDIDOS
-    Route::resource('pedidos', PedidoController::class)
-    ->middleware('role:admin,mesero,cajero,cliente');
+    Route::resource('pedidos', PedidoController::class);
 
-    Route::post('/pedidos/{pedido}/cambiar-estado', [PedidoController::class, 'cambiarEstado'])
-        ->name('pedidos.cambiar-estado')
-        ->middleware('role:admin,mesero,cocinero,cliente');
+    Route::post('/pedidos/{pedido}/cambiar-estado',
+        [PedidoController::class, 'cambiarEstado'])
+        ->name('pedidos.cambiar-estado');
 
-    Route::post('/detalle-pedido/{detalle}/cambiar-estado', [PedidoController::class, 'cambiarEstadoDetalle'])
-        ->name('pedidos.detalle.cambiar-estado')
-        ->middleware('role:admin,cocinero,cliente');
+    Route::post('/detalle-pedido/{detalle}/cambiar-estado',
+        [PedidoController::class, 'cambiarEstadoDetalle'])
+        ->name('pedidos.detalle.cambiar-estado');
 
-    Route::get('/pedidos/{pedido}/imprimir', [PedidoController::class, 'imprimir'])
+    Route::put('/pedidos/{pedido}',
+        [PedidoController::class, 'update'])
+        ->name('pedidos.update');
+
+    Route::get('/pedidos/{pedido}/imprimir',
+        [PedidoController::class, 'imprimir'])
         ->name('pedidos.imprimir');
-
-    Route::get('/misPedidos', [PedidoController::class, 'misPedidos'])
-        ->name('pedidos.misPedidos')
-        ->middleware('auth');
+});
 
 
+// =========================
+// PEDIDOS CLIENTE
+// =========================
+
+Route::middleware(['auth', 'role:cliente'])->group(function () {
+
+    Route::get('/cliente/pedido',
+        [PedidoController::class, 'pedidoCliente'])
+        ->name('pedidos.cliente');
+
+    Route::post('/cliente/pedido',
+        [PedidoController::class, 'store'])
+        ->name('pedidos.store.cliente');
+
+    Route::get('/misPedidos',
+        [PedidoController::class, 'misPedidos'])
+        ->name('pedidos.misPedidos');
+
+    // NUEVAS RUTAS PAGO QR CLIENTE
+    Route::get('/misPedidosPendientes',
+        [PedidoController::class, 'misPedidosPendientes'])
+        ->name('pedidos.pendientes.cliente');
+
+    Route::get('/cliente/pedidos/{pedido}/generar-qr',
+        [PedidoController::class, 'generarQrPedido'])
+        ->name('pedidos.generar-qr.cliente');
+
+    // VER pedido propio
+    Route::get('/cliente/pedidos/{pedido}',
+        [PedidoController::class, 'showCliente'])
+        ->name('pedidos.show.cliente');
+
+    // EDITAR pedido propio
+    Route::get('/cliente/pedidos/{pedido}/edit',
+        [PedidoController::class, 'editCliente'])
+        ->name('pedidos.edit.cliente');
+
+    // ACTUALIZAR pedido propio
+    Route::put('/cliente/pedidos/{pedido}',
+        [PedidoController::class, 'updateCliente'])
+        ->name('pedidos.update.cliente');
+
+    // CANCELAR pedido propio
+    Route::delete('/cliente/pedidos/{pedido}',
+        [PedidoController::class, 'destroyCliente'])
+        ->name('pedidos.destroy.cliente');
+});
 
     // Reportes de Consumos
     Route::prefix('reportes')->name('reportes.')->middleware('role:admin,cocinero')->group(function () {

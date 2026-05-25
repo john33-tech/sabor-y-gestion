@@ -27,7 +27,29 @@ class DashboardController extends Controller
     public function cocinero()
     {
         $this->authorizeRole('cocinero');
-        return view('dashboard.cocinero.index');
+
+        // Solo hoy y solo pendientes para el dashboard del cocinero
+        $query = \App\Models\Pedido::with(['detalles.plato', 'mesa', 'usuario'])
+            ->whereDate('created_at', now()->today())
+            ->where('estado', \App\Models\Pedido::ESTADO_PENDIENTE);
+        
+        $comandas = $query->orderBy('created_at', 'asc')->paginate(12);
+        
+        $tipos = \App\Models\Pedido::getTipos();
+        
+        // Estadísticas solo de HOY
+        $stats = [
+            'total' => \App\Models\Pedido::whereDate('created_at', now()->today())
+                ->whereIn('estado', ['pendiente', 'en_preparacion', 'listo'])->count(),
+            'pendientes' => \App\Models\Pedido::whereDate('created_at', now()->today())
+                ->where('estado', 'pendiente')->count(),
+            'en_preparacion' => \App\Models\Pedido::whereDate('created_at', now()->today())
+                ->where('estado', 'en_preparacion')->count(),
+            'listos' => \App\Models\Pedido::whereDate('created_at', now()->today())
+                ->where('estado', 'listos')->count()
+        ];
+
+        return view('dashboard.cocinero.index', compact('comandas', 'tipos', 'stats'));
     }
     
     public function cajero()
