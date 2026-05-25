@@ -247,6 +247,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.dispatchEvent(new CustomEvent('refresh-comandas', { detail: e }));
                 }
             })
+            .listen('.pedido.eliminado', (e) => {
+                console.log('🗑️ Comandas: pedido eliminado', e);
+                window.dispatchEvent(new CustomEvent('refresh-comandas', { detail: e }));
+            })
             .error((err) => console.error('❌ Error en pedidos.cocineros:', err));
     }
 

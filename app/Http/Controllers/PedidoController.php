@@ -2,6 +2,7 @@
 // app/Http/Controllers/PedidoController.php
 namespace App\Http\Controllers;
 
+use App\Events\PedidoEliminado;
 use App\Models\Pedido;
 use App\Models\DetallePedido;
 use App\Models\Plato;
@@ -477,10 +478,17 @@ class PedidoController extends Controller
                 $pedido->mesa->update(['estado' => 'libre']);
             }
 
+            // Capturar datos antes del delete para el broadcast
+            $pedidoId = $pedido->id;
+            $numeroPedido = $pedido->numero_pedido;
+
             $pedido->detalles()->delete();
             $pedido->delete();
 
             DB::commit();
+
+            // Notificar a cocina/meseros para que el card desaparezca en vivo
+            broadcast(new PedidoEliminado($pedidoId, $numeroPedido));
 
             return redirect()->route('pedidos.index')
                 ->with('success', 'Pedido eliminado exitosamente');
