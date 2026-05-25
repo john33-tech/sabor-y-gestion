@@ -206,11 +206,14 @@
                                 style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
                                 <option value="">-- Seleccione una mesa --</option>
                                 @foreach($mesas as $mesa)
-                                    <option value="{{ $mesa->id }}">
+                                    <option value="{{ $mesa->id }}" {{ old('mesa_id') == $mesa->id ? 'selected' : '' }}>
                                         Mesa {{ $mesa->numero_mesa }} - Cap. {{ $mesa->capacidad }} personas
                                     </option>
                                 @endforeach
                             </select>
+                            @error('mesa_id')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         @php
@@ -232,6 +235,9 @@
                                 placeholder="cliente@ejemplo.com"
                                 class="w-full px-3 py-2 rounded-lg outline-none transition-all"
                                 style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
+                            @error('cliente_email')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         <!-- Datos del Cliente (solo para delivery / para llevar) -->
@@ -250,6 +256,9 @@
                                     value="{{ old('cliente_nombre', $nombreDefault) }}"
                                     class="w-full px-3 py-2 rounded-lg outline-none transition-all"
                                     style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
+                                @error('cliente_nombre')
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1" style="color: #111827;">
@@ -259,6 +268,9 @@
                                     value="{{ old('cliente_telefono', $telefonoDefault) }}"
                                     class="w-full px-3 py-2 rounded-lg outline-none transition-all"
                                     style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
+                                @error('cliente_telefono')
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <div id="direccionContainer" class="hidden">
@@ -268,6 +280,9 @@
                                 <textarea name="direccion" id="direccion" rows="3"
                                     class="w-full px-3 py-2 rounded-lg outline-none transition-all"
                                     style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">{{ old('direccion', $direccionDefault) }}</textarea>
+                                @error('direccion')
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
                         </div>
 
@@ -290,8 +305,8 @@
                                 <i class="fas fa-map mr-1"></i> Seleccione ubicación en el mapa
                             </label>
                             <div id="map" style="height: 350px;" class="rounded-lg border"></div>
-                            <input type="hidden" name="latitud" id="latitud">
-                            <input type="hidden" name="longitud" id="longitud">
+                            <input type="hidden" name="latitud" id="latitud" value="{{ old('latitud') }}">
+                            <input type="hidden" name="longitud" id="longitud" value="{{ old('longitud') }}">
                         </div>
 
                         <!-- Notas -->
@@ -301,7 +316,7 @@
                             </label>
                             <textarea name="notas" rows="2"
                                 class="w-full px-3 py-2 rounded-lg outline-none transition-all"
-                                style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;"></textarea>
+                                style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">{{ old('notas') }}</textarea>
                         </div>
 
                         <!-- Descuento -->
@@ -309,7 +324,7 @@
                             <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                 <i class="fas fa-tag mr-1"></i> Descuento (Bs.)
                             </label>
-                            <input type="number" name="descuento" value="0" step="0.01" min="0"
+                            <input type="number" name="descuento" value="{{ old('descuento', 0) }}" step="0.01" min="0"
                                 class="w-full px-3 py-2 rounded-lg outline-none transition-all"
                                 style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
                         </div>
@@ -358,7 +373,35 @@
 
 @push('scripts')
 <script>
+// Mapa de datos de platos para restaurar desde old()
+const platoData = {
+    @foreach($platosConStock as $categoria => $platosCategoria)
+        @foreach($platosCategoria as $plato)
+            "{{ $plato->id }}": {
+                nombre: "{{ $plato->nombre }}",
+                precio: {{ $plato->precio }},
+                tieneStock: {{ $plato->tiene_stock ? 'true' : 'false' }}
+            },
+        @endforeach
+    @endforeach
+};
+
 let items = [];
+// Restaurar items desde el input antiguo si existe (por ejemplo, después de un error de validación)
+const oldItems = @json(old('items', []));
+if (Array.isArray(oldItems) && oldItems.length > 0) {
+    items = oldItems.map(item => {
+        const data = platoData[item.plato_id];
+        return {
+            plato_id: item.plato_id,
+            nombre: data ? data.nombre : 'Plato desconocido',
+            precio_unitario: data ? parseFloat(data.precio) : 0,
+            cantidad: parseInt(item.cantidad) || 1,
+            notas: item.notas || ''
+        };
+    });
+}
+
 let map;
 let marker;
 let searchTimeout;
@@ -409,8 +452,15 @@ function initMap() {
         setMarker(e.latlng.lat, e.latlng.lng, true);
     });
 
-    // Pedir geolocalización del navegador (si el usuario aprueba el permiso).
-    if (navigator.geolocation) {
+    // Si ya hay coordenadas (restauradas de old()), poner el marcador
+    const oldLat = document.getElementById('latitud').value;
+    const oldLng = document.getElementById('longitud').value;
+    
+    if (oldLat && oldLng) {
+        setMarker(parseFloat(oldLat), parseFloat(oldLng), false);
+        map.setView([parseFloat(oldLat), parseFloat(oldLng)], 16);
+    } else if (navigator.geolocation) {
+        // Pedir geolocalización del navegador (si el usuario aprueba el permiso).
         navigator.geolocation.getCurrentPosition(
             (pos) => {
                 const { latitude, longitude } = pos.coords;
@@ -582,7 +632,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    updateTipoPedido('mesa');
+    updateTipoPedido('{{ old('tipo_pedido', 'mesa') }}');
+    
+    // Si hay items restaurados, renderizarlos
+    if (items.length > 0) {
+        renderItems();
+    }
     
     // Evento para descuento
     document.querySelector('input[name="descuento"]').addEventListener('input', updateTotals);
@@ -614,8 +669,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Validación del formulario
     document.getElementById('pedidoForm').addEventListener('submit', async function(e) {
+        e.preventDefault(); // Evitar envío automático
+        
         if (items.length === 0) {
-            e.preventDefault();
             showNotification('❌ Debe agregar al menos un plato al pedido', 'error');
             return false;
         }
@@ -625,56 +681,70 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Verificando stock...';
         submitBtn.disabled = true;
         
-        let stockInsuficiente = [];
-        for (const item of items) {
-            try {
+        try {
+            let stockInsuficiente = [];
+            // Optimización: podríamos hacer esto en una sola petición, pero mantendremos la lógica actual corregida
+            for (const item of items) {
                 const response = await fetch('/api/verificar-stock-plato', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
                     body: JSON.stringify({ plato_id: item.plato_id, cantidad: item.cantidad })
                 });
+                
+                if (!response.ok) continue;
+                
                 const data = await response.json();
-                if (!data.disponible) stockInsuficiente.push(`${item.nombre} (x${item.cantidad}) - ${data.mensaje}`);
-            } catch (error) { console.error(error); }
-        }
-        
-        if (stockInsuficiente.length > 0) {
-            e.preventDefault();
-            showNotification('❌ Stock insuficiente:\n' + stockInsuficiente.join('\n'), 'error');
+                if (!data.disponible) {
+                    stockInsuficiente.push(`${item.nombre} (x${item.cantidad}) - ${data.mensaje}`);
+                }
+            }
+            
+            if (stockInsuficiente.length > 0) {
+                showNotification('❌ Stock insuficiente:\n' + stockInsuficiente.join('\n'), 'error');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                return false;
+            }
+            
+            const tipoPedido = tipoInput.value;
+            if (tipoPedido === 'mesa') {
+                const mesaSelect = document.querySelector('select[name="mesa_id"]');
+                if (!mesaSelect.value) {
+                    showNotification('❌ Debe seleccionar una mesa', 'error');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    return false;
+                }
+            } else {
+                const nombre = document.querySelector('input[name="cliente_nombre"]').value.trim();
+                const telefono = document.querySelector('input[name="cliente_telefono"]').value.trim();
+                if (!nombre || !telefono) {
+                    showNotification('❌ Debe ingresar nombre y teléfono del cliente', 'error');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    return false;
+                }
+                if (tipoPedido === 'delivery' && !document.querySelector('textarea[name="direccion"]').value.trim()) {
+                    showNotification('❌ Debe ingresar una dirección de entrega', 'error');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                    return false;
+                }
+            }
+            
+            // Si todo está correcto, enviar el formulario
+            this.submit();
+            
+        } catch (error) {
+            console.error('Error durante la validación:', error);
+            showNotification('❌ Error al verificar el pedido. Intente nuevamente.', 'error');
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
-            return false;
         }
-        
-        const tipoPedido = tipoInput.value;
-        if (tipoPedido === 'mesa') {
-            if (!document.querySelector('select[name="mesa_id"]').value) {
-                e.preventDefault();
-                showNotification('❌ Debe seleccionar una mesa', 'error');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-                return false;
-            }
-        } else {
-            const nombre = document.querySelector('input[name="cliente_nombre"]').value.trim();
-            const telefono = document.querySelector('input[name="cliente_telefono"]').value.trim();
-            if (!nombre || !telefono) {
-                e.preventDefault();
-                showNotification('❌ Debe ingresar nombre y teléfono del cliente', 'error');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-                return false;
-            }
-            if (tipoPedido === 'delivery' && !document.querySelector('textarea[name="direccion"]').value.trim()) {
-                e.preventDefault();
-                showNotification('❌ Debe ingresar una dirección de entrega', 'error');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-                return false;
-            }
-        }
-        
-        return true;
     });
 });
 

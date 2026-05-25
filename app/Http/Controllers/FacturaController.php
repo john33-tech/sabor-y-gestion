@@ -22,17 +22,17 @@ class FacturaController extends Controller
             ->where('estado', 'pendiente')
             ->orderBy('created_at', 'desc')
             ->get();
-            
+
         $pagadas = Factura::with(['pedido', 'usuario'])
             ->where('estado', 'pagada')
             ->orderBy('created_at', 'desc')
             ->get();
-            
+
         $anuladas = Factura::with(['pedido', 'usuario'])
             ->where('estado', 'anulada')
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         return view('facturas.index', compact('pendientes', 'pagadas', 'anuladas'));
     }
 
@@ -46,7 +46,7 @@ class FacturaController extends Controller
         ]);
 
         $pedido = Pedido::findOrFail($request->pedido_id);
-        
+
         // Usar la lógica del modelo Pedido para generar o actualizar la factura
         $factura = $pedido->generarOrUpdateFactura();
 
@@ -176,9 +176,9 @@ class FacturaController extends Controller
             'pedido'    => $factura->pedido_id,
         ];
 
-        // QR apunta a nuestra propia página de pago (autocontenida): no
-        // dependemos de un sistema externo que pueda fallar.
-        $url = url('/pago-externo') . '?' . http_build_query($params);
+
+        $baseUrl = 'https://proyecto-tis-umss.infinityfreeapp.com';
+        $url = $baseUrl . '/?' . http_build_query($params);
 
         // Generar QR 300x300 en formato SVG
         $qrSvg = (string) QrCode::size(300)
