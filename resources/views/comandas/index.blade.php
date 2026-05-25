@@ -207,6 +207,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Refresco silencioso (sin campana) cuando un pedido sale de cocina
+    // por cambio de estado: cancelado, entregado, facturado.
+    window.addEventListener('refresh-comandas', (ev) => {
+        console.log('🔄 Comandas: refrescando por cambio de estado', ev.detail);
+        loadComandas(tabActivoWS);
+    });
+
     function destacarCard(numeroPedido) {
         const cards = document.querySelectorAll('[data-pedido-numero], .comanda-card');
         cards.forEach(card => {

@@ -35,6 +35,9 @@ class PedidoEstadoCambiado implements ShouldBroadcastNow
             // Canal global para meseros/cajeros: filtran por estado="listo"
             // en el JS para no recibir todos los cambios.
             new Channel('pedidos.meseros'),
+            // Canal de cocina: el kitchen display refresca para que los pedidos
+            // cancelados/entregados/facturados desaparezcan en vivo.
+            new Channel('pedidos.cocineros'),
         ];
     }
 

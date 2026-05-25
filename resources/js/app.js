@@ -238,6 +238,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 window.dispatchEvent(new CustomEvent('nuevo-pedido', { detail: e }));
             })
+            .listen('.pedido.estado.cambiado', (e) => {
+                // Si el pedido salió del kitchen display (cancelado/entregado/facturado),
+                // refrescamos la vista para que el card desaparezca en vivo.
+                const estadosEnCocina = ['pendiente', 'en_preparacion', 'listo'];
+                if (!estadosEnCocina.includes(e.estado)) {
+                    console.log('🗑️ Comandas: pedido salió de cocina', e);
+                    window.dispatchEvent(new CustomEvent('refresh-comandas', { detail: e }));
+                }
+            })
             .error((err) => console.error('❌ Error en pedidos.cocineros:', err));
     }
 
