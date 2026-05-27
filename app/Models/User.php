@@ -57,4 +57,9 @@ class User extends Authenticatable
     {
         return $this->role === 'cliente';
     }
+
+    public function cashClosures(): HasMany
+    {
+        return $this->hasMany(CashClosure::class);
+    }
 }

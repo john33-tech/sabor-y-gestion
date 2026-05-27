@@ -25,5 +25,7 @@ class IngredienteSeeder extends Seeder
                 ['unidad_medida' => $ing['unidad_medida']]
             );
         }
+
+
     }
 }

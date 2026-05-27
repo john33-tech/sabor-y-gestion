@@ -6,13 +6,12 @@ use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\MesaController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\ComandaController;
-// NOTA: DeliveryController/PagoController/CierreCajaController son STUBS que
 // redirigen a otros módulos (Facturas, Pedidos, Reportes). El equipo todavía
 // no implementó estas pantallas. TODO equipo: reemplazar los stubs.
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\PagoController;
-use App\Http\Controllers\CierreCajaController;
+use App\Http\Controllers\CierrePedidoController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\IngredienteController;
@@ -82,9 +81,9 @@ Route::middleware(['auth'])->group(function () {
     // Cierre de Cuenta por mesa (punto #6): lista mesas con cuenta abierta,
     // permite ver la comanda consolidada y cobrar para liberar la mesa.
     Route::prefix('cierres')->name('cierres.')->middleware('role:admin,cajero,mesero')->group(function () {
-        Route::get('/', [CierreCajaController::class, 'index'])->name('index');
-        Route::get('/mesa/{cierre}', [CierreCajaController::class, 'show'])->name('show');
-        Route::post('/mesa/{cierre}/cerrar', [CierreCajaController::class, 'cerrar'])->name('cerrar');
+        Route::get('/', [CierrePedidoController::class, 'index'])->name('index');
+        Route::get('/mesa/{cierre}', [CierrePedidoController::class, 'show'])->name('show');
+        Route::post('/mesa/{cierre}/cerrar', [CierrePedidoController::class, 'cerrar'])->name('cerrar');
     });
 
     // Gestión de Categorías (Solo Admin) - CON todas las rutas CRUD
