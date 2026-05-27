@@ -144,7 +144,72 @@
                 <div class="absolute bottom-0 left-0 right-0 h-1 transition-transform duration-500 origin-left scale-x-0 bg-gradient-to-r from-rose-500 to-amber-500 group-hover:scale-x-100"></div>
             </div>
         </div>
-
+        {{-- ── Pedidos entregados por el mesero ── --}}
+        <div class="mt-6">
+            <div class="overflow-hidden bg-white shadow-xl rounded-2xl">
+                <div class="relative px-6 py-5 border-b border-gray-100">
+                    <div class="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent"></div>
+                    <div class="relative flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-1 h-6 rounded-full bg-gradient-to-b from-emerald-500 to-teal-500"></div>
+                            <h2 class="text-lg font-bold text-gray-800">Pedidos listos para cobrar</h2>
+                        </div>
+                        <span class="px-3 py-1 text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full">
+                            {{ $pedidosEntregados->count() }} pedido(s)
+                        </span>
+                    </div>
+                </div>
+                <div class="p-6">
+                    @if($pedidosEntregados->isEmpty())
+                        <div class="flex flex-col items-center justify-center py-12 text-center">
+                            <div class="flex items-center justify-center w-20 h-20 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl shadow-inner mb-4">
+                                <i class="text-4xl text-gray-300 fas fa-inbox"></i>
+                            </div>
+                            <p class="font-semibold text-gray-600">Sin pedidos entregados aún</p>
+                            <p class="mt-1 text-sm text-gray-400">Cuando el mesero finalice un pedido aparecerá aquí</p>
+                        </div>
+                    @else
+                        <div class="space-y-3">
+                            @foreach($pedidosEntregados as $pedido)
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl transition-all hover:shadow-md">
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex items-center justify-center w-12 h-12 bg-emerald-100 rounded-xl shadow shrink-0">
+                                            <i class="fas fa-receipt text-emerald-600 text-lg"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-gray-800">Pedido #{{ $pedido->numero_pedido }}</p>
+                                            <div class="flex flex-wrap items-center gap-2 mt-1">
+                                                @if($pedido->mesa)
+                                                    <span class="text-xs text-gray-500"><i class="fas fa-chair mr-1"></i>Mesa {{ $pedido->mesa->numero }}</span>
+                                                @endif
+                                                @if($pedido->usuario)
+                                                    <span class="text-xs text-gray-500"><i class="fas fa-user mr-1"></i>{{ $pedido->usuario->name }}</span>
+                                                @endif
+                                                <span class="text-xs text-gray-400"><i class="fas fa-clock mr-1"></i>{{ $pedido->updated_at->format('d/m H:i') }}</span>
+                                                <span class="text-xs font-bold text-emerald-700">${{ number_format($pedido->total, 2) }}</span>
+                                            </div>
+                                            @if($pedido->detalles && $pedido->detalles->count())
+                                                <p class="text-xs text-gray-400 mt-1">
+                                                    {{ $pedido->detalles->count() }} ítem(s):
+                                                    {{ $pedido->detalles->take(3)->map(fn($d) => $d->plato?->nombre ?? 'Ítem')->join(', ') }}
+                                                    {{ $pedido->detalles->count() > 3 ? '…' : '' }}
+                                                </p>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-2 shrink-0">
+                                        <a href="{{ route('facturas.index') }}"
+                                           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-primary to-secondary rounded-xl shadow hover:shadow-lg hover:scale-105 transition-all duration-200">
+                                            <i class="fas fa-file-invoice-dollar"></i> Facturar
+                                        </a>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
         <!-- Secciones principales - Ventas Recientes y Productos Más Vendidos -->
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <!-- Ventas Recientes -->
@@ -283,7 +348,9 @@
                     </div>
                 </div>
             </div>
-        </div>
+
+        
+
     </div>
 </div>
 @endsection
