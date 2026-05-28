@@ -29,7 +29,6 @@
 
             <i class="mr-2 fas fa-plus"></i>
             Nuevo Pedido
-
         </a>
 
     </div>
@@ -172,7 +171,7 @@
                                 <div class="flex gap-2">
 
                                     {{-- VER --}}
-                                    <a href="{{ route('pedidos.show.cliente', $pedido) }}"
+                                    <a href="{{ route('pedidos.showCliente', $pedido) }}"
                                     class="px-3 py-1 text-sm text-white rounded"
                                     style="background-color:#3B82F6;">
                                     <i class="fas fa-eye"></i>

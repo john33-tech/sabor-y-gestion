@@ -128,6 +128,13 @@ Route::middleware(['auth'])->group(function () {
     ->name('pedidos.misPedidos')
     ->middleware('auth');
 
+    Route::get('/cliente', [PedidoController::class, 'clienteIndex'])
+    ->name('pedidos.cliente')
+    ->middleware('auth');
+    Route::get('/pedidos/{pedido}/ver-cliente', [PedidoController::class, 'showCliente'])
+    ->name('pedidos.showCliente')
+    ->middleware('role:cliente,admin,cajero,mesero');
+
 
 
     // Reportes de Consumos
