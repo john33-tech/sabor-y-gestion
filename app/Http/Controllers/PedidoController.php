@@ -261,21 +261,6 @@ class PedidoController extends Controller
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
 public function storeCliente(Request $request)
 {
     $request->validate([

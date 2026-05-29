@@ -133,6 +133,20 @@ Route::middleware(['auth'])->group(function () {
     ->middleware('role:cliente,admin,cajero,mesero');
 
 
+    Route::get('/pedidos/{pedido}/editar-cliente', [PedidoController::class, 'editCliente'])
+    ->name('pedidos.edit.cliente')
+    ->middleware('role:cliente');
+
+    Route::put('/pedidos/{pedido}/actualizar-cliente', [PedidoController::class, 'updateCliente'])
+    ->name('pedidos.update.cliente')
+    ->middleware('role:cliente');
+
+    Route::delete('/pedidos/{pedido}/cancelar-cliente', [PedidoController::class, 'destroyCliente'])
+    ->name('pedidos.destroy.cliente')
+    ->middleware('role:cliente');
+
+
+    
     Route::get('/cliente', [PedidoController::class, 'pedidoCliente'])
     ->name('pedidos.cliente')
     ->middleware('auth');
