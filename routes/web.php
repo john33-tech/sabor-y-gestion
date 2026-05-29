@@ -35,6 +35,8 @@ Route::get('/inicio', function () {
     return view('home');
 })->name('inicio');
 
+
+
 Route::middleware(['auth'])->group(function () {
     // Dashboards
     Route::get('/dashboard/administrador', [DashboardController::class, 'administrador'])->name('dashboard.administrador');
@@ -155,6 +157,15 @@ Route::middleware(['auth'])->group(function () {
     ->name('pedidos.store.cliente')
     ->middleware('auth');
 
+    Route::get('/misPedidosPendientes', [PedidoController::class, 'misPedidosPendientes'])
+    ->name('pedidos.pendientes.json');
+
+    Route::get('/misPedidosPendientes', [PedidoController::class, 'misPedidosPendientes'])
+    ->name('pedidos.pendientes.json');
+    
+    Route::get('/cliente/pedidos/{pedido}/generar-qr', [PedidoController::class, 'generarQrPedido'])
+    ->name('cliente.pedido.generar-qr');
+
 
 
     // Reportes de Consumos
@@ -165,6 +176,8 @@ Route::middleware(['auth'])->group(function () {
 
 
 });
+
+
 //Ruta para la notificacion de pedidos
 use App\Models\Pedido;
 

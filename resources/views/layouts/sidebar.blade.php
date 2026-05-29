@@ -375,7 +375,7 @@ class="mb-1">
         </span>
     </button>
 
-    <!-- Modals Teleportados al final del Body -->
+    <!-- Modals Teleportados -->
     <template x-teleport="body">
         <div>
             <!-- Modal: Selección de Pedido -->
