@@ -42,26 +42,17 @@ if [ -z "${APP_KEY}" ] || [ "${APP_KEY}" = "base64:" ]; then
     php artisan key:generate --force --show || true
 fi
 
-if [ -n "$DB_SSL_CA" ]; then
-    if [ ! -f "$DB_SSL_CA" ]; then
-        echo "⚠️  ADVERTENCIA: Certificado SSL no encontrado en $DB_SSL_CA"
-        echo "   La conexión a TiDB Cloud podría fallar."
-    else
-        echo "✅ Certificado CA encontrado: $DB_SSL_CA"
-    fi
-fi
-
 # Esperar a MySQL
-# if [ -n "${DB_HOST}" ] && [ -n "${DB_PORT}" ]; then
-#     echo "==> Esperando a MySQL en ${DB_HOST}:${DB_PORT}..."
-#     for i in $(seq 1 30); do
-#         if mysqladmin ping -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USERNAME}" -p"${DB_PASSWORD}" --silent 2>/dev/null; then
-#             echo "    MySQL listo."
-#             break
-#         fi
-#         sleep 2
-#     done
-# fi
+if [ -n "${DB_HOST}" ] && [ -n "${DB_PORT}" ]; then
+    echo "==> Esperando a MySQL en ${DB_HOST}:${DB_PORT}..."
+    for i in $(seq 1 30); do
+        if mysqladmin ping -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USERNAME}" -p"${DB_PASSWORD}" --silent 2>/dev/null; then
+            echo "    MySQL listo."
+            break
+        fi
+        sleep 2
+    done
+fi
 
 # Caches
 if [ "${APP_ENV}" = "production" ]; then

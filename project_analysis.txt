@@ -1,5 +1,5 @@
 # Project Technical Analysis Report
-Generated on: 2026-05-26 18:29:51
+Generated on: 2026-05-28 15:11:00
 Project Path: `G:\LARAVE\proyectop\saborGestion`
 
 ## Environment Information
@@ -20,15 +20,26 @@ main
 ```
 ### Short Status
 ```
-
+M docker-compose.yml
+ M project_analysis.txt
+ M resources/views/layouts/navigation.blade.php
+ M routes/web.php
+?? app/Http/Controllers/CashClosureController.php
+?? cambios_be9d469_key.txt
+?? cambios_caaa1dd_key.txt
+?? commit_32c2fc4_Dockerfile.txt
+?? commit_32c2fc4_docker-compose.txt
+?? commit_be9d469.txt
+?? commit_be9d469_docker.txt
+?? resources/views/cierreCaja/
 ```
 ### Recent History (last 5 commits)
 ```
+0d5cab1 refactor: replace cierre caja controller with cierre pedido and update user-cash closure relation<
 59972ad fix(pedidos): mejorar validación de stock y persistencia de datos en creación de pedidos<
 0dc23d1 Merge branch 'main' of https://github.com/john33-tech/sabor-y-gestion
 300176f feat(pedidos): implementar pago con QR para clientes y optimizar dashboard de cocina
 60d400a fix: cocina refresca cuando mesero elimina un pedido pendiente
-509442e fix: comandas refrescan al cancelar pedido y timezone en hora local
 ```
 ### Remote Repositories
 ```
@@ -68,8 +79,9 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 │   │   │   │   ├── PasswordResetLinkController.php
 │   │   │   │   ├── RegisteredUserController.php
 │   │   │   │   └── VerifyEmailController.php
+│   │   │   ├── CashClosureController.php
 │   │   │   ├── CategoriaController.php
-│   │   │   ├── CierreCajaController.php
+│   │   │   ├── CierrePedidoController.php
 │   │   │   ├── ComandaController.php
 │   │   │   ├── Controller.php
 │   │   │   ├── DashboardController.php
@@ -98,6 +110,7 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 │   │   ├── FacturaPdfMail.php
 │   │   └── MailtrapSandboxTransport.php
 │   ├── Models
+│   │   ├── CashClosure.php
 │   │   ├── Categoria.php
 │   │   ├── Comanda.php
 │   │   ├── Consumo.php
@@ -138,6 +151,7 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 │   └── session.php
 ├── database
 │   ├── factories
+│   │   ├── CashClosureFactory.php
 │   │   ├── MesaFactory.php
 │   │   └── UserFactory.php
 │   ├── migrations
@@ -162,7 +176,8 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 │   │   ├── 2026_05_13_213118_add_telefono_direccion_to_users_table.php
 │   │   ├── 2026_05_14_223145_add_estado_to_pedidos_table.php
 │   │   ├── 2026_05_16_120000_cleanup_duplicate_categorias.php
-│   │   └── 2026_05_16_180000_add_cliente_email_to_pedidos.php
+│   │   ├── 2026_05_16_180000_add_cliente_email_to_pedidos.php
+│   │   └── 2026_05_27_080510_create_cash_closures_table.php
 │   ├── seeders
 │   │   ├── CategoriaSeeder.php
 │   │   ├── DatabaseSeeder.php
@@ -229,6 +244,9 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 │       │   ├── create.blade.php
 │       │   ├── edit.blade.php
 │       │   ├── index.blade.php
+│       │   └── show.blade.php
+│       ├── cierreCaja
+│       │   ├── create.blade.php
 │       │   └── show.blade.php
 │       ├── cierres
 │       │   ├── index.blade.php
@@ -11715,6 +11733,12 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 ├── .gitattributes
 ├── .gitignore
 ├── artisan
+├── cambios_be9d469_key.txt
+├── cambios_caaa1dd_key.txt
+├── commit_32c2fc4_docker-compose.txt
+├── commit_32c2fc4_Dockerfile.txt
+├── commit_be9d469.txt
+├── commit_be9d469_docker.txt
 ├── composer.json
 ├── composer.lock
 ├── docker-compose.yml
@@ -11731,6 +11755,7 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 ├── package.json
 ├── phpunit.xml
 ├── postcss.config.js
+├── project_analysis.txt
 ├── railway.json
 ├── README.md
 ├── structure.txt
@@ -11769,7 +11794,7 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 
 ## Stack and Configuration Detection
 ### Detected Frameworks
-Laravel, Vite
+Vite, Laravel
 ### Database / ORM
 *None detected.*
 ### Key Configuration Files

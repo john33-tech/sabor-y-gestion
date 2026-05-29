@@ -1,0 +1,206 @@
+commit be9d469b3479264212b237860ea73b9ad5496fb7
+Author: Anagua <anagua.18kahuana@gmail.com>
+Date:   Mon May 11 00:08:09 2026 -0400
+
+    feat: GPS Delivery + Pagos QR + permisos storage + seeders idempotentes + flujo cocina-cobro
+
+diff --git a/docker/entrypoint.sh b/docker/entrypoint.sh
+index a4df752..bb672d2 100644
+--- a/docker/entrypoint.sh
++++ b/docker/entrypoint.sh
+@@ -1,65 +1,93 @@
+-#!/bin/bash
++#!/usr/bin/env bash
++# ---------------------------------------------------------------------------
++# Entrypoint: prepara la app antes de arrancar Apache.
++# Corre cada vez que el contenedor inicia (en local y en Railway).
++# ---------------------------------------------------------------------------
+ set -e
+ 
+-echo "═══════════════════════════════════════════"
+-echo "   Iniciando Laravel + TiDB Cloud"
+-echo "═══════════════════════════════════════════"
++cd /var/www/html
+ 
+-# ── 1. Limpiar caché de configuración vieja ───────────────────────────────────
+-echo "🧹 Limpiando caché..."
+-php artisan config:clear
+-php artisan cache:clear
+-php artisan route:clear
+-php artisan view:clear
++echo "==> Sabor & Gestión: arrancando contenedor"
+ 
+-# ── 2. Verificar que el certificado CA existe ─────────────────────────────────
+-if [ -z "$DB_SSL_CA" ]; then
+-    echo "⚠️  ADVERTENCIA: DB_SSL_CA no está definida"
+-elif [ ! -f "$DB_SSL_CA" ]; then
+-    echo "❌ ERROR CRÍTICO: El certificado CA no existe en: $DB_SSL_CA"
+-    echo "   Asegúrate de que storage/ssl/isrgrootx1.pem esté en el repositorio"
+-    exit 1
+-else
+-    echo "✅ Certificado CA encontrado: $DB_SSL_CA"
+-fi
++# --- Safety net: asegurar que SOLO mpm_prefork esté habilitado en runtime ---
++rm -f /etc/apache2/mods-enabled/mpm_event.load \
++      /etc/apache2/mods-enabled/mpm_event.conf \
++      /etc/apache2/mods-enabled/mpm_worker.load \
++      /etc/apache2/mods-enabled/mpm_worker.conf 2>/dev/null || true
++
++# --- Configurar Apache para escuchar en el $PORT inyectado por la plataforma -
++PORT="${PORT:-8080}"
++sed -ri "s!^Listen .*!Listen ${PORT}!" /etc/apache2/ports.conf
++sed -ri "s!<VirtualHost \\*:[0-9]+>!<VirtualHost *:${PORT}>!" /etc/apache2/sites-available/000-default.conf
++echo "==> Apache escuchará en el puerto ${PORT}"
+ 
+-# ── 3. Verificar conexión a TiDB Cloud ───────────────────────────────────────
+-echo "🔌 Verificando conexión a TiDB Cloud..."
+-MAX_RETRIES=10
+-RETRY=0
+-until php artisan db:monitor 2>/dev/null || [ $RETRY -ge $MAX_RETRIES ]; do
+-    RETRY=$((RETRY+1))
+-    echo "   ⏳ Intento $RETRY/$MAX_RETRIES — esperando conexión..."
+-    sleep 3
+-done
++# --- Permisos de TODO storage/ y bootstrap/cache/ ----------------------------
++# Cuando docker-compose monta volumes (app_storage, app_logs) o Railway monta
++# su Volume, los puntos de montaje aparecen como root y www-data no puede
++# escribir. Hay que chownear cada vez que arranca el contenedor.
++echo "==> Ajustando permisos de storage/ y bootstrap/cache/"
++mkdir -p \
++    /var/www/html/storage/logs \
++    /var/www/html/storage/framework/cache/data \
++    /var/www/html/storage/framework/sessions \
++    /var/www/html/storage/framework/views \
++    /var/www/html/storage/app/public/platos \
++    /var/www/html/storage/app/public/comprobantes
++chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
++chmod -R ug+rwx /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
+ 
+-if [ $RETRY -ge $MAX_RETRIES ]; then
+-    echo "❌ No se pudo conectar a TiDB Cloud después de $MAX_RETRIES intentos"
+-    echo "   Verifica: DB_HOST, DB_PORT, DB_SSL_CA, credenciales"
+-    # No salimos con error para que Render muestre los logs
++# Si no hay APP_KEY definida, generarla
++if [ -z "${APP_KEY}" ] || [ "${APP_KEY}" = "base64:" ]; then
++    echo "==> APP_KEY no definida, generando una nueva (recordá copiarla a Railway)"
++    php artisan key:generate --force --show || true
+ fi
+ 
+-# ── 4. Ejecutar migraciones ───────────────────────────────────────────────────
+-echo "🗄️  Ejecutando migraciones..."
+-php artisan migrate --force --no-interaction
++# Esperar a MySQL
++if [ -n "${DB_HOST}" ] && [ -n "${DB_PORT}" ]; then
++    echo "==> Esperando a MySQL en ${DB_HOST}:${DB_PORT}..."
++    for i in $(seq 1 30); do
++        if mysqladmin ping -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USERNAME}" -p"${DB_PASSWORD}" --silent 2>/dev/null; then
++            echo "    MySQL listo."
++            break
++        fi
++        sleep 2
++    done
++fi
+ 
+-# ── 5. Optimizar para producción ─────────────────────────────────────────────
+-if [ "$APP_ENV" = "production" ]; then
+-    echo "⚡ Optimizando para producción..."
++# Caches
++if [ "${APP_ENV}" = "production" ]; then
++    echo "==> Optimizando para producción"
+     php artisan config:cache
+     php artisan route:cache
+     php artisan view:cache
+-    php artisan event:cache
++else
++    echo "==> Limpiando caches (modo dev)"
++    php artisan config:clear
++    php artisan route:clear
++    php artisan view:clear
+ fi
+ 
+-# ── 6. Generar APP_KEY si no existe ──────────────────────────────────────────
+-if [ -z "$APP_KEY" ]; then
+-    echo "🔑 Generando APP_KEY..."
+-    php artisan key:generate --force
++# Migraciones
++if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
++    echo "==> Corriendo migraciones"
++    php artisan migrate --force
+ fi
+ 
+-echo "✅ Aplicación lista. Iniciando Nginx + PHP-FPM..."
+-echo "═══════════════════════════════════════════"
++# Seeders opcionales
++if [ "${RUN_SEEDERS:-false}" = "true" ]; then
++    echo "==> Corriendo seeders"
++    php artisan db:seed --force || echo "==> Seeders fallaron, continuando"
++fi
++
++# Symlink de storage
++rm -f /var/www/html/public/storage 2>/dev/null || true
++php artisan storage:link || true
++
++# --- Arrancar Reverb en background si CMD es Apache ---
++if [ "${1:-}" = "apache2-foreground" ] && [ "${ENABLE_REVERB:-true}" = "true" ]; then
++    echo "==> Lanzando Reverb en background (127.0.0.1:8081)"
++    php artisan reverb:start --host=127.0.0.1 --port=8081 >> /var/log/reverb.log 2>&1 &
++fi
+ 
+-# Iniciar Supervisor (que gestiona Nginx + PHP-FPM)
+-exec /usr/bin/supervisord -c /etc/supervisor.d/laravel.ini
++echo "==> Arrancando Apache en puerto ${PORT:-8080}"
++exec "$@"
+diff --git a/docker/php.ini b/docker/php.ini
+new file mode 100644
+index 0000000..24bb467
+--- /dev/null
++++ b/docker/php.ini
+@@ -0,0 +1,19 @@
++; ----- Configuración PHP para producción -----
++memory_limit = 512M
++upload_max_filesize = 32M
++post_max_size = 32M
++max_execution_time = 60
++max_input_vars = 5000
++date.timezone = America/La_Paz
++
++; OPcache (acelera Laravel notablemente)
++opcache.enable = 1
++opcache.enable_cli = 0
++opcache.memory_consumption = 128
++opcache.interned_strings_buffer = 16
++opcache.max_accelerated_files = 20000
++opcache.validate_timestamps = 0
++opcache.revalidate_freq = 0
++
++; No exponer la versión de PHP
++expose_php = Off
+diff --git a/docker/reverb-proxy.conf b/docker/reverb-proxy.conf
+new file mode 100644
+index 0000000..56a663f
+--- /dev/null
++++ b/docker/reverb-proxy.conf
+@@ -0,0 +1,23 @@
++# ─────────────────────────────────────────────────────────────────────────────
++# reverb-proxy.conf
++# Apache enruta los WebSockets del cliente (paths /app/* y /apps/*) hacia el
++# servidor Reverb que corre en background dentro del mismo contenedor en :8081.
++# Así toda la app (HTTP + WS) vive bajo el mismo dominio público.
++# ─────────────────────────────────────────────────────────────────────────────
++
++<IfModule mod_proxy.c>
++    ProxyRequests Off
++    ProxyPreserveHost On
++
++    # Path /app/{appKey} = endpoint de WS (cliente Echo se conecta acá)
++    <Location "/app/">
++        ProxyPass        "ws://127.0.0.1:8081/app/"
++        ProxyPassReverse "ws://127.0.0.1:8081/app/"
++    </Location>
++
++    # Path /apps/{appId}/events = endpoint HTTP donde el server publica eventos
++    <Location "/apps/">
++        ProxyPass        "http://127.0.0.1:8081/apps/"
++        ProxyPassReverse "http://127.0.0.1:8081/apps/"
++    </Location>
++</IfModule>

@@ -18,6 +18,8 @@ use App\Http\Controllers\IngredienteController;
 use App\Http\Controllers\ReservaMesaController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Cache;
+use App\Http\Controllers\CashClosureController;
+
 
 Route::get('/', function () {
     return view('home');
@@ -150,7 +152,11 @@ Route::get('/notificaciones/pedidos', function () {
 
 })->middleware('auth');
 
-
+Route::middleware(['auth', 'role:cajero,administrador'])->prefix('cierres')->name('cierres.')->group(function () {
+    Route::get('/create', [CashClosureController::class, 'create'])->name('create');
+    Route::post('/', [CashClosureController::class, 'store'])->name('store');
+    Route::get('/{cierre}', [CashClosureController::class, 'show'])->name('show');
+});
 
 //Rutas de las apis utilizadas
 Route::prefix('api')->group(base_path('routes/api.php'));
