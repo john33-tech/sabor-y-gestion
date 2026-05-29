@@ -24,7 +24,7 @@
     <form action="{{ route('pedidos.store.cliente') }}" method="POST" id="pedidoForm">
         @csrf
         
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Panel Izquierdo - Platos -->
             <div class="lg:col-span-2">
                 <div class="bg-surface rounded-lg shadow-md" style="border: 1px solid #FED7AA;">
