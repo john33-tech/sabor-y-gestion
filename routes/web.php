@@ -128,12 +128,18 @@ Route::middleware(['auth'])->group(function () {
     ->name('pedidos.misPedidos')
     ->middleware('auth');
 
-    Route::get('/cliente', [PedidoController::class, 'clienteIndex'])
-    ->name('pedidos.cliente')
-    ->middleware('auth');
     Route::get('/pedidos/{pedido}/ver-cliente', [PedidoController::class, 'showCliente'])
     ->name('pedidos.showCliente')
     ->middleware('role:cliente,admin,cajero,mesero');
+
+
+    Route::get('/cliente', [PedidoController::class, 'pedidoCliente'])
+    ->name('pedidos.cliente')
+    ->middleware('auth');
+
+     Route::post('/pedido/cliente/store', [PedidoController::class, 'storeCliente'])
+    ->name('pedidos.store.cliente')
+    ->middleware('auth');
 
 
 

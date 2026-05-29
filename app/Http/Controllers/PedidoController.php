@@ -263,6 +263,104 @@ class PedidoController extends Controller
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+    
+public function storeCliente(Request $request)
+{
+    $request->validate([
+        'tipo_pedido' => 'required|in:delivery,para_llevar',
+        'cliente_nombre' => 'required|string|max:255',
+        'cliente_telefono' => 'required|string|max:20',
+        'direccion' => 'required_if:tipo_pedido,delivery|nullable|string|max:500',
+        'items' => 'required|array|min:1',
+        'items.*.plato_id' => 'required|exists:platos,id',
+        'items.*.cantidad' => 'required|integer|min:1',
+        'items.*.notas' => 'nullable|string',
+        'notas' => 'nullable|string',
+        'descuento' => 'nullable|numeric|min:0',
+        'latitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
+        'longitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
+    ]);
+
+    // Verificar stock antes de proceder
+    $stockCheck = $this->verificarStockItems($request->items);
+    if (!$stockCheck['success']) {
+        return back()->with('error', $stockCheck['mensaje'])->withInput();
+    }
+
+    DB::beginTransaction();
+
+    try {
+        // Crear el pedido
+        $pedido = new Pedido();
+        $pedido->tipo_pedido = $request->tipo_pedido;
+        $pedido->cliente_nombre = $request->cliente_nombre;
+        $pedido->cliente_telefono = $request->cliente_telefono;
+        $pedido->direccion = $request->tipo_pedido == 'delivery' ? $request->direccion : null;
+        $pedido->latitud = $request->latitud;
+        $pedido->longitud = $request->longitud;
+        $pedido->estado = Pedido::ESTADO_PENDIENTE;
+        $pedido->descuento = $request->descuento ?? 0;
+        $pedido->notas = $request->notas;
+        $pedido->usuario_id = Auth::id();
+        $pedido->save();
+
+        // Crear los detalles del pedido
+        foreach ($request->items as $item) {
+            $plato = Plato::find($item['plato_id']);
+
+            DetallePedido::create([
+                'pedido_id' => $pedido->id,
+                'plato_id' => $item['plato_id'],
+                'cantidad' => $item['cantidad'],
+                'precio_unitario' => $plato->precio,
+                'subtotal' => $plato->precio * $item['cantidad'],
+                'notas' => $item['notas'] ?? null,
+                'estado' => DetallePedido::ESTADO_PENDIENTE
+            ]);
+        }
+
+        // Calcular totales
+        $pedido->calcularTotales();
+
+        // Generar número de pedido (después de tener los totales)
+        $pedido->generarNumeroPedido();
+
+        // Generar factura automática
+        $pedido->generarOrUpdateFactura();
+
+        // Emitir evento para tiempo real (Notificar a cocineros)
+        event(new \App\Events\PedidoCreado($pedido));
+
+        DB::commit();
+
+        return redirect()->route('pedidos.misPedidos')
+            ->with('success', '✅ Pedido #' . $pedido->numero_pedido . ' creado exitosamente');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->with('error', 'Error al crear el pedido: ' . $e->getMessage())->withInput();
+    }
+}
+
+
+
+
+
+
+
+
     public function show(Pedido $pedido)
     {
         $pedido->load(['mesa', 'usuario', 'detalles.plato.categoria', 'factura']);
