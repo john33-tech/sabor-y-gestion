@@ -62,9 +62,15 @@
                                 <p class="text-2xl font-bold text-gray-800">{{ $cuenta['mesa']->numero_mesa }}</p>
                                 <p class="text-xs text-gray-500">{{ $cuenta['mesa']->area ?? 'General' }}</p>
                             </div>
+                            @if($cuenta['tiene_pendiente'])
                             <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                                <i class="fas fa-clock mr-1"></i>Abierta
+                                <i class="fas fa-clock mr-1"></i>Por cobrar
                             </span>
+                            @else
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                                <i class="fas fa-check mr-1"></i>Pagado · cerrar
+                            </span>
+                            @endif
                         </div>
 
                         <div class="border-t border-gray-100 pt-3 space-y-1 text-sm">

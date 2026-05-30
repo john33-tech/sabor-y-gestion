@@ -30,8 +30,11 @@ class CierreCajaController extends Controller
             ->where('tipo_pedido', Pedido::TIPO_MESA)
             ->whereNotNull('mesa_id')
             ->whereNotIn('estado', [Pedido::ESTADO_CANCELADO, Pedido::ESTADO_FACTURADO])
+            // Mostrar mesas con cuenta abierta: factura pendiente (por cobrar) O
+            // ya pagada (p. ej. por QR) pero sin cerrar — así el cajero puede
+            // confirmar el cierre y liberar la mesa aunque ya esté pagada.
             ->whereHas('factura', function ($q) {
-                $q->where('estado', Factura::ESTADO_PENDIENTE);
+                $q->whereIn('estado', [Factura::ESTADO_PENDIENTE, Factura::ESTADO_PAGADA]);
             })
             ->orderBy('created_at')
             ->get();
@@ -43,6 +46,10 @@ class CierreCajaController extends Controller
                 'total' => $pedidos->sum('total'),
                 'cantidad_pedidos' => $pedidos->count(),
                 'abierta_desde' => $pedidos->min('created_at'),
+                // ¿Hay algo por cobrar, o ya está todo pagado y solo falta cerrar?
+                'tiene_pendiente' => $pedidos->contains(
+                    fn($p) => optional($p->factura)->estado === Factura::ESTADO_PENDIENTE
+                ),
             ];
         })->values();
 
@@ -56,7 +63,7 @@ class CierreCajaController extends Controller
             ->where('tipo_pedido', Pedido::TIPO_MESA)
             ->whereNotIn('estado', [Pedido::ESTADO_CANCELADO, Pedido::ESTADO_FACTURADO])
             ->whereHas('factura', function ($q) {
-                $q->where('estado', Factura::ESTADO_PENDIENTE);
+                $q->whereIn('estado', [Factura::ESTADO_PENDIENTE, Factura::ESTADO_PAGADA]);
             })
             ->orderBy('created_at')
             ->get();
