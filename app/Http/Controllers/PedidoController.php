@@ -818,12 +818,17 @@ private function guardarConsumo(Pedido $pedido)
                 $pedido->estado = Pedido::ESTADO_PENDIENTE;
                 $pedido->save(); // dispara PedidoEstadoCambiado (hook del modelo)
                 $volvioACocina = true;
-                try {
-                    // Reaparece en el kitchen display como pedido a preparar.
-                    event(new \App\Events\PedidoCreado($pedido));
-                } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::warning('No se pudo notificar a cocina (agregarItems): ' . $e->getMessage());
-                }
+            }
+
+            // Avisar a cocina SIEMPRE que se agregan productos, para que el
+            // kitchen display muestre el item nuevo en vivo: ya sea reapareciendo
+            // (si estaba entregado/listo) o refrescando el card (si seguía en
+            // pendiente/en_preparacion). Se emite PedidoCreado, que es el evento
+            // al que la cocina reacciona recargando las comandas.
+            try {
+                event(new \App\Events\PedidoCreado($pedido->fresh()));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('No se pudo notificar a cocina (agregarItems): ' . $e->getMessage());
             }
 
             $mensaje = [];
