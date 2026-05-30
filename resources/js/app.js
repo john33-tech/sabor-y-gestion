@@ -186,6 +186,34 @@ function mostrarToastEstadoPedido(numeroPedido, estado, mensaje) {
 }
 
 /**
+ * Toast verde para avisar que una cuenta se cobró/cerró (mesa pagada).
+ */
+function mostrarToastPago(titulo, pago) {
+    let stack = document.getElementById('toast-stack-pedidos');
+    if (!stack) {
+        stack = document.createElement('div');
+        stack.id = 'toast-stack-pedidos';
+        stack.style.cssText = `position: fixed; top: 90px; right: 20px; z-index: 9999; display:flex; flex-direction:column; gap:12px; pointer-events:none;`;
+        document.body.appendChild(stack);
+    }
+    const toast = document.createElement('div');
+    toast.style.cssText = `background: linear-gradient(135deg,#10b981,#059669); color:white; padding:14px 18px; border-radius:12px; box-shadow:0 10px 30px rgba(16,185,129,0.4); min-width:300px; max-width:400px; display:flex; align-items:center; gap:12px; transform:translateX(120%); opacity:0; transition:transform .5s cubic-bezier(.34,1.56,.64,1), opacity .3s; pointer-events:auto; cursor:pointer; font-family:inherit;`;
+    const detalle = [pago && pago.total ? ('Bs ' + pago.total) : null, pago ? pago.metodo : null].filter(Boolean).join(' · ');
+    toast.innerHTML = `
+        <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-cash-register" style="font-size:18px;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:14px;">💰 ${titulo} cobrada</div>
+            <div style="font-size:12px;opacity:.95;">${detalle}</div>
+        </div>`;
+    toast.onclick = () => toast.remove();
+    stack.appendChild(toast);
+    requestAnimationFrame(() => { toast.style.transform = 'translateX(0)'; toast.style.opacity = '1'; });
+    setTimeout(() => { toast.style.transform = 'translateX(120%)'; toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 5000);
+}
+
+/**
  * Reproduce un beep simple sin necesidad de archivos de audio.
  * Usa Web Audio API — funciona en cualquier navegador moderno.
  */
@@ -271,6 +299,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         tag: 'mesero-listo-' + e.pedido_id,
                     });
                 }
+            })
+            .listen('.cuenta.pagada', (e) => {
+                console.log('💰 Cuenta pagada/cerrada', e);
+                const titulo = e.mesa ? ('Mesa ' + e.mesa) : (e.numero_factura || 'Cuenta');
+                mostrarToastPago(titulo, e);
+                beep(900, 200);
+                // Si estoy en la pantalla de caja (Cierre de Cuenta o Cierre de
+                // Caja), refresco para reflejar el pago/cierre sin acción manual.
+                const ruta = window.location.pathname;
+                if (ruta.startsWith('/cierres') || ruta.startsWith('/caja')) {
+                    setTimeout(() => window.location.reload(), 1500);
+                }
+                window.dispatchEvent(new CustomEvent('cuenta-pagada', { detail: e }));
             })
             .error((err) => console.error('❌ Error en pedidos.meseros:', err));
     }

@@ -154,6 +154,20 @@ class CierreCajaController extends Controller
             $totalCobrado = $pedidos->sum('total');
             $facturasIds = $pedidos->pluck('factura.id')->filter()->values()->all();
 
+            // Avisar en vivo (mesero/cajero/admin) que la mesa se cobró y liberó.
+            // La cuenta ya se cerró (commit hecho); si Reverb falla, no rompemos.
+            try {
+                broadcast(new \App\Events\CuentaPagada([
+                    'mesa'    => $cierre->numero_mesa,
+                    'total'   => number_format($totalCobrado, 2),
+                    'metodo'  => $request->metodo_pago,
+                    'pedidos' => $pedidos->count(),
+                    'origen'  => 'cierre',
+                ]));
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo emitir CuentaPagada (cierre): ' . $e->getMessage());
+            }
+
             return redirect()->route('cierres.index')
                 ->with('success', sprintf(
                     'Cuenta de la Mesa %s cerrada. Total cobrado: Bs. %s (%s pedido%s). %s correo%s enviado%s.',
