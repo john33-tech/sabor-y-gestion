@@ -1,11 +1,16 @@
-# Demo en la nube (AKS) SIN dominio: producción sin debug.
+# Demo en la nube (AKS) SIN dominio (http puro, sin TLS).
 # APP_URL se ajusta después con la IP pública que asigne el LoadBalancer.
+#
+# OJO: APP_ENV NO debe ser "production" aquí. En AppServiceProvider se hace
+# URL::forceScheme('https') cuando app.env === 'production', y como esta demo
+# sirve por HTTP (sin dominio/TLS) eso rompería los assets (CSS/JS) con URLs
+# https que el LoadBalancer no atiende. Con un valor != production se evita.
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: sabor-config
 data:
-  APP_ENV: "production"
-  APP_DEBUG: "false"
+  APP_ENV: "local"        # ver nota de arriba (evita forceScheme https)
+  APP_DEBUG: "false"      # sin pantallas de debug aunque sea env local
   LOG_LEVEL: "warning"
   RUN_SEEDERS: "true"     # primer deploy: carga datos de ejemplo para la demo
