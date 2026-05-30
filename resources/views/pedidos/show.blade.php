@@ -577,12 +577,13 @@
                 <div class="text-sm text-blue-700">
                     Generada automáticamente para el cobro.
                 </div>
-                {{-- Descargar/ver el PDF: solo admin, cajero y cliente. El mesero
-                     ve la factura pero no puede descargarla (la ruta también lo bloquea). --}}
-                @if(in_array(auth()->user()->role, ['admin', 'cajero', 'cliente']))
+                {{-- El PDF abre en el navegador (stream inline). El mesero puede
+                     VERLO ("Ver PDF"); admin/cajero/cliente además lo descargan. --}}
+                @if(in_array(auth()->user()->role, ['admin', 'cajero', 'cliente', 'mesero']))
                 <a href="{{ route('facturas.pdf', $pedido->factura) }}" target="_blank"
                    class="inline-flex items-center mt-3 text-sm font-medium text-blue-700 hover:text-blue-900">
-                    <i class="mr-1 fas fa-file-pdf"></i> Ver / Descargar PDF
+                    <i class="mr-1 fas fa-file-pdf"></i>
+                    {{ auth()->user()->role === 'mesero' ? 'Ver PDF' : 'Ver / Descargar PDF' }}
                 </a>
                 @endif
             </div>

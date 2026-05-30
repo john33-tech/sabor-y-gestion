@@ -75,7 +75,8 @@ Route::middleware(['auth'])->group(function () {
     // (validado por ownership en el controller).
     Route::get('/facturas/{factura}/generar-qr', [FacturaController::class, 'generarQr'])->name('facturas.generar-qr')->middleware('role:admin,cajero,cliente');
     Route::post('/facturas/{factura}/enviar-correo', [FacturaController::class, 'enviarPorCorreo'])->name('facturas.enviar-correo')->middleware('role:admin,cajero,cliente');
-    Route::get('/facturas/{factura}/pdf', [FacturaController::class, 'descargarPdf'])->name('facturas.pdf')->middleware('role:admin,cajero,cliente');
+    // El PDF se sirve inline (stream): el mesero puede VERLO en el navegador.
+    Route::get('/facturas/{factura}/pdf', [FacturaController::class, 'descargarPdf'])->name('facturas.pdf')->middleware('role:admin,cajero,cliente,mesero');
     
     // Pagos — STUB: redirige a Facturas. PagoQrController (webhook) sigue separado.
     Route::resource('pagos', PagoController::class)->middleware('role:admin,cajero');
