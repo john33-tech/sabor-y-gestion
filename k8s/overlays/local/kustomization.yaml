@@ -1,0 +1,18 @@
+# ---------------------------------------------------------------------------
+# Overlay LOCAL (Docker Desktop / Minikube).
+# Usa los valores de la base tal cual (APP_ENV=local, APP_URL=http://localhost,
+# secretos de desarrollo). La imagen se construye localmente, por eso
+# imagePullPolicy: IfNotPresent y tag :latest.
+#
+# Desplegar:   kubectl apply -k k8s/overlays/local
+# ---------------------------------------------------------------------------
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: sabor-gestion
+    newName: sabor-gestion
+    newTag: latest

@@ -1,0 +1,31 @@
+# ---------------------------------------------------------------------------
+# Ingress (ingress-nginx): publica la app en http://localhost por defecto.
+# El controlador nginx hace upgrade de WebSocket automáticamente, así que los
+# canales de Reverb (/app/, /apps/) funcionan sin anotaciones extra.
+# El overlay cloud cambia el host por tu dominio real y agrega TLS (wss).
+# ---------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sabor-ingress
+  labels:
+    app.kubernetes.io/part-of: sabor-gestion
+  annotations:
+    # Subidas de fotos de platos: subí el límite de tamaño de body.
+    nginx.ingress.kubernetes.io/proxy-body-size: "16m"
+    # Timeouts largos para mantener vivos los WebSockets de Reverb.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app
+                port:
+                  number: 80

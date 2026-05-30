@@ -1,0 +1,26 @@
+# ---------------------------------------------------------------------------
+# Overlay CLOUD (GKE / EKS / AKS u otro cluster real).
+#
+# Antes de desplegar:
+#   1. La imagen la construye y publica GitHub Actions en GHCR automáticamente
+#      al hacer push a main (.github/workflows/docker-build.yml). Hacé público
+#      el paquete en GitHub > Packages para que el cluster lo baje sin secreto.
+#   2. Editá configmap-patch.yaml e ingress-patch.yaml con tu dominio real.
+#   3. Reemplazá los secretos de desarrollo por reales (ver README, sección Cloud).
+#
+# Desplegar:   kubectl apply -k k8s/overlays/cloud
+# ---------------------------------------------------------------------------
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+patches:
+  - path: configmap-patch.yaml
+  - path: ingress-patch.yaml
+
+images:
+  - name: sabor-gestion
+    newName: ghcr.io/john33-tech/sabor-gestion   # imagen publicada por GitHub Actions (.github/workflows/docker-build.yml)
+    newTag: latest                               # o un tag por commit (sha corto) si querés fijar versión

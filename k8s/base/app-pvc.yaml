@@ -1,0 +1,16 @@
+# ---------------------------------------------------------------------------
+# Disco persistente para storage/app de Laravel: ahí viven las imágenes
+# subidas (fotos de platos, comprobantes QR). Sin esto se perderían cada vez
+# que el pod se reinicia.
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sabor-storage
+  labels:
+    app.kubernetes.io/part-of: sabor-gestion
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi

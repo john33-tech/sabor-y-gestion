@@ -1,0 +1,26 @@
+# Producción: host real + TLS (habilita wss para Reverb).
+# Requiere cert-manager con un ClusterIssuer llamado "letsencrypt-prod"
+# (o quitá la anotación y el bloque tls si tu cloud termina TLS en el LoadBalancer).
+# ⚠️ Cambiá sabor.TU-DOMINIO.com por tu dominio.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sabor-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+    - hosts:
+        - sabor.TU-DOMINIO.com
+      secretName: sabor-tls
+  rules:
+    - host: sabor.TU-DOMINIO.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app
+                port:
+                  number: 80

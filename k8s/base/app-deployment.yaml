@@ -1,0 +1,79 @@
+# ---------------------------------------------------------------------------
+# Deployment de la app: Apache + PHP 8.2 (Laravel) con Reverb corriendo en
+# background dentro del mismo contenedor (igual que en docker-compose/Railway).
+# El entrypoint.sh ya hace: esperar MySQL -> migrar -> cachear -> storage:link
+# -> lanzar Reverb -> arrancar Apache.
+#
+# replicas: 1 a propósito — el PVC de storage es ReadWriteOnce y las
+# migraciones corren en el entrypoint (con 2+ réplicas habría carrera).
+# ---------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  labels:
+    app.kubernetes.io/name: app
+    app.kubernetes.io/part-of: sabor-gestion
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate          # un solo PVC RWO: no se puede solapar pod viejo y nuevo
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: app
+        app.kubernetes.io/part-of: sabor-gestion
+    spec:
+      containers:
+        - name: app
+          # El overlay define la imagen real (local: sabor-gestion:latest /
+          # cloud: REGISTRY/sabor-gestion:TAG).
+          image: sabor-gestion:latest
+          imagePullPolicy: IfNotPresent
+          command: ["entrypoint.sh"]
+          args: ["apache2-foreground"]
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: sabor-config
+            - secretRef:
+                name: sabor-secret
+          volumeMounts:
+            - name: storage
+              mountPath: /var/www/html/storage/app
+          # startupProbe: da margen al primer arranque (migraciones + caches)
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30      # hasta 5 min para quedar listo
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: sabor-storage

@@ -1,0 +1,62 @@
+# ---------------------------------------------------------------------------
+# ConfigMap: variables de entorno NO sensibles de la app Laravel.
+# Las contraseñas / claves viven en el Secret (sabor-secret), no aquí.
+# Estos valores son los de DESARROLLO; el overlay cloud sobreescribe los que
+# cambian en producción (APP_ENV, APP_DEBUG, APP_URL, ...).
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sabor-config
+data:
+  # --- App ---
+  APP_NAME: "Sabor & Gestion"
+  APP_ENV: "local"
+  APP_DEBUG: "true"
+  APP_URL: "http://localhost"
+  APP_LOCALE: "es"
+  APP_FALLBACK_LOCALE: "en"
+  PORT: "8080"
+
+  # --- Logs ---
+  LOG_CHANNEL: "stack"
+  LOG_STACK: "single"
+  LOG_LEVEL: "debug"
+
+  # --- Base de datos (DB_HOST = nombre del Service de MySQL) ---
+  DB_CONNECTION: "mysql"
+  DB_HOST: "mysql"
+  DB_PORT: "3306"
+  DB_DATABASE: "saborGestion"
+  DB_USERNAME: "sabor"
+
+  # --- Variables que consume el contenedor de MySQL ---
+  MYSQL_DATABASE: "saborGestion"
+  MYSQL_USER: "sabor"
+
+  # --- Drivers Laravel ---
+  SESSION_DRIVER: "database"
+  CACHE_STORE: "database"
+  QUEUE_CONNECTION: "database"
+  FILESYSTEM_DISK: "local"
+
+  # --- Broadcasting / Reverb (corre en el MISMO pod, Apache proxea /app y /apps) ---
+  BROADCAST_CONNECTION: "reverb"
+  ENABLE_REVERB: "true"
+  REVERB_APP_ID: "sabor-app-id"
+  REVERB_APP_KEY: "saborkey"
+  REVERB_HOST: "localhost"
+  REVERB_PORT: "8080"
+  REVERB_SCHEME: "http"
+  REVERB_SERVER_HOST: "0.0.0.0"
+  REVERB_SERVER_PORT: "8081"
+
+  # --- Mail: 'log' = no envía de verdad, escribe en el log (seguro para demo).
+  #     Para enviar facturas reales, cambiá a 'resend' y poné RESEND_API_KEY en el Secret.
+  MAIL_MAILER: "log"
+  MAIL_FROM_ADDRESS: "onboarding@resend.dev"
+  MAIL_FROM_NAME: "Sabor Gestion"
+
+  # --- Arranque ---
+  RUN_MIGRATIONS: "true"
+  RUN_SEEDERS: "false"

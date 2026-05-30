@@ -1,0 +1,7 @@
+# Namespace propio para aislar todos los recursos de Sabor & Gestión.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sabor-gestion
+  labels:
+    app.kubernetes.io/part-of: sabor-gestion

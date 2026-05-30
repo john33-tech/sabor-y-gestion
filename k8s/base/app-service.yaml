@@ -1,0 +1,19 @@
+# ---------------------------------------------------------------------------
+# Service de la app: expone el puerto 80 del cluster hacia el contenedor (8080).
+# El Ingress enruta el tráfico público (HTTP + WebSocket) hacia este Service.
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  labels:
+    app.kubernetes.io/name: app
+    app.kubernetes.io/part-of: sabor-gestion
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: app
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

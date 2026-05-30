@@ -1,0 +1,19 @@
+# ---------------------------------------------------------------------------
+# Service headless (clusterIP: None) para el StatefulSet de MySQL.
+# La app se conecta usando el host "mysql" (DB_HOST en el ConfigMap).
+# ---------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    app.kubernetes.io/name: mysql
+    app.kubernetes.io/part-of: sabor-gestion
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: mysql
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306

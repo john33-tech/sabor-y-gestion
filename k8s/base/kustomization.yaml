@@ -1,0 +1,22 @@
+# ---------------------------------------------------------------------------
+# Base Kustomize: junta todos los recursos comunes. Los overlays (local/cloud)
+# parten de acá y solo cambian lo que difiere entre entornos.
+# ---------------------------------------------------------------------------
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: sabor-gestion
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - mysql-service.yaml
+  - mysql-statefulset.yaml
+  - app-pvc.yaml
+  - app-deployment.yaml
+  - app-service.yaml
+  - ingress.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: sabor-gestion
