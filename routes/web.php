@@ -13,6 +13,7 @@ use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\CierreCajaController;
+use App\Http\Controllers\CajaController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\CategoriaController; 
 use App\Http\Controllers\IngredienteController; 
@@ -79,12 +80,21 @@ Route::middleware(['auth'])->group(function () {
     // Pagos — STUB: redirige a Facturas. PagoQrController (webhook) sigue separado.
     Route::resource('pagos', PagoController::class)->middleware('role:admin,cajero');
 
-    // Cierre de Cuenta por mesa (punto #6): lista mesas con cuenta abierta,
-    // permite ver la comanda consolidada y cobrar para liberar la mesa.
-    Route::prefix('cierres')->name('cierres.')->middleware('role:admin,cajero,mesero')->group(function () {
+    // Cierre de CUENTA por mesa (punto #6): lista mesas con cuenta abierta,
+    // permite ver la comanda consolidada y COBRAR para liberar la mesa.
+    // El cobro se hace en CAJA: solo admin y cajero (el mesero ya no cobra).
+    Route::prefix('cierres')->name('cierres.')->middleware('role:admin,cajero')->group(function () {
         Route::get('/', [CierreCajaController::class, 'index'])->name('index');
         Route::get('/mesa/{cierre}', [CierreCajaController::class, 'show'])->name('show');
         Route::post('/mesa/{cierre}/cerrar', [CierreCajaController::class, 'cerrar'])->name('cerrar');
+    });
+
+    // Cierre de CAJA (arqueo del turno): detalle del día + arqueo por método
+    // de pago (efectivo contado vs registrado) + historial de cierres. Solo caja.
+    Route::prefix('caja')->name('caja.')->middleware('role:admin,cajero')->group(function () {
+        Route::get('/', [CajaController::class, 'index'])->name('index');
+        Route::post('/cerrar', [CajaController::class, 'cerrar'])->name('cerrar');
+        Route::get('/{caja}', [CajaController::class, 'show'])->name('show');
     });
     
     // Gestión de Categorías (Solo Admin) - CON todas las rutas CRUD

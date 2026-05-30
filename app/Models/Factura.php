@@ -24,7 +24,8 @@ class Factura extends Model
         'metodo_pago',
         'estado',
         'fecha_emision',
-        'usuario_id'
+        'usuario_id',
+        'cierre_caja_id'
     ];
 
     protected $casts = [
@@ -72,6 +73,11 @@ class Factura extends Model
     public function usuario()
     {
         return $this->belongsTo(User::class, 'usuario_id');
+    }
+
+    public function cierreCaja()
+    {
+        return $this->belongsTo(CierreCaja::class, 'cierre_caja_id');
     }
 
     /**
