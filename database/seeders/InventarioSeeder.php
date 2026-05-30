@@ -17,9 +17,11 @@ class InventarioSeeder extends Seeder
             Inventario::updateOrCreate(
                 ['ingrediente_id' => $ingrediente->id],
                 [
-                    'cantidad_actual' => rand(150, 500), // arriba del stock mínimo
+                    // Stock generoso para que la demo no se quede sin insumos
+                    // (las recetas consumen 80-250 por plato).
+                    'cantidad_actual' => 5000,
                     'stock_minimo'    => 100,
-                    'stock_maximo'    => 1000,
+                    'stock_maximo'    => 10000,
                     'ubicacion'       => 'Estante ' . chr(rand(65, 70)),
                 ]
             );
