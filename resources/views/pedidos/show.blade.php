@@ -577,10 +577,14 @@
                 <div class="text-sm text-blue-700">
                     Generada automáticamente para el cobro.
                 </div>
+                {{-- Descargar/ver el PDF: solo admin, cajero y cliente. El mesero
+                     ve la factura pero no puede descargarla (la ruta también lo bloquea). --}}
+                @if(in_array(auth()->user()->role, ['admin', 'cajero', 'cliente']))
                 <a href="{{ route('facturas.pdf', $pedido->factura) }}" target="_blank"
                    class="inline-flex items-center mt-3 text-sm font-medium text-blue-700 hover:text-blue-900">
                     <i class="mr-1 fas fa-file-pdf"></i> Ver / Descargar PDF
                 </a>
+                @endif
             </div>
             @endif
 
