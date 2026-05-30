@@ -257,10 +257,11 @@ class PedidoController extends Controller
         $tipos = Pedido::getTipos();
         $estadosDetalle = DetallePedido::getEstados();
 
-        // Para D4: si el pedido está abierto, cargar platos disponibles para
-        // que el panel "Agregar productos" pueda renderizar el selector.
+        // Para D4: mientras la cuenta esté ABIERTA (no cobrada ni cancelada),
+        // cargar platos disponibles para que el panel "Agregar productos" se
+        // pueda renderizar — aunque el pedido ya esté listo/entregado.
         $platosDisponibles = collect();
-        if (in_array($pedido->estado, [Pedido::ESTADO_PENDIENTE, Pedido::ESTADO_EN_PREPARACION])) {
+        if (!in_array($pedido->estado, [Pedido::ESTADO_FACTURADO, Pedido::ESTADO_CANCELADO])) {
             $platosDisponibles = Plato::where('disponible', true)
                 ->with('categoria')
                 ->orderBy('categoria_id')
@@ -733,10 +734,16 @@ private function guardarConsumo(Pedido $pedido)
             abort(403, 'No puedes modificar pedidos de otros usuarios.');
         }
 
-        if (!in_array($pedido->estado, [Pedido::ESTADO_PENDIENTE, Pedido::ESTADO_EN_PREPARACION])) {
+        // Se puede seguir agregando a la MISMA cuenta hasta que el cajero cobre.
+        // Solo se bloquea si ya está facturada (cobrada) o cancelada.
+        if (in_array($pedido->estado, [Pedido::ESTADO_FACTURADO, Pedido::ESTADO_CANCELADO])) {
             return redirect()->route('pedidos.show', $pedido)
-                ->with('error', 'No se pueden agregar productos a un pedido en estado ' . $pedido->estado);
+                ->with('error', 'No se pueden agregar productos: la cuenta ya está ' . $pedido->estado . '.');
         }
+
+        // Estado antes de agregar: si ya estaba listo/entregado, el producto
+        // nuevo debe prepararse, así que el pedido se reabre a cocina (abajo).
+        $estadoPrevio = $pedido->estado;
 
         $request->validate([
             'items' => 'required|array|min:1',
@@ -795,12 +802,31 @@ private function guardarConsumo(Pedido $pedido)
 
             DB::commit();
 
+            // Si la cuenta ya estaba lista/entregada, el producto nuevo debe
+            // prepararse: reabrimos el pedido a cocina (misma factura; la cuenta
+            // sigue abierta hasta que el cajero cobre).
+            $volvioACocina = false;
+            if (in_array($estadoPrevio, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
+                $pedido->estado = Pedido::ESTADO_PENDIENTE;
+                $pedido->save(); // dispara PedidoEstadoCambiado (hook del modelo)
+                $volvioACocina = true;
+                try {
+                    // Reaparece en el kitchen display como pedido a preparar.
+                    event(new \App\Events\PedidoCreado($pedido));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('No se pudo notificar a cocina (agregarItems): ' . $e->getMessage());
+                }
+            }
+
             $mensaje = [];
             if ($agregados > 0) {
                 $mensaje[] = $agregados . ' producto' . ($agregados === 1 ? '' : 's') . ' nuevo' . ($agregados === 1 ? '' : 's');
             }
             if ($sumados > 0) {
                 $mensaje[] = $sumados . ' ' . ($sumados === 1 ? 'producto sumado' : 'productos sumados');
+            }
+            if ($volvioACocina) {
+                $mensaje[] = 'enviado de nuevo a cocina';
             }
 
             return redirect()->route('pedidos.show', $pedido)
