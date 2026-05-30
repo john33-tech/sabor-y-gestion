@@ -437,10 +437,15 @@ class PedidoController extends Controller
     // Método auxiliar para actualizar la comanda
     private function actualizarComanda(Pedido $pedido)
     {
-        // Si el pedido está en comanda (pendiente o en preparación)
+        // Si el pedido está en comanda (pendiente/en preparación/listo),
+        // avisamos a cocina que fue editado para que el kitchen display se
+        // refresque en vivo (p. ej. al quitar un producto equivocado).
         if (in_array($pedido->estado, ['pendiente', 'en_preparacion', 'listo'])) {
-            // Opcional: Notificar a cocina que el pedido fue actualizado
-            //event(new \App\Events\PedidoActualizado($pedido));
+            try {
+                event(new \App\Events\PedidoActualizado($pedido->fresh()));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('No se pudo notificar a cocina (update): ' . $e->getMessage());
+            }
         }
     }
     // Método para verificar stock antes de actualizar

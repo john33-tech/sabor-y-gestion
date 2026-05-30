@@ -279,6 +279,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('🗑️ Comandas: pedido eliminado', e);
                 window.dispatchEvent(new CustomEvent('refresh-comandas', { detail: e }));
             })
+            .listen('.pedido.actualizado', (e) => {
+                // Edición de un pedido (p. ej. se quitó un producto): refresco
+                // silencioso del kitchen display (sin campana, no es algo nuevo).
+                console.log('✏️ Comandas: pedido editado, refrescando', e);
+                window.dispatchEvent(new CustomEvent('refresh-comandas', { detail: e }));
+            })
             .error((err) => console.error('❌ Error en pedidos.cocineros:', err));
     }
 
