@@ -447,7 +447,15 @@ class PedidoController extends Controller
     private function verificarStockItems($items)
     {
         foreach ($items as $item) {
-            $plato = Plato::find($item['plato_id']);
+            $plato = Plato::with('ingredientes')->find($item['plato_id']);
+
+            // Sin receta (ingredientes asignados) no se puede vender: aviso claro.
+            if ($plato->ingredientes->count() === 0) {
+                return [
+                    'success' => false,
+                    'mensaje' => "El plato \"{$plato->nombre}\" no tiene ingredientes asignados. Asignalos en Platos → Editar para poder venderlo."
+                ];
+            }
 
             // Verificar stock para cada unidad del plato
             for ($i = 0; $i < $item['cantidad']; $i++) {

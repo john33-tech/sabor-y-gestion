@@ -74,11 +74,10 @@ class Plato extends Model
     // Método para verificar si hay suficiente stock (Solo UNA vez)
 public function verificarStock($cantidad = 1)
 {
-    // Si el plato no tiene receta (sin ingredientes), no está controlado por
-    // inventario → se considera disponible. (Antes devolvía false y bloqueaba
-    // todos los platos sin receta, impidiendo venderlos/agregarlos.)
+    // Control estricto: un plato sin receta (sin ingredientes asignados) no se
+    // puede vender. Asigná sus ingredientes en Platos → Editar.
     if ($this->ingredientes->count() === 0) {
-        return true;
+        return false;
     }
 
     foreach ($this->ingredientes as $ingrediente) {
