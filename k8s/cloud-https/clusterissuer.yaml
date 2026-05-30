@@ -1,0 +1,20 @@
+# ---------------------------------------------------------------------------
+# ClusterIssuer de Let's Encrypt (producción) para cert-manager.
+# Emite certificados TLS válidos vía desafío HTTP-01 a través de ingress-nginx.
+#
+# ⚠️ Reemplazá el email por el tuyo (Let's Encrypt envía avisos de vencimiento).
+# ---------------------------------------------------------------------------
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: TU-CORREO@ejemplo.com        # 👈 cambialo por tu correo
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+      - http01:
+          ingress:
+            class: nginx

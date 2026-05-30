@@ -1,0 +1,36 @@
+# ---------------------------------------------------------------------------
+# Ingress HTTPS para la app, con certificado Let's Encrypt automático.
+# Es una PLANTILLA: reemplazá __HOST__ por tu hostname real antes de aplicar.
+#
+# Truco sin comprar dominio: usá nip.io con la IP pública del ingress-nginx:
+#   IP=$(kubectl -n ingress-nginx get svc ingress-nginx-controller \
+#          -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+#   sed "s/__HOST__/${IP}.nip.io/g" ingress.template.yaml | kubectl apply -f -
+# ---------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sabor-ingress
+  namespace: sabor-gestion
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # WebSockets de Reverb (wss): timeouts largos para no cortar la conexión.
+    nginx.ingress.kubernetes.io/proxy-body-size: "16m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: ["__HOST__"]
+      secretName: sabor-tls
+  rules:
+    - host: __HOST__
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app
+                port:
+                  number: 80
