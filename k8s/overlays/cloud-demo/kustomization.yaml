@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------------------
+# Overlay CLOUD-DEMO: despliegue rápido en un cluster real (ej. AKS) SIN dominio.
+# Expone la app con un Service tipo LoadBalancer (el cloud asigna una IP pública)
+# y quita el Ingress (que requería dominio + TLS). Ideal para demo/defensa.
+#
+# Usa la imagen pública de GHCR (la publica GitHub Actions), así que NO depende
+# de tu red local. Desde Azure Cloud Shell:
+#   git clone https://github.com/john33-tech/sabor-y-gestion.git
+#   kubectl apply -k sabor-y-gestion/k8s/overlays/cloud-demo
+#
+# Acceso: http://<IP-publica-del-LoadBalancer>
+#   kubectl -n sabor-gestion get svc app -w   # esperá a que aparezca EXTERNAL-IP
+# ---------------------------------------------------------------------------
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+patches:
+  # 1) Exponer la app con LoadBalancer público (en vez de ClusterIP)
+  - target:
+      kind: Service
+      name: app
+    patch: |
+      - op: replace
+        path: /spec/type
+        value: LoadBalancer
+
+  # 2) Quitar el Ingress de la base (esta demo no usa dominio/TLS)
+  - target:
+      kind: Ingress
+      name: sabor-ingress
+    patch: |
+      $patch: delete
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: sabor-ingress
+
+  # 3) Producción sin debug + seeders en el primer arranque
+  - path: configmap-patch.yaml
+
+images:
+  - name: sabor-gestion
+    newName: ghcr.io/john33-tech/sabor-gestion
+    newTag: latest

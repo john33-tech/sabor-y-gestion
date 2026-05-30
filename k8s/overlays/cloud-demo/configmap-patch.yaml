@@ -1,0 +1,11 @@
+# Demo en la nube (AKS) SIN dominio: producción sin debug.
+# APP_URL se ajusta después con la IP pública que asigne el LoadBalancer.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sabor-config
+data:
+  APP_ENV: "production"
+  APP_DEBUG: "false"
+  LOG_LEVEL: "warning"
+  RUN_SEEDERS: "true"     # primer deploy: carga datos de ejemplo para la demo
