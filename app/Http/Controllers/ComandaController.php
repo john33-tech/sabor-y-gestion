@@ -40,7 +40,8 @@ class ComandaController extends Controller
             
             return response()->json([
                 'html' => $html,
-                'pagination' => $pagination
+                'pagination' => $pagination,
+                'stats' => $stats,
             ]);
         }
         

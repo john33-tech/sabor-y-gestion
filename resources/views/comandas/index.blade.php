@@ -27,19 +27,19 @@
             <nav class="flex space-x-8">
                 <button class="tab-btn py-2 px-1 font-medium transition-all" data-tab="todos" style="color: #C2410C; border-bottom: 2px solid #C2410C;">
                     <i class="fas fa-list mr-2"></i> Todos
-                    <span class="ml-1 px-2 py-0.5 rounded-full text-xs" style="background-color: #FED7AA;">{{ $stats['total'] }}</span>
+                    <span id="stat-total" class="ml-1 px-2 py-0.5 rounded-full text-xs" style="background-color: #FED7AA;">{{ $stats['total'] }}</span>
                 </button>
                 <button class="tab-btn py-2 px-1 font-medium transition-all" data-tab="pendiente" style="color: #78716C;">
                     <i class="fas fa-hourglass-half mr-2"></i> Pendientes
-                    <span class="ml-1 px-2 py-0.5 rounded-full text-xs" style="background-color: #FEF3C7;">{{ $stats['pendientes'] }}</span>
+                    <span id="stat-pendientes" class="ml-1 px-2 py-0.5 rounded-full text-xs" style="background-color: #FEF3C7;">{{ $stats['pendientes'] }}</span>
                 </button>
                 <button class="tab-btn py-2 px-1 font-medium transition-all" data-tab="en_preparacion" style="color: #78716C;">
                     <i class="fas fa-fire mr-2"></i> En Preparación
-                    <span class="ml-1 px-2 py-0.5 rounded-full text-xs" style="background-color: #DBEAFE;">{{ $stats['en_preparacion'] }}</span>
+                    <span id="stat-en_preparacion" class="ml-1 px-2 py-0.5 rounded-full text-xs" style="background-color: #DBEAFE;">{{ $stats['en_preparacion'] }}</span>
                 </button>
                 <button class="tab-btn py-2 px-1 font-medium transition-all" data-tab="listo" style="color: #78716C;">
                     <i class="fas fa-check-circle mr-2"></i> Listos
-                    <span class="ml-1 px-2 py-0.5 rounded-full text-xs" style="background-color: #D1FAE5;">{{ $stats['listos'] }}</span>
+                    <span id="stat-listos" class="ml-1 px-2 py-0.5 rounded-full text-xs" style="background-color: #D1FAE5;">{{ $stats['listos'] }}</span>
                 </button>
             </nav>
         </div>
@@ -82,6 +82,15 @@ document.addEventListener('DOMContentLoaded', function() {
             container.innerHTML = data.html;
             if (data.pagination) {
                 paginationContainer.innerHTML = data.pagination;
+            }
+            // Actualizar los contadores de las tabs en vivo (total/pendientes/
+            // en preparación/listos) cuando un pedido entra o sale de cocina.
+            if (data.stats) {
+                const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+                set('stat-total', data.stats.total);
+                set('stat-pendientes', data.stats.pendientes);
+                set('stat-en_preparacion', data.stats.en_preparacion);
+                set('stat-listos', data.stats.listos);
             }
             // Re-inicializar eventos
             inicializarEventos();
