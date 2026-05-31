@@ -116,8 +116,8 @@ class Pedido extends Model
     public function calcularTotales()
     {
         $this->subtotal = $this->detalles->sum('subtotal');
-        $this->impuesto = $this->subtotal * 0.13; // 13% IVA
-        $this->total = $this->subtotal + $this->impuesto - $this->descuento;
+        $this->impuesto = 0; // IVA desactivado: no se cobra (total = subtotal - descuento)
+        $this->total = $this->subtotal - $this->descuento;
         $this->save();
     }
 
