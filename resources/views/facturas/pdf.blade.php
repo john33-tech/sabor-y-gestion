@@ -351,10 +351,6 @@
                         <td class="l">Subtotal:</td>
                         <td class="r">Bs {{ number_format($factura->subtotal, 2) }}</td>
                     </tr>
-                    <tr>
-                        <td class="l">Impuesto IVA (13%):</td>
-                        <td class="r">Bs {{ number_format($factura->impuesto, 2) }}</td>
-                    </tr>
                     @if($factura->descuento > 0)
                         <tr class="descuento">
                             <td class="l">Descuento:</td>

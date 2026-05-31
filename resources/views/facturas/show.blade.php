@@ -70,10 +70,6 @@
                                 <span class="text-sm font-medium">Bs. {{ number_format($factura->subtotal, 2) }}</span>
                             </div>
                             <div class="flex justify-between py-2 border-b border-gray-100">
-                                <span class="text-sm text-gray-600">Impuesto (13%):</span>
-                                <span class="text-sm font-medium">Bs. {{ number_format($factura->impuesto, 2) }}</span>
-                            </div>
-                            <div class="flex justify-between py-2 border-b border-gray-100">
                                 <span class="text-sm text-gray-600">Descuento:</span>
                                 <span class="text-sm font-medium text-red-600">- Bs. {{ number_format($factura->descuento, 2) }}</span>
                             </div>

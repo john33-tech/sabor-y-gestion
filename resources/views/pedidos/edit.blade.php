@@ -249,10 +249,6 @@
                                     <span id="subtotal" class="font-semibold" style="color: #111827;">Bs. 0.00</span>
                                 </div>
                                 <div class="flex justify-between text-sm">
-                                    <span style="color: #78716C;">IVA:</span>
-                                    <span id="impuesto" class="font-semibold" style="color: #111827;">Bs. 0.00</span>
-                                </div>
-                                <div class="flex justify-between text-sm">
                                     <span style="color: #78716C;">Descuento:</span>
                                     <span id="descuentoDisplay" class="font-semibold" style="color: #C2410C;">Bs. 0.00</span>
                                 </div>
@@ -391,7 +387,6 @@ function updateTotals() {
     let total = subtotal - descuento;
     
     document.getElementById('subtotal').innerHTML = `Bs. ${subtotal.toFixed(2)}`;
-    document.getElementById('impuesto').innerHTML = `Bs. ${impuesto.toFixed(2)}`;
     document.getElementById('descuentoDisplay').innerHTML = `Bs. ${descuento.toFixed(2)}`;
     document.getElementById('total').innerHTML = `Bs. ${total.toFixed(2)}`;
 }

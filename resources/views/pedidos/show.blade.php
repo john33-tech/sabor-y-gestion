@@ -601,10 +601,6 @@
                             <span class="text-gray-600">Subtotal:</span>
                             <span class="font-medium text-gray-800">Bs. {{ number_format($pedido->subtotal, 2) }}</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600">IVA (13%):</span>
-                            <span class="font-medium text-gray-800">Bs. {{ number_format($pedido->impuesto, 2) }}</span>
-                        </div>
                         @if($pedido->descuento > 0)
                         <div class="flex justify-between">
                             <span class="text-gray-600">Descuento:</span>

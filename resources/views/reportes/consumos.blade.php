@@ -440,10 +440,6 @@ function verDetalle(consumo) {
                         <span class="font-medium">Bs. ${consumo.subtotal.toFixed(2)}</span>
                     </div>
                     <div class="flex justify-between text-sm">
-                        <span class="text-gray-600">IVA (13%)</span>
-                        <span class="font-medium">Bs. ${consumo.impuesto.toFixed(2)}</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
                         <span class="text-gray-600">Descuento</span>
                         <span class="font-medium text-red-600">- Bs. ${consumo.descuento.toFixed(2)}</span>
                     </div>

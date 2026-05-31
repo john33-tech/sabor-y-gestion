@@ -286,10 +286,6 @@
                     <dt class="text-gray-600">Subtotal:</dt>
                     <dd>Bs {{ number_format($resumen['subtotal'], 2) }}</dd>
                 </div>
-                <div class="flex justify-between">
-                    <dt class="text-gray-600">Impuesto (13%):</dt>
-                    <dd>Bs {{ number_format($resumen['impuesto'], 2) }}</dd>
-                </div>
                 @if($resumen['descuento'] > 0)
                     <div class="flex justify-between text-red-600">
                         <dt>Descuento:</dt>

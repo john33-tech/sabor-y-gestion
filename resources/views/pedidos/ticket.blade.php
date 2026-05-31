@@ -191,10 +191,6 @@
                 <span>Subtotal:</span>
                 <span>Bs {{ number_format($pedido->subtotal, 2) }}</span>
             </div>
-            <div class="info-row">
-                <span>IVA (13%):</span>
-                <span>Bs {{ number_format($pedido->impuesto, 2) }}</span>
-            </div>
             @if($pedido->descuento > 0)
             <div class="info-row">
                 <span>Descuento:</span>
