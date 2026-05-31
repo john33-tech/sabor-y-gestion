@@ -17,3 +17,25 @@ spec:
             - name: tidb-ca
               mountPath: /etc/ssl/tidb
               readOnly: true
+          # Probes con más margen: la 1ª carga abre conexión SSL a TiDB Cloud
+          # (AWS, remoto) y puede tardar >5s. Sin esto la startup probe expira.
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 15
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 15
+            timeoutSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 5
