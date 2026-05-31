@@ -15,22 +15,38 @@
         </div>
     @endif
 
-    {{-- Alerta de stock bajo: aviso + reposición masiva con 1 clic --}}
+    {{-- Alerta de stock bajo (solo aviso) --}}
     @if(($stockBajo ?? 0) > 0 || ($stockAgotado ?? 0) > 0)
-    <div class="bg-amber-50 border border-amber-300 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div class="text-amber-800 text-sm">
-            <i class="fas fa-exclamation-triangle mr-1"></i>
-            <strong>Atención:</strong> {{ $stockBajo }} ingrediente(s) con <strong>stock bajo</strong>@if(($stockAgotado ?? 0) > 0) ({{ $stockAgotado }} agotado/s)@endif. Usa "Reponer" en cada fila, o repón todos de una vez:
-        </div>
-        <form action="{{ route('inventario.reponer-todos') }}" method="POST"
-              onsubmit="return confirm('¿Reponer al máximo TODOS los ingredientes con stock bajo?');">
+    <div class="bg-amber-50 border border-amber-300 rounded-lg p-4 text-amber-800 text-sm">
+        <i class="fas fa-exclamation-triangle mr-1"></i>
+        <strong>Atención:</strong> {{ $stockBajo }} ingrediente(s) con <strong>stock bajo</strong>@if(($stockAgotado ?? 0) > 0) ({{ $stockAgotado }} agotado/s)@endif. Repón abajo lo necesario para producir más platos.
+    </div>
+    @endif
+
+    {{-- Reposición por PRODUCCIÓN: suma al inventario lo justo para producir N unidades de un plato --}}
+    <div class="bg-white border border-emerald-200 rounded-lg shadow-sm p-4">
+        <h2 class="font-semibold text-gray-800 mb-1"><i class="fas fa-calculator text-emerald-600 mr-1"></i> Reponer ingredientes por producción</h2>
+        <p class="text-xs text-gray-500 mb-3">Elige un plato y cuántas unidades vas a preparar; el sistema suma al inventario los ingredientes necesarios (receta × cantidad).</p>
+        <form action="{{ route('inventario.reponer-producto') }}" method="POST" class="flex flex-col sm:flex-row gap-3 sm:items-end">
             @csrf
-            <button type="submit" class="inline-flex items-center px-3 py-2 text-sm font-semibold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition whitespace-nowrap">
-                <i class="fas fa-truck-loading mr-1"></i> Reponer todos los bajos
+            <div class="flex-1">
+                <label class="block text-sm font-medium text-gray-600 mb-1">Plato</label>
+                <select name="plato_id" required class="w-full border-gray-300 rounded-lg shadow-sm focus:border-primary focus:ring-primary">
+                    <option value="">Selecciona un plato…</option>
+                    @foreach($platos as $pl)
+                        <option value="{{ $pl->id }}">{{ $pl->nombre }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="w-full sm:w-44">
+                <label class="block text-sm font-medium text-gray-600 mb-1">Unidades a producir</label>
+                <input type="number" name="cantidad" min="1" max="1000" value="10" required class="w-full border-gray-300 rounded-lg shadow-sm focus:border-primary focus:ring-primary">
+            </div>
+            <button type="submit" class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition whitespace-nowrap">
+                <i class="fas fa-plus mr-1"></i> Calcular y reponer
             </button>
         </form>
     </div>
-    @endif
 
     <!-- Tarjetas de estadísticas -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
@@ -171,16 +187,6 @@
                         </td>
                         <td class="py-3 px-4">
                             @if($ingrediente->inventario)
-                                {{-- Reposición rápida: rellena al stock máximo con 1 clic --}}
-                                <form action="{{ route('inventario.reponer', $ingrediente->inventario) }}" method="POST" class="inline">
-                                    @csrf
-                                    <button type="submit"
-                                            class="inline-flex items-center px-2 py-1 mr-2 text-xs font-semibold text-white bg-emerald-600 rounded hover:bg-emerald-700 transition-colors"
-                                            onclick="return confirm('¿Reponer el stock de {{ $ingrediente->nombre }} al máximo?')"
-                                            title="Reponer stock al máximo">
-                                        <i class="fas fa-truck-loading mr-1"></i> Reponer
-                                    </button>
-                                </form>
                                 <a href="{{ route('inventario.edit', $ingrediente->inventario) }}"
                                    class="text-primary hover:text-secondary mr-2 transition-colors"
                                    title="Editar inventario">
