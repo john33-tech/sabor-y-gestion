@@ -1,4 +1,4 @@
-@extends('layouts.sidebar') {{-- or your main layout --}}
+@extends('layouts.app') {{-- or your main layout --}}
 
 @section('title', 'Detalle de Cierre de Caja')
 

@@ -6,7 +6,7 @@
 
 @php
     use Illuminate\Support\Facades\Cache;
-    
+
     $lowStockCount = Cache::remember('low_stock_count_direct', 300, function() {
         return \App\Models\Inventario::with('ingrediente')
             ->get()
@@ -205,17 +205,17 @@
                 x-collapse
                 x-cloak
                 class="mt-1 ml-2 space-y-1 sm:ml-3">
-                
+
                 <a href="{{ route('inventario.index') }}"
                 class="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
-                    
+
                     <div class="flex items-center gap-2 sm:gap-3">
                         <i class="fas fa-boxes text-[10px] sm:text-xs w-4"></i>
                         <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">
                             Inventario
                         </span>
                     </div>
-                    
+
                     @if($lowStockCount > 0)
                         <span class="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-black bg-yellow-400 animate-pulse rounded-full">
                             {{ $lowStockCount }}
@@ -331,7 +331,7 @@ class="mb-1">
         <a href="{{ route('pedidos.index') }}"
            class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
             <i class="fas fa-clipboard-list text-[10px] sm:text-xs w-4"></i>
-            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap flex-1 flex justify-between items-center pr-2">
+            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="flex items-center justify-between flex-1 pr-2 whitespace-nowrap">
                 <span>Pedidos</span>
                 @if(in_array($role, ['admin']))
                 <span x-show="pendingOrdersCount > 0" x-text="pendingOrdersCount" x-cloak class="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-orange-500 rounded-full"></span>
@@ -381,36 +381,36 @@ class="mb-1">
             <!-- Modal: Selección de Pedido -->
             <x-modal name="select-pedido-pago" focusable>
                 <div class="p-6">
-                    <h2 class="text-lg font-medium text-gray-900 mb-4">
-                        <i class="fas fa-list-ul mr-2 text-primary"></i> Seleccione el Pedido a Pagar
+                    <h2 class="mb-4 text-lg font-medium text-gray-900">
+                        <i class="mr-2 fas fa-list-ul text-primary"></i> Seleccione el Pedido a Pagar
                     </h2>
-                    
+
                     <div x-show="loadingPedidos" class="flex justify-center py-10">
-                        <i class="fas fa-spinner fa-spin text-3xl text-primary"></i>
+                        <i class="text-3xl fas fa-spinner fa-spin text-primary"></i>
                     </div>
 
-                    <div x-show="!loadingPedidos && pedidosPendientes.length === 0" class="text-center py-10">
+                    <div x-show="!loadingPedidos && pedidosPendientes.length === 0" class="py-10 text-center">
                         <p class="text-gray-500">No tienes pedidos pendientes de pago.</p>
                     </div>
 
-                    <div x-show="!loadingPedidos && pedidosPendientes.length > 0" class="space-y-3 max-h-96 overflow-y-auto pr-2">
+                    <div x-show="!loadingPedidos && pedidosPendientes.length > 0" class="pr-2 space-y-3 overflow-y-auto max-h-96">
                         <template x-for="pedido in pedidosPendientes" :key="pedido.id">
-                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition border border-gray-200">
+                            <div class="flex items-center justify-between p-4 transition border border-gray-200 bg-gray-50 rounded-xl hover:bg-gray-100">
                                 <div>
                                     <div class="font-bold text-primary" x-text="'#' + pedido.numero_pedido"></div>
                                     <div class="text-xs text-gray-500" x-text="new Date(pedido.created_at).toLocaleString()"></div>
-                                    <div class="text-sm font-semibold text-green-600 mt-1" x-text="'Bs. ' + parseFloat(pedido.total).toFixed(2)"></div>
+                                    <div class="mt-1 text-sm font-semibold text-green-600" x-text="'Bs. ' + parseFloat(pedido.total).toFixed(2)"></div>
                                 </div>
                                 <button @click="generarQr(pedido)"
                                         :disabled="qrLoading"
-                                        class="inline-flex items-center px-4 py-2 bg-purple-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-purple-700 transition disabled:opacity-50">
-                                    <i class="fas fa-cash-register mr-2"></i> Pagar
+                                        class="inline-flex items-center px-4 py-2 text-xs font-semibold tracking-widest text-white uppercase transition bg-purple-600 border border-transparent rounded-md hover:bg-purple-700 disabled:opacity-50">
+                                    <i class="mr-2 fas fa-cash-register"></i> Pagar
                                 </button>
                             </div>
                         </template>
                     </div>
 
-                    <div class="mt-6 flex justify-end">
+                    <div class="flex justify-end mt-6">
                         <x-secondary-button x-on:click="$dispatch('close')">Cerrar</x-secondary-button>
                     </div>
                 </div>
@@ -429,57 +429,57 @@ class="mb-1">
 
                 <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm"></div>
 
-                <div class="flex min-h-screen items-center justify-center p-4">
+                <div class="flex items-center justify-center min-h-screen p-4">
                     <div x-show="qrModalOpen"
                         x-transition:enter="ease-out duration-300"
                         x-transition:enter-start="opacity-0 scale-95"
                         x-transition:enter-end="opacity-100 scale-100"
-                        class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+                        class="relative w-full max-w-md overflow-hidden bg-white shadow-2xl rounded-2xl">
 
-                        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
+                        <div class="px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600">
                             <div class="flex items-center justify-between">
-                                <h3 class="text-white font-bold text-lg flex items-center">
-                                    <i class="fas fa-qrcode mr-2"></i> Pago con QR
+                                <h3 class="flex items-center text-lg font-bold text-white">
+                                    <i class="mr-2 fas fa-qrcode"></i> Pago con QR
                                 </h3>
                                 <button @click="cerrarQrModal()"
-                                        class="text-white/80 hover:text-white transition"
+                                        class="transition text-white/80 hover:text-white"
                                         x-show="!qrPagado">
-                                    <i class="fas fa-times text-xl"></i>
+                                    <i class="text-xl fas fa-times"></i>
                                 </button>
                             </div>
-                            <p class="text-purple-200 text-sm mt-1" x-text="'Pedido: ' + (selectedPedido?.numero_pedido || '')"></p>
+                            <p class="mt-1 text-sm text-purple-200" x-text="'Pedido: ' + (selectedPedido?.numero_pedido || '')"></p>
                         </div>
 
                         <div class="p-6">
                             <div x-show="!qrPagado">
                                 <div class="flex justify-center mb-5">
-                                    <div class="p-3 bg-white border-2 border-gray-200 rounded-xl shadow-inner"
+                                    <div class="p-3 bg-white border-2 border-gray-200 shadow-inner rounded-xl"
                                         x-html="qrSvg">
                                     </div>
                                 </div>
 
-                                <div class="bg-gray-50 rounded-xl p-4 space-y-2 mb-5 text-gray-800">
-                                    <div class="flex justify-between items-center">
+                                <div class="p-4 mb-5 space-y-2 text-gray-800 bg-gray-50 rounded-xl">
+                                    <div class="flex items-center justify-between">
                                         <span class="text-sm text-gray-500">Monto Total:</span>
                                         <span class="text-xl font-black text-purple-700" x-text="'Bs. ' + qrFacturaData?.total"></span>
                                     </div>
                                 </div>
 
                                 <div class="flex items-center justify-center gap-3 py-3">
-                                    <div class="relative flex h-3 w-3">
-                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                                        <span class="relative inline-flex rounded-full h-3 w-3 bg-purple-500"></span>
+                                    <div class="relative flex w-3 h-3">
+                                        <span class="absolute inline-flex w-full h-full bg-purple-400 rounded-full opacity-75 animate-ping"></span>
+                                        <span class="relative inline-flex w-3 h-3 bg-purple-500 rounded-full"></span>
                                     </div>
-                                    <span class="text-sm text-gray-500 font-medium animate-pulse">Esperando confirmación...</span>
+                                    <span class="text-sm font-medium text-gray-500 animate-pulse">Esperando confirmación...</span>
                                 </div>
                             </div>
 
-                            <div x-show="qrPagado" class="text-center py-8">
-                                <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-4 qr-success-check">
-                                    <i class="fas fa-check text-4xl text-green-600"></i>
+                            <div x-show="qrPagado" class="py-8 text-center">
+                                <div class="inline-flex items-center justify-center w-20 h-20 mb-4 bg-green-100 rounded-full qr-success-check">
+                                    <i class="text-4xl text-green-600 fas fa-check"></i>
                                 </div>
-                                <h3 class="text-2xl font-bold text-green-700 mb-2">¡Pago Confirmado!</h3>
-                                <p class="text-gray-600 mb-1">Tu pago fue procesado exitosamente.</p>
+                                <h3 class="mb-2 text-2xl font-bold text-green-700">¡Pago Confirmado!</h3>
+                                <p class="mb-1 text-gray-600">Tu pago fue procesado exitosamente.</p>
                                 <p class="text-sm text-gray-500">Actualizando información...</p>
                                 <div class="mt-4">
                                     <div class="w-full bg-green-100 rounded-full h-1.5 overflow-hidden">
@@ -516,7 +516,7 @@ class="mb-1">
             async openSelectionModal() {
                 this.loadingPedidos = true;
                 this.$dispatch('open-modal', 'select-pedido-pago');
-                
+
                 try {
                     const response = await fetch('/misPedidosPendientes');
                     this.pedidosPendientes = await response.json();
@@ -571,7 +571,7 @@ class="mb-1">
 
             async procesarPagoConfirmado(eventData) {
                 this.qrPagado = true;
-                
+
                 // Actualizar estado en servidor
                 try {
                     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -613,11 +613,11 @@ class="mb-1">
 @endif
 
         <!-- Comandas -->
-       @if(in_array($role, ['admin', 'cocinero']))
+        @if(in_array($role, ['admin', 'cajero', 'cocinero']))
         <a href="{{ route('comandas.index') }}"
         class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
             <i class="fas fa-receipt text-[10px] sm:text-xs w-4"></i>
-            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap flex-1 flex justify-between items-center pr-2">
+            <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="flex items-center justify-between flex-1 pr-2 whitespace-nowrap">
                 <span>Comandas</span>
                 @if(in_array($role, ['cocinero']))
                 <span x-show="pendingOrdersCount > 0" x-text="pendingOrdersCount" x-cloak class="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-orange-500 rounded-full"></span>
@@ -676,7 +676,7 @@ class="mb-1">
             </a>
         @endif
     </div>
-</div>  
+</div>
 @endif
 
 
