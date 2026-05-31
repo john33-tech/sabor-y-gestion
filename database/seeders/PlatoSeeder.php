@@ -85,12 +85,14 @@ class PlatoSeeder extends Seeder
                 continue;
             }
             $fecha = Carbon::now()->subDays(30 - ($i % 30));
+            // NO incluimos 'imagen' aquí a propósito: así, si el plato ya existe
+            // y le subiste una foto, un re-seed (RUN_SEEDERS en cada deploy) NO la
+            // borra. En platos nuevos queda null (default) hasta que subas una.
             Plato::updateOrCreate(
                 ['nombre' => $p['nombre']],
                 [
                     'precio'       => $p['precio'],
                     'categoria_id' => $categoria->id,
-                    'imagen'       => null,
                     'disponible'   => true,
                     'score'        => $p['score'],
                     'descripcion'  => $p['desc'],
