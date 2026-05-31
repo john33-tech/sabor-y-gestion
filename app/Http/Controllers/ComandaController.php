@@ -13,24 +13,27 @@ class ComandaController extends Controller
 {
     public function index(Request $request)
     {
+        // visibleEnCocina(): muestra pendiente/en_preparacion/listo, pero los
+        // pedidos "para llevar" solo cuando ya están PAGADOS (primero paga,
+        // luego cocina). Mesa y delivery entran enseguida.
         $query = Pedido::with(['detalles.plato', 'mesa', 'usuario'])
-            ->whereIn('estado', ['pendiente', 'en_preparacion', 'listo']);
-        
+            ->visibleEnCocina();
+
         // Filtrar por estado si se especifica
         if ($request->filled('estado') && $request->estado != 'todos') {
             $query->where('estado', $request->estado);
         }
-        
+
         $comandas = $query->orderBy('created_at', 'asc')->paginate(12);
-        
+
         $tipos = Pedido::getTipos();
-        
-        // Estadísticas
+
+        // Estadísticas (mismo criterio que la cocina)
         $stats = [
-            'total' => Pedido::whereIn('estado', ['pendiente', 'en_preparacion', 'listo'])->count(),
-            'pendientes' => Pedido::where('estado', 'pendiente')->count(),
-            'en_preparacion' => Pedido::where('estado', 'en_preparacion')->count(),
-            'listos' => Pedido::where('estado', 'listo')->count()
+            'total' => Pedido::visibleEnCocina()->count(),
+            'pendientes' => Pedido::visibleEnCocina()->where('estado', 'pendiente')->count(),
+            'en_preparacion' => Pedido::visibleEnCocina()->where('estado', 'en_preparacion')->count(),
+            'listos' => Pedido::visibleEnCocina()->where('estado', 'listo')->count()
         ];
         
         // Si es petición AJAX, devolver solo el HTML de las tarjetas

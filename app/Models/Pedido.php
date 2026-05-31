@@ -113,6 +113,24 @@ class Pedido extends Model
         return $this->hasOne(Factura::class);
     }
 
+    /**
+     * Pedidos que deben verse en la cocina (kitchen display): en estados
+     * pendiente/en_preparacion/listo. Regla "para llevar": solo entra a cocina
+     * cuando su factura YA está PAGADA (primero paga, luego se prepara). Mesa y
+     * delivery van a cocina enseguida.
+     */
+    public function scopeVisibleEnCocina($query)
+    {
+        return $query
+            ->whereIn('estado', [self::ESTADO_PENDIENTE, self::ESTADO_EN_PREPARACION, self::ESTADO_LISTO])
+            ->where(function ($q) {
+                $q->where('tipo_pedido', '!=', self::TIPO_PARA_LLEVAR)
+                  ->orWhereHas('factura', function ($f) {
+                      $f->where('estado', Factura::ESTADO_PAGADA);
+                  });
+            });
+    }
+
     public function calcularTotales()
     {
         $this->subtotal = $this->detalles->sum('subtotal');
