@@ -96,7 +96,11 @@ class CierreCajaController extends Controller
     public function cerrar(Request $request, Mesa $cierre)
     {
         $request->validate([
-            'metodo_pago' => 'required|in:efectivo,tarjeta,qr,transferencia',
+            'metodo_pago'   => 'required|in:efectivo,tarjeta,qr,transferencia',
+            'cliente_nit'   => 'required|string|max:20',   // CI/NIT obligatorio al cobrar
+            'cliente_email' => 'nullable|email',           // opcional: enviar factura
+        ], [
+            'cliente_nit.required' => 'El CI/NIT del cliente es obligatorio para cobrar.',
         ]);
 
         // No filtramos por factura pendiente: si el cliente ya pagó por QR
@@ -124,10 +128,17 @@ class CierreCajaController extends Controller
         try {
             foreach ($pedidos as $pedido) {
                 if ($pedido->factura) {
+                    // Guardar el CI/NIT que pidió el cajero (en todas las facturas).
+                    $pedido->factura->cliente_nit = $request->cliente_nit;
+
                     if ($pedido->factura->estado === Factura::ESTADO_PENDIENTE) {
                         $pedido->factura->metodo_pago = $request->metodo_pago;
                         $pedido->factura->estado = Factura::ESTADO_PAGADA;
-                        $pedido->factura->save();
+                    }
+                    $pedido->factura->save();
+
+                    // Solo se envía correo si el cliente dio un email (opcional).
+                    if ($request->filled('cliente_email')) {
                         $facturasParaNotificar[] = $pedido->factura;
                     }
                 }
@@ -146,7 +157,7 @@ class CierreCajaController extends Controller
             // pagadas por un pago QR previo, que ya enviaron su correo).
             $correosEnviados = 0;
             foreach ($facturasParaNotificar as $factura) {
-                if ($this->enviarFacturaAlCliente($factura)) {
+                if ($this->enviarFacturaAlCliente($factura, $request->cliente_email)) {
                     $correosEnviados++;
                 }
             }
@@ -191,15 +202,15 @@ class CierreCajaController extends Controller
      * Envía la factura por correo al usuario dueño del pedido. Devuelve true
      * si el correo se despachó OK, false si falló o no había email destino.
      */
-    private function enviarFacturaAlCliente(Factura $factura): bool
+    private function enviarFacturaAlCliente(Factura $factura, ?string $emailOverride = null): bool
     {
         $factura->loadMissing(['pedido.usuario', 'pedido.detalles.plato']);
 
-        // Preferimos el email del cliente capturado en el pedido (lo que el
-        // mesero anotó). Si no hay, caemos al email del usuario del sistema
-        // que creó el pedido (típicamente el cliente cuando se autoatiende).
-        $email = $factura->pedido?->cliente_email
-            ?: optional($factura->pedido?->usuario)->email;
+        // Prioridad: el correo que el cajero ingresó al cobrar. Si no, el del
+        // pedido (lo que anotó el mesero) y por último el del usuario del sistema.
+        $email = $emailOverride
+            ?: ($factura->pedido?->cliente_email
+            ?: optional($factura->pedido?->usuario)->email);
 
         if (!$email) {
             Log::info('Cierre de cuenta: factura sin email destino', [

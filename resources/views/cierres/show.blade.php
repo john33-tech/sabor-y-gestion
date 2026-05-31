@@ -128,6 +128,32 @@
                     @enderror
                 </div>
 
+                {{-- CI/NIT obligatorio: el cajero debe pedirlo al cobrar --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">CI / NIT del cliente <span class="text-red-500">*</span></label>
+                    <input type="text" name="cliente_nit" required maxlength="20"
+                           value="{{ old('cliente_nit') }}"
+                           class="w-full border-gray-300 rounded-lg shadow-sm focus:border-primary focus:ring-primary"
+                           placeholder="Ej: 1234567 (o S/N si no tiene)">
+                    @error('cliente_nit')
+                        <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                {{-- Correo opcional: si el cliente quiere su factura por email --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Correo del cliente <span class="text-gray-400 font-normal">(opcional — para enviarle la factura)</span>
+                    </label>
+                    <input type="email" name="cliente_email"
+                           value="{{ old('cliente_email') }}"
+                           class="w-full border-gray-300 rounded-lg shadow-sm focus:border-primary focus:ring-primary"
+                           placeholder="cliente@correo.com">
+                    @error('cliente_email')
+                        <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 <button type="submit"
                         class="w-full bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold transition shadow-md">
                     <i :class="metodo === 'qr' ? 'fas fa-qrcode mr-2' : 'fas fa-check-circle mr-2'"></i>
