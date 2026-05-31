@@ -115,9 +115,13 @@
                 <p class="text-sm text-gray-400">No hay nada que arquear todavía.</p>
             @else
             <dl class="space-y-1 text-sm mb-4">
-                <div class="flex justify-between"><dt class="text-gray-500">Efectivo registrado</dt><dd class="font-medium">Bs {{ number_format($totales['efectivo'], 2) }}</dd></div>
-                <div class="flex justify-between"><dt class="text-gray-500">Total general</dt><dd class="font-bold">Bs {{ number_format($totales['general'], 2) }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500"><i class="fas fa-money-bill-wave text-emerald-500 mr-1"></i>Efectivo</dt><dd class="font-medium">Bs {{ number_format($totales['efectivo'], 2) }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500"><i class="fas fa-credit-card text-indigo-500 mr-1"></i>Tarjeta</dt><dd class="font-medium">Bs {{ number_format($totales['tarjeta'], 2) }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500"><i class="fas fa-qrcode text-violet-500 mr-1"></i>QR</dt><dd class="font-medium">Bs {{ number_format($totales['qr'], 2) }}</dd></div>
+                <div class="flex justify-between"><dt class="text-gray-500"><i class="fas fa-exchange-alt text-sky-500 mr-1"></i>Transferencia</dt><dd class="font-medium">Bs {{ number_format($totales['transferencia'], 2) }}</dd></div>
+                <div class="flex justify-between pt-1 mt-1 border-t border-gray-100"><dt class="font-semibold text-gray-700">Total general</dt><dd class="font-bold">Bs {{ number_format($totales['general'], 2) }}</dd></div>
             </dl>
+            <p class="text-[11px] text-gray-400 mb-2">El conteo de efectivo abajo se compara solo contra el efectivo registrado (los demás métodos son electrónicos).</p>
 
             <form action="{{ route('caja.cerrar') }}" method="POST" onsubmit="return confirm('¿Cerrar la caja del turno? Esta acción registra el arqueo.');">
                 @csrf
