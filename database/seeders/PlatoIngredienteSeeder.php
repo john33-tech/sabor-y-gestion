@@ -43,12 +43,18 @@ class PlatoIngredienteSeeder extends Seeder
             'Falso Conejo'        => ['Carne de res' => 150, 'Arroz' => 120, 'Papa' => 90, 'Arveja' => 30, 'Ají amarillo' => 20],
             'Ranga Ranga'         => ['Mondongo' => 150, 'Papa' => 120, 'Ají colorado' => 30],
             'Lengua a la Plancha' => ['Lengua de res' => 160, 'Papa' => 100, 'Arroz' => 120, 'Tomate' => 40],
+            'Lasaña'              => ['Carne molida' => 150, 'Fideo' => 100, 'Tomate' => 80, 'Queso' => 80],
+            'Hamburguesa Clásica' => ['Pan' => 1, 'Carne molida' => 150, 'Queso' => 30, 'Tomate' => 30, 'Lechuga' => 20, 'Cebolla' => 20],
+            'Milanesa Napolitana' => ['Carne de res' => 180, 'Huevo' => 1, 'Harina' => 50, 'Tomate' => 60, 'Queso' => 60, 'Papa' => 120],
 
             // Parrillas
             'Pacumutu'            => ['Carne de res' => 250, 'Yuca' => 120, 'Arroz' => 120],
             'Chicharrón de Cerdo' => ['Carne de cerdo' => 220, 'Maíz' => 100, 'Papa' => 120],
             'Pollo a la Brasa'    => ['Pollo' => 350, 'Papa' => 150],
             'Anticucho'           => ['Carne de res' => 120, 'Papa' => 100, 'Maní' => 40],
+            'Churrasco'           => ['Carne de res' => 250, 'Papa' => 120, 'Arroz' => 100],
+            'Costillas BBQ'       => ['Carne de cerdo' => 300, 'Papa' => 120, 'Tomate' => 40, 'Azúcar' => 20],
+            'Brochetas Mixtas'    => ['Carne de res' => 100, 'Pollo' => 100, 'Cebolla' => 40, 'Tomate' => 40, 'Locoto' => 10],
 
             // Ensaladas
             'Ensalada Criolla'    => ['Tomate' => 80, 'Cebolla' => 60, 'Locoto' => 20, 'Perejil' => 10],
@@ -67,6 +73,9 @@ class PlatoIngredienteSeeder extends Seeder
             'Api con Pastel'      => ['Maíz morado' => 100, 'Azúcar' => 50, 'Canela' => 5, 'Harina' => 80],
             'Refresco de Linaza'  => ['Linaza' => 50, 'Limón' => 1, 'Azúcar' => 40],
             'Café con Leche'      => ['Café' => 15, 'Leche' => 150, 'Azúcar' => 20],
+            'Jugo de Naranja'     => ['Naranja' => 3, 'Azúcar' => 20],
+            'Capuchino'           => ['Café' => 15, 'Leche' => 120, 'Azúcar' => 15],
+            'Té Helado'           => ['Té' => 5, 'Limón' => 1, 'Azúcar' => 30],
         ];
 
         foreach ($recetas as $nombrePlato => $items) {

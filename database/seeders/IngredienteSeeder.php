@@ -65,6 +65,8 @@ class IngredienteSeeder extends Seeder
             ['nombre' => 'Maíz morado',     'unidad_medida' => 'gr'],
             ['nombre' => 'Linaza',          'unidad_medida' => 'gr'],
             ['nombre' => 'Café',            'unidad_medida' => 'gr'],
+            ['nombre' => 'Naranja',         'unidad_medida' => 'unidad'],
+            ['nombre' => 'Té',              'unidad_medida' => 'gr'],
         ];
 
         foreach ($ingredientes as $ing) {

@@ -43,12 +43,18 @@ class PlatoSeeder extends Seeder
             ['nombre' => 'Falso Conejo',         'precio' => 18.00, 'cat' => 'Platos Principales', 'score' => 4.5, 'desc' => 'Carne apanada en salsa con arroz, papa y arveja.'],
             ['nombre' => 'Ranga Ranga',          'precio' => 18.00, 'cat' => 'Platos Principales', 'score' => 4.4, 'desc' => 'Guiso de mondongo en ají colorado con papa.'],
             ['nombre' => 'Lengua a la Plancha',  'precio' => 24.00, 'cat' => 'Platos Principales', 'score' => 4.6, 'desc' => 'Lengua de res a la plancha con arroz y papa.'],
+            ['nombre' => 'Lasaña',               'precio' => 24.00, 'cat' => 'Platos Principales', 'score' => 4.8, 'desc' => 'Italiana: capas de pasta con carne, salsa de tomate y queso gratinado.'],
+            ['nombre' => 'Hamburguesa Clásica',  'precio' => 20.00, 'cat' => 'Platos Principales', 'score' => 4.7, 'desc' => 'Pan, carne, queso, tomate, lechuga y cebolla con papas fritas.'],
+            ['nombre' => 'Milanesa Napolitana',  'precio' => 26.00, 'cat' => 'Platos Principales', 'score' => 4.8, 'desc' => 'Argentina: milanesa con salsa de tomate y queso gratinado, con papas.'],
 
             // ── Parrillas ────────────────────────────────────────────
             ['nombre' => 'Pacumutu',             'precio' => 35.00, 'cat' => 'Parrillas', 'score' => 4.8, 'desc' => 'Brocheta gigante de carne con yuca y arroz.'],
             ['nombre' => 'Chicharrón de Cerdo',  'precio' => 28.00, 'cat' => 'Parrillas', 'score' => 4.9, 'desc' => 'Chicharrón crocante con mote y papa.'],
             ['nombre' => 'Pollo a la Brasa',     'precio' => 25.00, 'cat' => 'Parrillas', 'score' => 4.7, 'desc' => 'Pollo asado a la brasa con papas fritas.'],
             ['nombre' => 'Anticucho',            'precio' => 15.00, 'cat' => 'Parrillas', 'score' => 4.6, 'desc' => 'Brocheta a la parrilla con papa y salsa de maní.'],
+            ['nombre' => 'Churrasco',            'precio' => 35.00, 'cat' => 'Parrillas', 'score' => 4.9, 'desc' => 'Argentino: jugoso bife a la parrilla con papa y arroz.'],
+            ['nombre' => 'Costillas BBQ',        'precio' => 38.00, 'cat' => 'Parrillas', 'score' => 4.8, 'desc' => 'Costillas de cerdo glaseadas en salsa BBQ con papa.'],
+            ['nombre' => 'Brochetas Mixtas',     'precio' => 28.00, 'cat' => 'Parrillas', 'score' => 4.7, 'desc' => 'Brochetas de res y pollo con cebolla, tomate y locoto.'],
 
             // ── Ensaladas ────────────────────────────────────────────
             ['nombre' => 'Ensalada Criolla',     'precio' => 8.00,  'cat' => 'Ensaladas', 'score' => 4.4, 'desc' => 'Tomate, cebolla y locoto picados con perejil.'],
@@ -67,6 +73,9 @@ class PlatoSeeder extends Seeder
             ['nombre' => 'Api con Pastel',       'precio' => 8.00,  'cat' => 'Bebidas', 'score' => 4.8, 'desc' => 'Bebida caliente de maíz morado con pastel frito.'],
             ['nombre' => 'Refresco de Linaza',   'precio' => 5.00,  'cat' => 'Bebidas', 'score' => 4.4, 'desc' => 'Refresco de linaza con limón.'],
             ['nombre' => 'Café con Leche',       'precio' => 5.00,  'cat' => 'Bebidas', 'score' => 4.5, 'desc' => 'Café caliente con leche.'],
+            ['nombre' => 'Jugo de Naranja',      'precio' => 7.00,  'cat' => 'Bebidas', 'score' => 4.6, 'desc' => 'Jugo de naranja recién exprimido.'],
+            ['nombre' => 'Capuchino',            'precio' => 8.00,  'cat' => 'Bebidas', 'score' => 4.7, 'desc' => 'Italiano: espresso con leche espumada.'],
+            ['nombre' => 'Té Helado',            'precio' => 6.00,  'cat' => 'Bebidas', 'score' => 4.4, 'desc' => 'Té frío con limón y un toque de azúcar.'],
         ];
 
         $i = 0;
