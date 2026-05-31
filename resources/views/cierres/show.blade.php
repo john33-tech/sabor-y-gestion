@@ -128,6 +128,18 @@
                     @enderror
                 </div>
 
+                {{-- Nombre y apellido del cliente para la factura --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre y apellido del cliente <span class="text-red-500">*</span></label>
+                    <input type="text" name="cliente_nombre" required maxlength="255"
+                           value="{{ old('cliente_nombre') }}"
+                           class="w-full border-gray-300 rounded-lg shadow-sm focus:border-primary focus:ring-primary"
+                           placeholder="Ej: Juan Pérez">
+                    @error('cliente_nombre')
+                        <p class="text-xs text-red-600 mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 {{-- CI/NIT obligatorio: el cajero debe pedirlo al cobrar --}}
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">CI / NIT del cliente <span class="text-red-500">*</span></label>

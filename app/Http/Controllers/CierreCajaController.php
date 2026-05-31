@@ -96,11 +96,13 @@ class CierreCajaController extends Controller
     public function cerrar(Request $request, Mesa $cierre)
     {
         $request->validate([
-            'metodo_pago'   => 'required|in:efectivo,tarjeta,qr,transferencia',
-            'cliente_nit'   => 'required|string|max:20',   // CI/NIT obligatorio al cobrar
-            'cliente_email' => 'nullable|email',           // opcional: enviar factura
+            'metodo_pago'    => 'required|in:efectivo,tarjeta,qr,transferencia',
+            'cliente_nombre' => 'required|string|max:255',  // nombre y apellido del cliente
+            'cliente_nit'    => 'required|string|max:20',    // CI/NIT obligatorio al cobrar
+            'cliente_email'  => 'nullable|email',            // opcional: enviar factura
         ], [
-            'cliente_nit.required' => 'El CI/NIT del cliente es obligatorio para cobrar.',
+            'cliente_nombre.required' => 'El nombre y apellido del cliente es obligatorio.',
+            'cliente_nit.required'    => 'El CI/NIT del cliente es obligatorio para cobrar.',
         ]);
 
         // No filtramos por factura pendiente: si el cliente ya pagó por QR
@@ -128,7 +130,8 @@ class CierreCajaController extends Controller
         try {
             foreach ($pedidos as $pedido) {
                 if ($pedido->factura) {
-                    // Guardar el CI/NIT que pidió el cajero (en todas las facturas).
+                    // Guardar los datos del cliente que pidió el cajero.
+                    $pedido->factura->cliente_nombre = $request->cliente_nombre;
                     $pedido->factura->cliente_nit = $request->cliente_nit;
 
                     if ($pedido->factura->estado === Factura::ESTADO_PENDIENTE) {
