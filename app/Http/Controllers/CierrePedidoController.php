@@ -95,6 +95,12 @@ class CierrePedidoController extends Controller
 
     public function cerrar(Request $request, Mesa $cierre)
     {
+        // Defensa en profundidad: el cobro es SOLO de caja (admin/cajero).
+        // La ruta ya lo restringe, pero validamos también en el servidor.
+        if (!in_array(auth()->user()->role ?? '', ['admin', 'cajero'])) {
+            abort(403, 'Solo caja (admin o cajero) puede cobrar una cuenta.');
+        }
+
         $request->validate([
             'metodo_pago'    => 'required|in:efectivo,tarjeta,qr,transferencia',
             'cliente_nombre' => 'required|string|max:255',  // nombre y apellido del cliente

@@ -80,7 +80,7 @@
                         </div>
                         <div>
                             <x-input-label for="descuento" value="Descuento" />
-                            <x-text-input id="descuento" name="descuento" type="number" step="0.01" class="block w-full mt-1" x-model="selectedFactura.descuento" @input="selectedFactura.total = (parseFloat(selectedFactura.subtotal) + parseFloat(selectedFactura.impuesto) - parseFloat($event.target.value)).toFixed(2)" />
+                            <x-text-input id="descuento" name="descuento" type="number" step="0.01" class="block w-full mt-1" x-model="selectedFactura.descuento" @input="selectedFactura.total = (parseFloat(selectedFactura.subtotal) - parseFloat($event.target.value)).toFixed(2)" />
                         </div>
                         <div>
                             <x-input-label for="metodo_pago" value="Método de Pago" />

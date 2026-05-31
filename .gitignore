@@ -22,3 +22,14 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Archivos temporales / dumps / análisis / respaldos de entorno (NO versionar)
+/commit_*.txt
+/cambios_*.txt
+/project_analysis.txt
+/structure.txt
+/dockerfile.txt
+/env-*.txt
+/estructura.sql
+*.sqlite
+/test_*.php

@@ -30,7 +30,7 @@
                         {{ $factura->cliente_nit ?? 'N/A' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        Bs. {{ number_format($factura->subtotal + $factura->impuesto, 2) }}
+                        Bs. {{ number_format($factura->subtotal, 2) }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-red-500">
                         -{{ number_format($factura->descuento, 2) }}

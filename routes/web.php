@@ -85,7 +85,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Cierre de Cuenta por mesa (punto #6): versión del GRUPO (CierrePedidoController).
     // El arqueo/cierre de caja del grupo está más abajo (CashClosureController, name caja.*).
-    Route::prefix('cierres')->name('cierres.')->middleware('role:admin,cajero,mesero')->group(function () {
+    // Cobro de cuenta: SOLO admin y cajero (el mesero ya no cobra).
+    Route::prefix('cierres')->name('cierres.')->middleware('role:admin,cajero')->group(function () {
         Route::get('/', [CierrePedidoController::class, 'index'])->name('index');
         Route::get('/mesa/{cierre}', [CierrePedidoController::class, 'show'])->name('show');
         Route::post('/mesa/{cierre}/cerrar', [CierrePedidoController::class, 'cerrar'])->name('cerrar');
