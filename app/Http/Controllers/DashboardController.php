@@ -14,8 +14,11 @@ class DashboardController extends Controller
         // Obtenemos una colección vacía para evitar el error de variable indefinida
         // En el futuro, esto se podrá reemplazar con una consulta real a la base de datos
         $productosDestacados = collect();
-        
-        return view('dashboard.administrador.index', compact('productosDestacados'));
+
+        // Alerta de inventario: ingredientes con stock bajo (cantidad <= mínimo).
+        $stockBajo = \App\Models\Inventario::whereColumn('cantidad_actual', '<=', 'stock_minimo')->count();
+
+        return view('dashboard.administrador.index', compact('productosDestacados', 'stockBajo'));
     }
     
     public function mesero()

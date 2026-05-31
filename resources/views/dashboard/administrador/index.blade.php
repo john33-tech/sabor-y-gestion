@@ -1,6 +1,22 @@
 @extends('layouts.app')
 
 @section('content')
+
+{{-- Alerta de stock bajo: el admin la ve al entrar y va directo a reponer --}}
+@if(($stockBajo ?? 0) > 0)
+<a href="{{ route('inventario.index') }}"
+   class="flex items-center justify-between gap-3 p-4 mt-6 bg-amber-50 border border-amber-300 rounded-xl hover:bg-amber-100 transition">
+    <div class="flex items-center gap-3 text-amber-800">
+        <i class="fas fa-exclamation-triangle text-2xl"></i>
+        <div>
+            <p class="font-semibold">Inventario: {{ $stockBajo }} ingrediente(s) con stock bajo</p>
+            <p class="text-sm">Toca aquí para revisar y reponer el inventario.</p>
+        </div>
+    </div>
+    <i class="fas fa-arrow-right text-amber-600"></i>
+</a>
+@endif
+
 <!-- Widget de Consumos Recientes -->
 <div class="card bg-white rounded-xl shadow-lg overflow-hidden mt-6">
     <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-white">

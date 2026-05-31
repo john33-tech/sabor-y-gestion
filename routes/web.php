@@ -109,6 +109,12 @@ Route::middleware(['auth'])->group(function () {
 
     //inventario
     Route::resource('inventario', InventarioController::class)->middleware('role:admin,cocinero');
+    // Reposición rápida: rellena el stock al máximo con 1 clic.
+    Route::post('/inventario/{inventario}/reponer', [InventarioController::class, 'reponer'])
+        ->name('inventario.reponer')->middleware('role:admin,cocinero');
+    // Reposición masiva: repone todos los ingredientes con stock bajo.
+    Route::post('/inventario-reponer-todos', [InventarioController::class, 'reponerTodos'])
+        ->name('inventario.reponer-todos')->middleware('role:admin,cocinero');
 
     // Usuarios
     Route::resource('usuarios', UsuarioController::class)->middleware('role:admin');
