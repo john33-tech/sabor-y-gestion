@@ -1,0 +1,19 @@
+# Monta el certificado CA de TiDB Cloud dentro del pod (en la ruta que
+# DB_SSL_CA indica) y quita el volumen de storage local que no necesitamos.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  template:
+    spec:
+      volumes:
+        - name: tidb-ca
+          configMap:
+            name: tidb-ca
+      containers:
+        - name: app
+          volumeMounts:
+            - name: tidb-ca
+              mountPath: /etc/ssl/tidb
+              readOnly: true

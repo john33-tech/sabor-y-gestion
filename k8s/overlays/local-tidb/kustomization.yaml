@@ -1,0 +1,68 @@
+# ---------------------------------------------------------------------------
+# Overlay LOCAL-TIDB: despliega en Kubernetes LOCAL (Docker Desktop) pero
+# conectado a TiDB Cloud (la BD compartida del grupo), NO al MySQL del cluster.
+#
+# - Quita el MySQL del cluster (StatefulSet + Service): se usa TiDB Cloud.
+# - Quita el Ingress (acceso por port-forward).
+# - Monta el CA de TiDB como ConfigMap.
+# - Usa la imagen local sabor-gestion:latest (docker build -t sabor-gestion:latest .)
+#
+# Aplicar:
+#   kubectl apply -k k8s/overlays/local-tidb
+#   kubectl -n sabor-gestion port-forward svc/app 8080:80
+#   -> http://localhost:8080
+# ---------------------------------------------------------------------------
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# CA público de TiDB Cloud (Let's Encrypt ISRG Root X1) montado en el pod.
+configMapGenerator:
+  - name: tidb-ca
+    files:
+      - isrgrootx1.pem
+generatorOptions:
+  disableNameSuffixHash: true
+
+patches:
+  # Conexión a TiDB + no migrar/seedear
+  - path: configmap-patch.yaml
+  # Montar el CA en el pod
+  - path: deployment-patch.yaml
+  # Quitar el StatefulSet de MySQL (usamos TiDB Cloud)
+  - target:
+      kind: StatefulSet
+      name: mysql
+    patch: |
+      $patch: delete
+      apiVersion: apps/v1
+      kind: StatefulSet
+      metadata:
+        name: mysql
+  # Quitar el Service de MySQL
+  - target:
+      kind: Service
+      name: mysql
+    patch: |
+      $patch: delete
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: mysql
+  # Quitar el Ingress (acceso por port-forward en local)
+  - target:
+      kind: Ingress
+      name: sabor-ingress
+    patch: |
+      $patch: delete
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: sabor-ingress
+
+images:
+  - name: sabor-gestion
+    newName: sabor-gestion
+    newTag: latest

@@ -1,0 +1,30 @@
+# Conecta la app a TiDB Cloud (la BD compartida del grupo) en vez del MySQL
+# del cluster. Monta el CA público y NO corre migraciones/seeders (la BD del
+# grupo ya está migrada; evitamos tocar/duplicar sus datos).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sabor-config
+data:
+  # --- App ---
+  APP_ENV: "local"          # evita forceScheme(https) (servimos por http/port-forward)
+  APP_DEBUG: "false"
+  APP_URL: "http://localhost:8080"
+  LOG_LEVEL: "warning"
+
+  # --- Base de datos: TiDB Cloud (grupo) ---
+  DB_CONNECTION: "mysql"
+  DB_HOST: "gateway01.us-east-1.prod.aws.tidbcloud.com"
+  DB_PORT: "4000"
+  DB_DATABASE: "saborgestion"
+  DB_USERNAME: "3Z76JHETThLiUEQ.root"
+  DB_SSL_CA: "/etc/ssl/tidb/isrgrootx1.pem"   # montado vía ConfigMap (abajo)
+  DB_SSL_VERIFY: "false"
+
+  # --- No tocar la BD del grupo en el arranque ---
+  RUN_MIGRATIONS: "false"
+  RUN_SEEDERS: "false"
+
+  # --- Mail en log (no envía de verdad); broadcasting en log (sin Reverb extra) ---
+  MAIL_MAILER: "log"
+  BROADCAST_CONNECTION: "log"
