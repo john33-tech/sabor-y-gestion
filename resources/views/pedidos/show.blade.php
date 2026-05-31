@@ -370,12 +370,22 @@
                              style="z-index: 9999;"
                              @keydown.escape.window="cerrarQr()">
                             <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center space-y-3">
-                                <h4 class="text-lg font-semibold text-gray-800">Escanea para pagar</h4>
+                                <h4 class="text-lg font-semibold text-gray-800">Escanea o toca para pagar</h4>
                                 <p class="text-xs text-gray-500">
                                     Factura <span class="font-mono" x-text="qrFacturaData.numero_factura"></span>
                                     · Bs <span x-text="qrFacturaData.total"></span>
                                 </p>
                                 <div class="flex justify-center" x-html="qrSvg" x-show="!qrPagado"></div>
+
+                                {{-- Pagar en el MISMO dispositivo: si el QR está en tu teléfono no
+                                     puedes escanearlo, así que abrimos la página de pago directo. --}}
+                                <a :href="qrUrl" target="_blank" x-show="!qrPagado"
+                                   class="w-full inline-flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition">
+                                    <i class="mr-2 fas fa-mobile-alt"></i> Pagar aquí (en este dispositivo)
+                                </a>
+                                <p class="text-[11px] text-gray-400" x-show="!qrPagado">
+                                    ¿El QR está en tu teléfono? Toca el botón para pagar sin escanear.
+                                </p>
 
                                 @if(config('app.env') === 'local' || config('app.debug'))
                                     {{-- Solo en local/debug: el sistema externo de QR no puede llegar a
@@ -424,6 +434,7 @@
                             qrLoading: false,
                             qrModalOpen: false,
                             qrSvg: '',
+                            qrUrl: '',
                             qrEmisor: '',
                             qrFacturaData: {},
                             qrPagado: false,
@@ -438,6 +449,7 @@
                                     if (!res.ok) throw new Error('Error generando QR');
                                     const data = await res.json();
                                     this.qrSvg = data.qr_svg;
+                                    this.qrUrl = data.url;
                                     this.qrEmisor = data.emisor;
                                     this.qrFacturaData = data.factura;
                                     this.qrPagado = false;
