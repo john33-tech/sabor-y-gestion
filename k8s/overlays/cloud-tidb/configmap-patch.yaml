@@ -1,0 +1,26 @@
+# AKS conectado a TiDB Cloud (la BD compartida del grupo).
+# NO corre migraciones/seeders (la BD del grupo ya está migrada).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sabor-config
+data:
+  # APP_ENV != production para no forzar https sin dominio/TLS (demo por IP).
+  APP_ENV: "local"
+  APP_DEBUG: "false"
+  APP_URL: "http://CAMBIAR-POR-IP-PUBLICA"   # poner la EXTERNAL-IP del LoadBalancer
+  LOG_LEVEL: "warning"
+
+  DB_CONNECTION: "mysql"
+  DB_HOST: "gateway01.us-east-1.prod.aws.tidbcloud.com"
+  DB_PORT: "4000"
+  DB_DATABASE: "saborgestion"
+  DB_USERNAME: "3Z76JHETThLiUEQ.root"
+  DB_SSL_CA: "/etc/ssl/tidb/isrgrootx1.pem"
+  DB_SSL_VERIFY: "false"
+
+  RUN_MIGRATIONS: "false"
+  RUN_SEEDERS: "false"
+
+  MAIL_MAILER: "log"
+  BROADCAST_CONNECTION: "log"
