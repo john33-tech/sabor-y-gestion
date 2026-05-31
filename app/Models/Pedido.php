@@ -115,16 +115,21 @@ class Pedido extends Model
 
     /**
      * Pedidos que deben verse en la cocina (kitchen display): en estados
-     * pendiente/en_preparacion/listo. Regla "para llevar": solo entra a cocina
-     * cuando su factura YA está PAGADA (primero paga, luego se prepara). Mesa y
-     * delivery van a cocina enseguida.
+     * pendiente/en_preparacion/listo. Regla de "pagar primero":
+     *  - Pedidos hechos por el CLIENTE (autoservicio): solo entran a cocina
+     *    cuando su factura YA está PAGADA (primero paga, luego se prepara).
+     *  - Pedidos del staff (mesero/admin/cajero): entran a cocina enseguida.
      */
     public function scopeVisibleEnCocina($query)
     {
         return $query
             ->whereIn('estado', [self::ESTADO_PENDIENTE, self::ESTADO_EN_PREPARACION, self::ESTADO_LISTO])
             ->where(function ($q) {
-                $q->where('tipo_pedido', '!=', self::TIPO_PARA_LLEVAR)
+                // No fue hecho por un cliente (lo hizo el staff) → va directo.
+                $q->whereDoesntHave('usuario', function ($u) {
+                        $u->where('role', 'cliente');
+                    })
+                  // …o ya está pagado (cualquier pedido del cliente ya pagado).
                   ->orWhereHas('factura', function ($f) {
                       $f->where('estado', Factura::ESTADO_PAGADA);
                   });

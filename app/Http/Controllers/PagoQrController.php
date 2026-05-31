@@ -84,17 +84,18 @@ class PagoQrController extends Controller
             'mensaje'          => '¡Pago QR confirmado para ' . $factura->numero_factura . '!',
         ]));
 
-        // "Para llevar": recién al pagar entra a cocina (regla: primero paga,
-        // luego se prepara). Avisamos para que aparezca en el kitchen display.
-        $factura->loadMissing('pedido');
+        // Pedido del CLIENTE: recién al pagar entra a cocina (regla "primero
+        // paga, luego se prepara"). Avisamos para que aparezca en el kitchen display.
+        $factura->loadMissing('pedido.usuario');
         $pedidoQr = $factura->pedido;
+        $esDeCliente = optional($pedidoQr?->usuario)->role === 'cliente';
         if ($pedidoQr
-            && $pedidoQr->tipo_pedido === \App\Models\Pedido::TIPO_PARA_LLEVAR
+            && $esDeCliente
             && in_array($pedidoQr->estado, [\App\Models\Pedido::ESTADO_PENDIENTE, \App\Models\Pedido::ESTADO_EN_PREPARACION, \App\Models\Pedido::ESTADO_LISTO])) {
             try {
                 event(new \App\Events\PedidoCreado($pedidoQr));
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('No se pudo notificar a cocina (pago QR para llevar): ' . $e->getMessage());
+                \Illuminate\Support\Facades\Log::warning('No se pudo notificar a cocina (pago QR cliente): ' . $e->getMessage());
             }
         }
 
