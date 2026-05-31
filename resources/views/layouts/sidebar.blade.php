@@ -301,8 +301,8 @@
 x-init="
     initNotifications();
     if (localStorage.getItem('sidebar_section_operaciones') === null) {
-        open = false;
-        localStorage.setItem('sidebar_section_operaciones', false);
+        open = {{ in_array($role, ['admin', 'cajero']) ? 'true' : 'false' }};
+        localStorage.setItem('sidebar_section_operaciones', open);
     }
 "
 class="mb-1">
@@ -661,6 +661,19 @@ class="mb-1">
             <i class="fas fa-cash-register text-[10px] sm:text-xs w-4"></i>
             <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Cierre de Cuenta</span>
         </a>
+        @endif
+
+        @if(in_array($role, ['admin', 'cajero']))
+            @php
+                $openClosure = \App\Models\CashClosure::where('status', 'open')->first();
+            @endphp
+            <a href="{{ $openClosure ? route('caja.show', $openClosure) : route('caja.create') }}"
+               class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
+                <i class="fas fa-vault text-[10px] sm:text-xs w-4"></i>
+                <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">
+                    {{ $openClosure ? 'Cerrar Caja' : 'Abrir Caja' }}
+                </span>
+            </a>
         @endif
     </div>
 </div>  

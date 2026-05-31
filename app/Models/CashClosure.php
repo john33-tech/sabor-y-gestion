@@ -44,4 +44,31 @@ class CashClosure extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    // Scopes
+    public function scopeOpen($query)
+    {
+        return $query->where('status', 'Open');
+    }
+
+    public function scopeClosed($query)
+    {
+        return $query->where('status', 'Closed');
+    }
+
+    /**
+     * Get paid orders that belong to this closed shift.
+     * Returns a query builder, not a relation.
+     */
+    public function paidOrders()
+    {
+        if (!$this->closing_date) {
+            return Pedido::query()->whereRaw('0'); // empty query if still open
+        }
+
+        return Pedido::whereBetween('created_at', [$this->opening_date, $this->closing_date])
+            ->whereHas('factura', function ($q) {
+                $q->where('estado', 'pagada');
+            });
+    }
 }

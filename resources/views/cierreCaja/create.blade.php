@@ -16,7 +16,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('cierres.store') }}">
+                <form method="POST" action="{{ route('caja.store') }}">
                     @csrf
 
                     <!-- Monto inicial -->

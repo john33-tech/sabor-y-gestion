@@ -18,24 +18,36 @@
 
                     @auth
                         @if(in_array(Auth::user()->role, ['cajero', 'admin']))
-                            <x-nav-link :href="route('cierres.create')" :active="request()->routeIs('cierres.create')">
-                                {{ __('Abrir Caja') }}
-                            </x-nav-link>
+                            @php
+                                $openClosure = \App\Models\CashClosure::where('status', 'Open')->first();
+                            @endphp
+
+                            @if(!$openClosure)
+                                <x-nav-link :href="route('caja.create')" :active="request()->routeIs('caja.create')">
+                                    {{ __('Abrir Caja') }}
+                                </x-nav-link>
+                            @else
+                                <x-nav-link :href="route('caja.show', $openClosure)" :active="request()->routeIs('caja.show')">
+                                    {{ __('Cerrar Caja') }}
+                                </x-nav-link>
+                            @endif
                         @endif
                     @endauth
                 </div>
                 @auth
-                    @php
-                        $openClosure = \App\Models\CashClosure::where('status', 'open')->first();
-                    @endphp
-                    @if($openClosure)
-                        <div class="hidden ml-4 text-sm text-yellow-600 sm:flex sm:items-center dark:text-yellow-400">
-                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Caja abierta por {{ $openClosure->user->name }}
-                            <a href="{{ route('cierres.show', $openClosure) }}" class="ml-1 underline hover:text-yellow-800">Ver</a>
-                        </div>
+                    @if(in_array(Auth::user()->role, ['cajero', 'admin']))
+                        @php
+                            $openClosure = \App\Models\CashClosure::where('status', 'Open')->first();
+                        @endphp
+                        @if($openClosure)
+                            <div class="hidden ml-4 text-sm text-yellow-600 sm:flex sm:items-center dark:text-yellow-400">
+                                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Caja abierta por {{ $openClosure->user->name }}
+                                <a href="{{ route('caja.show', $openClosure) }}" class="ml-1 underline hover:text-yellow-800">Ver</a>
+                            </div>
+                        @endif
                     @endif
                 @endauth
 
@@ -96,27 +108,38 @@
 
             @auth
                 @if(in_array(Auth::user()->role, ['cajero', 'admin']))
-                    <x-responsive-nav-link :href="route('cierres.create')" :active="request()->routeIs('cierres.create')">
-                        {{ __('Abrir Caja') }}
-                    </x-responsive-nav-link>
+                    @php
+                        $openClosure = \App\Models\CashClosure::where('status', 'Open')->first();
+                    @endphp
+                    @if(!$openClosure)
+                        <x-responsive-nav-link :href="route('caja.create')" :active="request()->routeIs('caja.create')">
+                            {{ __('Abrir Caja') }}
+                        </x-responsive-nav-link>
+                    @else
+                        <x-responsive-nav-link :href="route('caja.show', $openClosure)" :active="request()->routeIs('caja.show')">
+                            {{ __('Cerrar Caja') }}
+                        </x-responsive-nav-link>
+                    @endif
                 @endif
             @endauth
         </div>
 
         @auth
-            @php
-                $openClosure = \App\Models\CashClosure::where('status', 'open')->first();
-            @endphp
-            @if($openClosure)
-                <div class="px-4 py-2 text-sm text-yellow-600 border-l-4 border-yellow-400 dark:text-yellow-400">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Caja abierta por {{ $openClosure->user->name }}</span>
+            @if(in_array(Auth::user()->role, ['cajero', 'admin']))
+                @php
+                    $openClosure = \App\Models\CashClosure::where('status', 'Open')->first();
+                @endphp
+                @if($openClosure)
+                    <div class="px-4 py-2 text-sm text-yellow-600 border-l-4 border-yellow-400 dark:text-yellow-400">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Caja abierta por {{ $openClosure->user->name }}</span>
+                        </div>
+                        <a href="{{ route('caja.show', $openClosure) }}" class="block mt-1 text-xs underline ml-7">Ver detalles</a>
                     </div>
-                    <a href="{{ route('cierres.show', $openClosure) }}" class="block mt-1 text-xs underline ml-7">Ver detalles</a>
-                </div>
+                @endif
             @endif
         @endauth
 

@@ -152,10 +152,13 @@ Route::get('/notificaciones/pedidos', function () {
 
 })->middleware('auth');
 
-Route::middleware(['auth', 'role:cajero,administrador'])->prefix('cierres')->name('cierres.')->group(function () {
+Route::middleware(['auth', 'role:cajero,admin'])->prefix('cierres')->name('caja.')->group(function () {
+    Route::get('cierres/historial', [CashClosureController::class, 'index'])->name('index');
     Route::get('/create', [CashClosureController::class, 'create'])->name('create');
     Route::post('/', [CashClosureController::class, 'store'])->name('store');
     Route::get('/{cierre}', [CashClosureController::class, 'show'])->name('show');
+    Route::get('/{cierre}/edit', [CashClosureController::class, 'edit'])->name('edit');
+    Route::put('/{cierre}', [CashClosureController::class, 'update'])->name('update');
 });
 
 //Rutas de las apis utilizadas

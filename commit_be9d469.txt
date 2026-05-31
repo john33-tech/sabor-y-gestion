@@ -81,11 +81,11 @@ index ee6c572..3aa5a90 100644
 +# STAGE 1 — Composer: instala dependencias PHP sin dev
 +# ============================================================================
 +FROM composer:2 AS vendor
- 
+
  WORKDIR /app
- 
+
  COPY composer.json composer.lock ./
- 
+
  RUN composer install \
 +    --no-dev \
 +    --no-interaction \
@@ -98,13 +98,13 @@ index ee6c572..3aa5a90 100644
 -COPY . .
 +    --optimize-autoloader \
 +    --ignore-platform-req=ext-gd
- 
+
 -RUN composer dump-autoload --optimize
 +# ============================================================================
 +# STAGE 2 — Node: compila assets con Vite
 +# ============================================================================
 +FROM node:20-alpine AS assets
- 
+
 -# ── NUEVA Etapa 2: Compilación de activos (Vite) ──────────────────────────────
 -FROM node:20-alpine AS node_builder
  WORKDIR /app
@@ -117,7 +117,7 @@ index ee6c572..3aa5a90 100644
 +COPY --from=vendor /app/vendor ./vendor
 +
  RUN npm run build
- 
+
 -# ── Etapa 2: Imagen final ─────────────────────────────────────────────────────
 -FROM php:8.3-fpm-alpine
 -
@@ -202,7 +202,7 @@ index ee6c572..3aa5a90 100644
 +        opcache \
 +    && apt-get clean \
 +    && rm -rf /var/lib/apt/lists/*
- 
+
 -# COPIAR activos compilados (Crucial para Laravel 11 + Vite)
 -COPY --from=node_builder /app/public/build /var/www/html/public/build
 -# ── 5. Copiar configuraciones de servicios ────────────────────────────────────
@@ -214,21 +214,21 @@ index ee6c572..3aa5a90 100644
 + && ln -sf /etc/apache2/mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load \
 + && ln -sf /etc/apache2/mods-available/mpm_prefork.conf /etc/apache2/mods-enabled/mpm_prefork.conf \
 + && a2enmod rewrite headers proxy proxy_http proxy_wstunnel
- 
+
 -# ── 6. Copiar el script de inicio ─────────────────────────────────────────────
 -COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 -RUN chmod +x /usr/local/bin/entrypoint.sh
 +# Proxy WS: /app/* y /apps/* → Reverb local en 8081
 +COPY docker/reverb-proxy.conf /etc/apache2/conf-available/reverb-proxy.conf
 +RUN a2enconf reverb-proxy
- 
+
 +ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 +RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf \
 + && sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
- 
+
 +# Configuración PHP para producción
 +COPY docker/php.ini /usr/local/etc/php/conf.d/zz-app.ini
- 
+
 -# ── 8. Permisos ───────────────────────────────────────────────────────────────
 -RUN mkdir -p storage/framework/{sessions,views,cache} \
 -    && mkdir -p /var/log/supervisor \
@@ -250,13 +250,13 @@ index ee6c572..3aa5a90 100644
 +# Entrypoint
 +COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 +RUN chmod +x /usr/local/bin/entrypoint.sh
- 
+
 -RUN chown -R www-data:www-data /var/www/html/public \
 -    && chmod -R 755 /var/www/html/public/build
 -# ── 9. Puerto y punto de entrada (SIEMPRE al final) ───────────────────────────
 +ENV PORT=8080
  EXPOSE 8080
- 
+
 -ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 +ENTRYPOINT ["entrypoint.sh"]
 +CMD ["apache2-foreground"]
@@ -483,7 +483,7 @@ index 01c2a15..01ffeff 100644
 @@ -42,10 +42,12 @@ public function confirmar(Request $request)
          $factura->estado = Factura::ESTADO_PAGADA;
          $factura->save();
- 
+
 -        // Actualizar estado del pedido
 -        if ($factura->pedido) {
 -            $factura->pedido->update(['estado' => Pedido::ESTADO_FACTURADO]);
@@ -494,7 +494,7 @@ index 01c2a15..01ffeff 100644
 +        // El pedido pasa a 'facturado' recién cuando se entrega (flujo
 +        // normal: pendiente → en_preparacion → listo → entregado → facturado).
 +        // El estado de cobro ya queda reflejado en la factura.
- 
+
          // Disparar evento Pusher para notificar al frontend
          broadcast(new PagoConfirmadoEvent($emisor, [
 diff --git a/app/Http/Controllers/PlatoController.php b/app/Http/Controllers/PlatoController.php
@@ -618,9 +618,9 @@ index ab23165..380fb09 100644
 --- a/app/Providers/AppServiceProvider.php
 +++ b/app/Providers/AppServiceProvider.php
 @@ -2,8 +2,11 @@
- 
+
  namespace App\Providers;
- 
+
 -use Illuminate\Support\ServiceProvider;
 +use App\Mail\MailtrapSandboxTransport;
 +use Illuminate\Support\Facades\Mail;
@@ -4007,7 +4007,7 @@ index 14584bf..a6e346c 100644
 -            ]) : [],
 +            ], fn($v) => !is_null($v)) : [],
          ],
- 
+
          'mariadb' => [
 diff --git a/config/mail.php b/config/mail.php
 index e32e88d..f6b8c9a 100644
@@ -4016,7 +4016,7 @@ index e32e88d..f6b8c9a 100644
 @@ -49,6 +49,14 @@
              'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
          ],
- 
+
 +        // Mailtrap Sandbox API (HTTP) — usado en Railway porque bloquea SMTP outbound.
 +        // Ver: app/Mail/MailtrapSandboxTransport.php y AppServiceProvider::boot()
 +        'mailtrap_sandbox' => [
@@ -4121,7 +4121,7 @@ index 2cfbb25..d8c7b7e 100644
 -        // 🔥 Desactivar verificaciones de llaves foráneas al inicio
 +        // Desactivamos FKs por si algún seeder hace updates cruzados.
          DB::statement('SET FOREIGN_KEY_CHECKS=0;');
--        
+-
 +
 +        // Orden estricto por dependencias:
 +        //  - Categoria   ← Plato
@@ -4140,7 +4140,7 @@ index 2cfbb25..d8c7b7e 100644
 +            InventarioSeeder::class,
 +            PlatoIngredienteSeeder::class,
          ]);
--        
+-
 -        // 🔥 Reactivar verificaciones de llaves foráneas al final
 +
          DB::statement('SET FOREIGN_KEY_CHECKS=1;');
@@ -4155,11 +4155,11 @@ index 617415b..5e1f49f 100644
 @@ -2,20 +2,28 @@
  // database/seeders/IngredienteSeeder.php
  namespace Database\Seeders;
- 
+
 +use App\Models\Ingrediente;
  use Illuminate\Database\Seeder;
 -use Illuminate\Support\Facades\DB;
- 
+
  class IngredienteSeeder extends Seeder
  {
      public function run(): void
@@ -4196,7 +4196,7 @@ index 64df278..3b5429d 100644
 --- a/database/seeders/InventarioSeeder.php
 +++ b/database/seeders/InventarioSeeder.php
 @@ -8,18 +8,21 @@
- 
+
  class InventarioSeeder extends Seeder
  {
 -    public function run()
@@ -4204,7 +4204,7 @@ index 64df278..3b5429d 100644
      {
 +        // Idempotente: updateOrCreate por ingrediente_id para no duplicar.
          $ingredientes = Ingrediente::all();
--        
+-
 +
          foreach ($ingredientes as $ingrediente) {
 -            Inventario::create([
@@ -4238,7 +4238,7 @@ index d20e624..ced80ab 100644
      {
 -        // Limpiar la tabla antes de sembrar (opcional)
 -        Mesa::truncate();
--        
+-
 +        // No truncate (rompe FKs si hay pedidos referenciando mesas).
 +        // Usamos updateOrCreate por numero_mesa más abajo, idempotente.
 +
@@ -4248,7 +4248,7 @@ index d20e624..ced80ab 100644
 @@ -188,12 +188,16 @@ public function run(): void
              ],
          ];
- 
+
 -        // Crear las mesas específicas
 +        // Crear las mesas específicas (idempotente con updateOrCreate por numero_mesa).
          foreach ($mesasEspecificas as $mesa) {
@@ -4258,7 +4258,7 @@ index d20e624..ced80ab 100644
 +                $mesa
 +            );
          }
- 
+
 -        // Crear 10 mesas adicionales aleatorias usando el factory
 -        Mesa::factory()->count(10)->create();
 +        // Nota: NO usamos Mesa::factory() porque Faker es dev-only y no está
@@ -4274,12 +4274,12 @@ index 4ba4bfe..c39c20a 100644
 @@ -2,6 +2,8 @@
  // database/seeders/PlatoIngredienteSeeder.php
  namespace Database\Seeders;
- 
+
 +use App\Models\Plato;
 +use App\Models\Ingrediente;
  use Illuminate\Database\Seeder;
  use Illuminate\Support\Facades\DB;
- 
+
 @@ -9,27 +11,35 @@ class PlatoIngredienteSeeder extends Seeder
  {
      public function run(): void
@@ -4347,12 +4347,12 @@ index 2f18071..7a6b6e2 100644
 @@ -163,22 +163,24 @@ public function run(): void
              ],
          ];
-         
+
 -        // Insertar los platos
 +        // Insertar los platos (idempotente: updateOrCreate por nombre).
          foreach ($platos as $plato) {
              $categoria = $categorias[$plato['categoria_nombre']] ?? null;
--            
+-
 +
              if ($categoria) {
 -                Plato::create([
@@ -4404,7 +4404,7 @@ index cc74402..db86178 100644
 +            ['email' => 'cocinero@saborgestion.com', 'name' => 'Cocinero',      'role' => 'cocinero'],
 +            ['email' => 'cajero@saborgestion.com',   'name' => 'Cajero',        'role' => 'cajero'],
 +        ];
- 
+
 -        User::create([
 -            'name' => 'Mesero',
 -            'email' => 'mesero@saborgestion.com',
@@ -4455,7 +4455,7 @@ index e6487ba..3c89e8a 100644
 +#     docker compose up --build
 +# Luego abrí http://localhost:8080
 +# ---------------------------------------------------------------------------
- 
+
  services:
 -  # ── Aplicación Laravel ──────────────────────────────────────────────────────
    app:
@@ -4501,7 +4501,7 @@ index e6487ba..3c89e8a 100644
 +      CACHE_STORE: database
 +      QUEUE_CONNECTION: database
 +      FILESYSTEM_DISK: local
- 
+
 -    # Volúmenes para desarrollo (cambios en código se reflejan sin rebuilding)
 +      # Broadcasting / WebSockets — Reverb interno (Apache proxy a 8081)
 +      BROADCAST_CONNECTION: reverb
@@ -4547,7 +4547,7 @@ index e6487ba..3c89e8a 100644
 -    restart: unless-stopped
 +      - app_storage:/var/www/html/storage/app
 +      - app_logs:/var/www/html/storage/logs
- 
+
 -    # Healthcheck para verificar que la app responde
 +  mysql:
 +    image: mysql:8.0
@@ -4598,12 +4598,12 @@ index a4df752..bb672d2 100644
 +# Corre cada vez que el contenedor inicia (en local y en Railway).
 +# ---------------------------------------------------------------------------
  set -e
- 
+
 -echo "═══════════════════════════════════════════"
 -echo "   Iniciando Laravel + TiDB Cloud"
 -echo "═══════════════════════════════════════════"
 +cd /var/www/html
- 
+
 -# ── 1. Limpiar caché de configuración vieja ───────────────────────────────────
 -echo "🧹 Limpiando caché..."
 -php artisan config:clear
@@ -4611,7 +4611,7 @@ index a4df752..bb672d2 100644
 -php artisan route:clear
 -php artisan view:clear
 +echo "==> Sabor & Gestión: arrancando contenedor"
- 
+
 -# ── 2. Verificar que el certificado CA existe ─────────────────────────────────
 -if [ -z "$DB_SSL_CA" ]; then
 -    echo "⚠️  ADVERTENCIA: DB_SSL_CA no está definida"
@@ -4633,7 +4633,7 @@ index a4df752..bb672d2 100644
 +sed -ri "s!^Listen .*!Listen ${PORT}!" /etc/apache2/ports.conf
 +sed -ri "s!<VirtualHost \\*:[0-9]+>!<VirtualHost *:${PORT}>!" /etc/apache2/sites-available/000-default.conf
 +echo "==> Apache escuchará en el puerto ${PORT}"
- 
+
 -# ── 3. Verificar conexión a TiDB Cloud ───────────────────────────────────────
 -echo "🔌 Verificando conexión a TiDB Cloud..."
 -MAX_RETRIES=10
@@ -4657,7 +4657,7 @@ index a4df752..bb672d2 100644
 +    /var/www/html/storage/app/public/comprobantes
 +chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
 +chmod -R ug+rwx /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
- 
+
 -if [ $RETRY -ge $MAX_RETRIES ]; then
 -    echo "❌ No se pudo conectar a TiDB Cloud después de $MAX_RETRIES intentos"
 -    echo "   Verifica: DB_HOST, DB_PORT, DB_SSL_CA, credenciales"
@@ -4667,7 +4667,7 @@ index a4df752..bb672d2 100644
 +    echo "==> APP_KEY no definida, generando una nueva (recordá copiarla a Railway)"
 +    php artisan key:generate --force --show || true
  fi
- 
+
 -# ── 4. Ejecutar migraciones ───────────────────────────────────────────────────
 -echo "🗄️  Ejecutando migraciones..."
 -php artisan migrate --force --no-interaction
@@ -4682,7 +4682,7 @@ index a4df752..bb672d2 100644
 +        sleep 2
 +    done
 +fi
- 
+
 -# ── 5. Optimizar para producción ─────────────────────────────────────────────
 -if [ "$APP_ENV" = "production" ]; then
 -    echo "⚡ Optimizando para producción..."
@@ -4699,7 +4699,7 @@ index a4df752..bb672d2 100644
 +    php artisan route:clear
 +    php artisan view:clear
  fi
- 
+
 -# ── 6. Generar APP_KEY si no existe ──────────────────────────────────────────
 -if [ -z "$APP_KEY" ]; then
 -    echo "🔑 Generando APP_KEY..."
@@ -4709,7 +4709,7 @@ index a4df752..bb672d2 100644
 +    echo "==> Corriendo migraciones"
 +    php artisan migrate --force
  fi
- 
+
 -echo "✅ Aplicación lista. Iniciando Nginx + PHP-FPM..."
 -echo "═══════════════════════════════════════════"
 +# Seeders opcionales
@@ -4727,7 +4727,7 @@ index a4df752..bb672d2 100644
 +    echo "==> Lanzando Reverb en background (127.0.0.1:8081)"
 +    php artisan reverb:start --host=127.0.0.1 --port=8081 >> /var/log/reverb.log 2>&1 &
 +fi
- 
+
 -# Iniciar Supervisor (que gestiona Nginx + PHP-FPM)
 -exec /usr/bin/supervisord -c /etc/supervisor.d/laravel.ini
 +echo "==> Arrancando Apache en puerto ${PORT:-8080}"
@@ -4899,9 +4899,9 @@ index 959e085..03601c2 100644
 --- a/resources/js/bootstrap.js
 +++ b/resources/js/bootstrap.js
 @@ -14,13 +14,25 @@ import Pusher from 'pusher-js';
- 
+
  window.Pusher = Pusher;
- 
+
 +// Configuración Echo: usa el MISMO host de la página (Apache proxea /app/ a Reverb).
 +// En local docker compose: localhost:8080 (Apache + Reverb interno).
 +// En Railway producción: dominio.up.railway.app:443 (HTTPS + Apache proxy).
@@ -4935,7 +4935,7 @@ index 0012dc6..9369447 100644
 +++ b/resources/views/comandas/index.blade.php
 @@ -185,6 +185,49 @@ function showNotification(message, type = 'success') {
      }
-     
+
      inicializarEventos();
 +
 +    // ─── WebSockets: cocina escucha el canal "pedidos.cocineros" en tiempo real ──
@@ -5160,7 +5160,7 @@ index 5e905e3..68da59f 100644
 @@ -352,7 +352,7 @@ class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:t
          </a>
          @endif
- 
+
 -        <!-- Delivery - Solo para admin y cajero -->
 +        <!-- Delivery - Solo para admin y cajero (stub: redirige a Pedidos) -->
          @if(in_array($role, ['admin', 'cajero']))
@@ -5169,7 +5169,7 @@ index 5e905e3..68da59f 100644
 @@ -371,14 +371,14 @@ class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:t
              <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Pre-factura</span>
          </a>
- 
+
 -        <!-- Pagos - Solo para admin y cajero -->
 +        <!-- Pagos - stub que redirige a Facturas -->
          <a href="{{ route('pagos.index') }}"
@@ -5177,7 +5177,7 @@ index 5e905e3..68da59f 100644
              <i class="fas fa-credit-card text-[10px] sm:text-xs w-4"></i>
              <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Pagos</span>
          </a>
- 
+
 -        <!-- Cierre de Caja - Solo para admin y cajero -->
 +        <!-- Cierre de Caja - stub que redirige a Reportes -->
          <a href="{{ route('cierres.index') }}"
@@ -5499,7 +5499,7 @@ index 1d87d6c..b06c17c 100644
 +++ b/resources/views/pedidos/create.blade.php
 @@ -335,18 +335,68 @@ class="w-full px-3 py-2 rounded-lg outline-none transition-all"
  let searchTimeout;
- 
+
  // Funciones del mapa
 +// Default: Cochabamba (Plaza 14 de Septiembre). Si el navegador permite
 +// geolocalización, recentramos en la ubicación real del usuario.
@@ -5545,7 +5545,7 @@ index 1d87d6c..b06c17c 100644
 +        attribution: '&copy; OpenStreetMap contributors',
 +        maxZoom: 19,
      }).addTo(map);
- 
+
      map.on('click', function(e) {
 -        document.getElementById('latitud').value = e.latlng.lat;
 -        document.getElementById('longitud').value = e.latlng.lng;
@@ -5570,7 +5570,7 @@ index 1d87d6c..b06c17c 100644
 +        );
 +    }
  }
- 
+
  function toggleMap() {
 diff --git a/resources/views/pedidos/index.blade.php b/resources/views/pedidos/index.blade.php
 index 9a2226f..aba0cc6 100644
@@ -5590,17 +5590,17 @@ index 9a2226f..aba0cc6 100644
 @@ -228,6 +228,9 @@ class="inline"
  [x-cloak] { display:none !important; }
  </style>
- 
+
 +<!-- SweetAlert2 para confirmaciones bonitas (CDN, sin npm install) -->
 +<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 +
  <script>
  document.addEventListener('DOMContentLoaded', function() {
- 
+
 @@ -239,6 +242,36 @@ class="inline"
      if(estado) estado.addEventListener('change', () => form.submit());
      if(tipo) tipo.addEventListener('change', () => form.submit());
- 
+
 +    // Modal SweetAlert2 para eliminar pedido
 +    document.querySelectorAll('.form-eliminar-pedido').forEach(formEl => {
 +        formEl.addEventListener('submit', function (e) {
@@ -5633,7 +5633,7 @@ index 9a2226f..aba0cc6 100644
 +
  });
  </script>
- 
+
 diff --git a/routes/web.php b/routes/web.php
 index ddf96fd..b18735d 100644
 --- a/routes/web.php
@@ -5651,34 +5651,34 @@ index ddf96fd..b18735d 100644
 @@ -55,19 +58,19 @@
          Route::get('/{comanda}/print', [ComandaController::class, 'print'])->name('print');
      });
-     
+
 -    // Delivery
 +    // Delivery — STUB: DeliveryController redirige a Pedidos.
      Route::resource('delivery', DeliveryController::class)->middleware('role:admin,cajero');
--    
+-
 +
      Route::resource('facturas', FacturaController::class)->middleware('role:admin,cajero');
      Route::post('/facturas/{factura}/pagar', [FacturaController::class, 'pagar'])->name('facturas.pagar')->middleware('role:admin,cajero');
      Route::post('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular')->middleware('role:admin,cajero');
      Route::get('/facturas/{factura}/generar-qr', [FacturaController::class, 'generarQr'])->name('facturas.generar-qr')->middleware('role:admin,cajero');
      Route::post('/facturas/{factura}/enviar-correo', [FacturaController::class, 'enviarPorCorreo'])->name('facturas.enviar-correo')->middleware('role:admin,cajero');
-     
+
 -    // Pagos
 +    // Pagos — STUB: redirige a Facturas. PagoQrController (webhook) sigue separado.
      Route::resource('pagos', PagoController::class)->middleware('role:admin,cajero');
--    
+-
 -    // Cierre de Caja
 +
 +    // Cierre de Caja — STUB: redirige a Reportes/Dashboard.
      Route::resource('cierres', CierreCajaController::class)->middleware('role:admin,cajero');
-     
+
      // Gestión de Categorías (Solo Admin) - CON todas las rutas CRUD
 commit caaa1dd39278104fcced1f5f5faf958829caa61c
 Author: Anagua <anagua.18kahuana@gmail.com>
 Date:   Mon May 18 08:55:15 2026 -0400
 
     feat: cierre de cuenta, pago QR cliente, notifs en vivo, factura email automatica
-    
+
     - Reserva por personal: admin/mesero pueden registrar a nombre de un cliente
     - Cierre de cuenta: nuevo modulo en /cierres con cobro y envio de factura
     - Pedidos: agregar productos sin re-armar detalle (D4), confirmar recepcion
@@ -5704,7 +5704,7 @@ Date:   Mon May 18 08:55:15 2026 -0400
     - Fix: import faltante de Consumo en PedidoController
     - Integracion completa con Resend (composer + config)
     - Documentacion DEFENSA_DEVOPS.md actualizada + version CELULAR + PDFs
-    
+
     Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 
 diff --git a/app/Events/PagoConfirmadoEvent.php b/app/Events/PagoConfirmadoEvent.php
@@ -5712,19 +5712,19 @@ index 66e7d30..5ca3e4d 100644
 --- a/app/Events/PagoConfirmadoEvent.php
 +++ b/app/Events/PagoConfirmadoEvent.php
 @@ -4,11 +4,11 @@
- 
+
  use Illuminate\Broadcasting\Channel;
  use Illuminate\Broadcasting\InteractsWithSockets;
 -use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 +use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
  use Illuminate\Foundation\Events\Dispatchable;
  use Illuminate\Queue\SerializesModels;
- 
+
 -class PagoConfirmadoEvent implements ShouldBroadcast
 +class PagoConfirmadoEvent implements ShouldBroadcastNow
  {
      use Dispatchable, InteractsWithSockets, SerializesModels;
- 
+
 diff --git a/app/Events/PedidoEstadoCambiado.php b/app/Events/PedidoEstadoCambiado.php
 new file mode 100644
 index 0000000..81c943a
@@ -5793,9 +5793,9 @@ index 631c8eb..7cf1489 100644
 --- a/app/Http/Controllers/CierreCajaController.php
 +++ b/app/Http/Controllers/CierreCajaController.php
 @@ -2,31 +2,202 @@
- 
+
  namespace App\Http\Controllers;
- 
+
 +use App\Mail\FacturaPdfMail;
 +use App\Models\Factura;
 +use App\Models\Mesa;
@@ -5805,7 +5805,7 @@ index 631c8eb..7cf1489 100644
 +use Illuminate\Support\Facades\DB;
 +use Illuminate\Support\Facades\Log;
 +use Illuminate\Support\Facades\Mail;
- 
+
  /**
 - * Stub temporal — el módulo de Cierre de Caja del equipo todavía no está
 - * implementado. Redirigimos a Reportes para que el usuario tenga datos
@@ -5866,7 +5866,7 @@ index 631c8eb..7cf1489 100644
 +            return redirect()->route('cierres.index')
 +                ->with('info', 'La mesa ' . $cierre->numero_mesa . ' no tiene cuenta abierta.');
          }
- 
+
 -        return redirect()->route('dashboard.administrador')
 -            ->with('info', 'El módulo de Cierre de Caja aún no está implementado.');
 +        $resumen = [
@@ -5888,7 +5888,7 @@ index 631c8eb..7cf1489 100644
 +            'facturaParaQr' => $facturaParaQr,
 +        ]);
      }
- 
+
 -    public function create() { return $this->index(); }
 -    public function store(Request $request) { return $this->index(); }
 -    public function show($id) { return $this->index(); }
@@ -6017,7 +6017,7 @@ index 37b52c7..c112e49 100644
 @@ -141,6 +141,14 @@ public function generarQr(Factura $factura)
      {
          $factura->load('pedido');
- 
+
 +        // Cliente solo puede generar QR de su propia factura
 +        $user = Auth::user();
 +        if ($user && $user->isCliente()) {
@@ -6028,22 +6028,22 @@ index 37b52c7..c112e49 100644
 +
          // Identificador único del canal Pusher para este pago
          $emisor = 'fact' . $factura->id;
- 
+
 @@ -154,7 +162,9 @@ public function generarQr(Factura $factura)
              'pedido'    => $factura->pedido_id,
          ];
- 
+
 -        $url = 'https://proyecto-tis-umss.infinityfreeapp.com/?' . http_build_query($params);
 +        // QR apunta a nuestra propia página de pago (autocontenida): no
 +        // dependemos de un sistema externo que pueda fallar.
 +        $url = url('/pago-externo') . '?' . http_build_query($params);
- 
+
          // Generar QR 300x300 en formato SVG
          $qrSvg = (string) QrCode::size(300)
 @@ -180,6 +190,27 @@ public function generarQr(Factura $factura)
          ]);
      }
- 
+
 +    /**
 +     * Previsualizar o descargar el PDF de una factura.
 +     * Útil para verificar el formato y para que admin/cajero ofrezcan
@@ -6071,12 +6071,12 @@ index 37b52c7..c112e49 100644
 @@ -189,11 +220,19 @@ public function enviarPorCorreo(Request $request, Factura $factura)
              'email' => 'required|email'
          ]);
- 
+
 -        $email = $request->input('email');
 -
          // Cargar las relaciones necesarias para el PDF
          $factura->load(['pedido.detalles.plato', 'usuario']);
- 
+
 +        // Cliente solo puede enviar la factura de su propio pedido
 +        $user = Auth::user();
 +        if ($user && $user->isCliente()) {
@@ -6096,7 +6096,7 @@ index 01ffeff..bdb0d12 100644
 +++ b/app/Http/Controllers/PagoQrController.php
 @@ -3,12 +3,32 @@
  namespace App\Http\Controllers;
- 
+
  use App\Events\PagoConfirmadoEvent;
 +use App\Mail\FacturaPdfMail;
  use App\Models\Factura;
@@ -6105,7 +6105,7 @@ index 01ffeff..bdb0d12 100644
  use Illuminate\Http\Request;
 +use Illuminate\Support\Facades\Log;
 +use Illuminate\Support\Facades\Mail;
- 
+
  class PagoQrController extends Controller
  {
 +    /**
@@ -6130,7 +6130,7 @@ index 01ffeff..bdb0d12 100644
 @@ -49,20 +69,61 @@ public function confirmar(Request $request)
          // normal: pendiente → en_preparacion → listo → entregado → facturado).
          // El estado de cobro ya queda reflejado en la factura.
- 
+
 +        // Spec #5.1: enviar automáticamente la factura por correo al cliente
 +        // luego de confirmar el pago QR.
 +        $correoEnviado = $this->enviarFacturaAlCliente($factura);
@@ -6151,7 +6151,7 @@ index 01ffeff..bdb0d12 100644
 +            'correo_enviado'   => $correoEnviado,
 +            'mensaje'          => '¡Pago QR confirmado para ' . $factura->numero_factura . '!',
          ]));
- 
+
          return response()->json([
 -            'success' => true,
 -            'message' => 'Pago confirmado exitosamente.',
@@ -6228,12 +6228,12 @@ index 9ab4e94..2587c41 100644
              $pedido->longitud = $request->longitud;
 @@ -250,10 +253,22 @@ public function show(Pedido $pedido)
          $pedido->load(['mesa', 'usuario', 'detalles.plato.categoria', 'factura']);
- 
+
          $estados = Pedido::getEstados();
 -        $tipos = Pedido::getTipos();  // <-- Agregar esta línea
 +        $tipos = Pedido::getTipos();
          $estadosDetalle = DetallePedido::getEstados();
- 
+
 -        return view('pedidos.show', compact('pedido', 'estados', 'tipos', 'estadosDetalle'));
 +        // Para D4: si el pedido está abierto, cargar platos disponibles para
 +        // que el panel "Agregar productos" pueda renderizar el selector.
@@ -6249,8 +6249,8 @@ index 9ab4e94..2587c41 100644
 +
 +        return view('pedidos.show', compact('pedido', 'estados', 'tipos', 'estadosDetalle', 'platosDisponibles'));
      }
- 
- 
+
+
 @@ -294,6 +309,7 @@ public function update(Request $request, Pedido $pedido)
              'mesa_id'                  => 'required_if:tipo_pedido,mesa|nullable|exists:mesas,id',
              'cliente_nombre'           => 'required_if:tipo_pedido,delivery,para_llevar|nullable|string|max:255',
@@ -6261,16 +6261,16 @@ index 9ab4e94..2587c41 100644
              'items.*.plato_id'         => 'required|exists:platos,id',
 @@ -343,6 +359,7 @@ public function update(Request $request, Pedido $pedido)
                      : null);
- 
+
              $pedido->cliente_telefono = $request->cliente_telefono;
 +            $pedido->cliente_email = $request->cliente_email;
- 
+
              $pedido->direccion = $request->tipo_pedido === 'delivery'
                  ? $request->direccion
 @@ -482,6 +499,30 @@ public function cambiarEstado(Request $request, Pedido $pedido)
          'estado' => 'required|in:' . implode(',', array_keys(Pedido::getEstados()))
      ]);
- 
+
 +    // Cliente: solo dos transiciones permitidas sobre su propio pedido.
 +    //   1) Cancelar mientras esté pendiente.
 +    //   2) Confirmar recepción (listo → entregado) si es delivery o para_llevar.
@@ -6296,7 +6296,7 @@ index 9ab4e94..2587c41 100644
 +    }
 +
      $estadoAnterior = $pedido->estado;
- 
+
      DB::beginTransaction();
 @@ -669,4 +710,97 @@ private function generarNumeroPedidoTemporal()
          $numero = $ultimo ? intval(substr($ultimo->numero_pedido, -4)) + 1 : 1;
@@ -6401,13 +6401,13 @@ index 5a43e3f..c58634f 100644
 --- a/app/Http/Controllers/ReservaMesaController.php
 +++ b/app/Http/Controllers/ReservaMesaController.php
 @@ -4,142 +4,211 @@
- 
+
  use App\Models\Mesa;
  use App\Models\Reserva;
 +use App\Models\User;
  use Illuminate\Http\Request;
  use Illuminate\Support\Facades\Auth;
- 
+
  class ReservaMesaController extends Controller
  {
 +    /**
@@ -6429,7 +6429,7 @@ index 5a43e3f..c58634f 100644
              ->orderBy('fecha_reserva', 'desc')
 -            ->orderBy('hora_reserva', 'desc')
 -            ->paginate(10);
--            
+-
 -        return view('reservas.index', compact('reservas'));
 +            ->orderBy('hora_reserva', 'desc');
 +
@@ -6442,7 +6442,7 @@ index 5a43e3f..c58634f 100644
 +
 +        return view('reservas.index', compact('reservas', 'esPersonal'));
      }
- 
+
      public function create()
 -{
 -    // SOLO mesas libres
@@ -6455,14 +6455,14 @@ index 5a43e3f..c58634f 100644
 +            ->orderBy('area')
 +            ->orderBy('numero_mesa')
 +            ->get();
- 
+
 -    return view('reservas.create', compact('mesas'));
 -}
 +        $esPersonal = $this->esPersonal();
 +        $clientes = $esPersonal
 +            ? User::where('role', 'cliente')->orderBy('name')->get()
 +            : collect();
- 
+
 -    public function store(Request $request)
 -{
 -    $request->validate([
@@ -6480,7 +6480,7 @@ index 5a43e3f..c58634f 100644
 -        return back()->with('error', 'La mesa ya no está disponible.');
 +        return view('reservas.create', compact('mesas', 'clientes', 'esPersonal'));
      }
- 
+
 -    // Guardar reserva
 -    $reserva = new Reserva();
 -    $reserva->usuario_id = Auth::id();
@@ -6540,7 +6540,7 @@ index 5a43e3f..c58634f 100644
 +
          $mesa->estado = 'reservado';
          $mesa->save();
- 
+
 -    return redirect()
 -        ->route('reserva.index')
 -        ->with('success', 'Reserva solicitada exitosamente.');
@@ -6553,14 +6553,14 @@ index 5a43e3f..c58634f 100644
 +            ->route('reserva.index')
 +            ->with('success', 'Reserva registrada exitosamente.');
 +    }
- 
+
 -    $mesas = Mesa::where('estado', 'libre')
 -        ->orWhere('id', $reserva->mesa_id)
 -        ->get();
 +    public function edit($id)
 +    {
 +        $reserva = $this->encontrarReserva($id);
- 
+
 -    return view('reservas.edit', compact('reserva', 'mesas'));
 -}
 -public function update(Request $request, $id)
@@ -6588,19 +6588,19 @@ index 5a43e3f..c58634f 100644
 +            ->orderBy('area')
 +            ->orderBy('numero_mesa')
 +            ->get();
- 
+
 -    // Reservar nueva mesa
 -    $mesaNueva = Mesa::find($request->mesa_id);
 +        $esPersonal = $this->esPersonal();
 +        $clientes = $esPersonal
 +            ? User::where('role', 'cliente')->orderBy('name')->get()
 +            : collect();
- 
+
 -    if ($mesaNueva->estado != 'libre' && $mesaNueva->id != $reserva->mesa_id) {
 -        return back()->with('error', 'La mesa ya no está disponible.');
 +        return view('reservas.edit', compact('reserva', 'mesas', 'clientes', 'esPersonal'));
      }
- 
+
 -    $mesaNueva->estado = 'reservado';
 -    $mesaNueva->save();
 -
@@ -6668,12 +6668,12 @@ index 5a43e3f..c58634f 100644
 +            ->route('reserva.index')
 +            ->with('success', 'Reserva actualizada correctamente.');
 +    }
- 
+
 -    $reserva->save();
 +    public function destroy($id)
 +    {
 +        $reserva = $this->encontrarReserva($id);
- 
+
 -    return redirect()
 -        ->route('reserva.index')
 -        ->with('success', 'Reserva actualizada correctamente.');
@@ -6687,11 +6687,11 @@ index 5a43e3f..c58634f 100644
 +            $mesa->estado = 'libre';
 +            $mesa->save();
 +        }
- 
+
 -    // Liberar mesa
 -    $mesa = Mesa::find($reserva->mesa_id);
 +        $reserva->delete();
- 
+
 -    if ($mesa) {
 -        $mesa->estado = 'libre';
 -        $mesa->save();
@@ -6699,7 +6699,7 @@ index 5a43e3f..c58634f 100644
 +            ->route('reserva.index')
 +            ->with('success', 'Reserva eliminada correctamente.');
      }
- 
+
 -    $reserva->delete();
 -
 -    return redirect()
@@ -6730,11 +6730,11 @@ index c6b869e..c7acd44 100644
  use App\Models\Factura;
 +use App\Events\PedidoEstadoCambiado;
  use Illuminate\Support\Facades\Auth;
- 
+
  class Pedido extends Model
  {
      use HasFactory;
- 
+
 +    /**
 +     * Boot: emite `PedidoEstadoCambiado` cuando el campo `estado` cambia.
 +     * Esto cubre todos los caminos que actualizan estado (controllers,
@@ -6751,7 +6751,7 @@ index c6b869e..c7acd44 100644
 +    }
 +
      protected $table = 'pedidos';
- 
+
      protected $fillable = [
 @@ -18,6 +34,7 @@ class Pedido extends Model
          'mesa_id',
@@ -6764,7 +6764,7 @@ index c6b869e..c7acd44 100644
 @@ -160,14 +177,14 @@ public function generarOrUpdateFactura()
          $factura->fecha_emision = now();
          $factura->usuario_id = $this->usuario_id ?? Auth::id();
- 
+
 -        // --- SOLUCIÓN MANUAL DIRECTA ---
 -        $ultimo = Factura::orderBy('id', 'desc')->first();
 -        $numero = 1;
@@ -6781,7 +6781,7 @@ index c6b869e..c7acd44 100644
 -        $factura->numero_factura = 'FACT-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
 +        $factura->numero_factura = 'FACT-' . str_pad($numeroSecuencia, 6, '0', STR_PAD_LEFT);
      }
- 
+
      $factura->cliente_nombre = $this->cliente_nombre ?? 'Cliente';
 diff --git a/composer.json b/composer.json
 index 61a6457..bbe02a4 100644
@@ -7044,7 +7044,7 @@ index ff49d2c..6c56858 100644
 @@ -18,8 +18,14 @@ public function run(): void
              ['nombre' => 'Ensaladas', 'icono' => 'fa-leaf', 'descripcion' => 'Opciones saludables'],
          ];
-         
+
 +        // Usamos firstOrCreate para que el seeder sea idempotente y no
 +        // duplique las categorías si corre varias veces (ej. RUN_SEEDERS=true
 +        // en varios deploys consecutivos).
@@ -7065,7 +7065,7 @@ index 3c89e8a..c3f943f 100644
 @@ -52,14 +52,11 @@ services:
        VITE_REVERB_PORT: 8080
        VITE_REVERB_SCHEME: http
- 
+
 -      # Mailtrap SMTP local (en Railway usamos transport HTTP por SMTP bloqueado)
 -      MAIL_MAILER: smtp
 -      MAIL_HOST: sandbox.smtp.mailtrap.io
@@ -7080,7 +7080,7 @@ index 3c89e8a..c3f943f 100644
 +      RESEND_API_KEY: ${RESEND_API_KEY}
 +      MAIL_FROM_ADDRESS: onboarding@resend.dev
        MAIL_FROM_NAME: "Sabor Gestion"
- 
+
        RUN_MIGRATIONS: "true"
 diff --git a/md_to_pdf.py b/md_to_pdf.py
 new file mode 100644
@@ -7331,7 +7331,7 @@ index 4b01816..ee7b9c3 100644
 @@ -4,63 +4,294 @@ import './bootstrap';
  import Alpine from 'alpinejs';
  import collapse from '@alpinejs/collapse';
- 
+
 -// Registrar el plugin collapse
  Alpine.plugin(collapse);
 -
@@ -7340,9 +7340,9 @@ index 4b01816..ee7b9c3 100644
 -
 -// Iniciar Alpine
  Alpine.start();
- 
+
  console.log('Alpine.js inicializado correctamente');
- 
+
 +/**
 + * Toast bonito con animación slide-in / slide-out + auto-dismiss.
 + * Reemplaza el alert() horrible que rompía la UX.
@@ -7543,18 +7543,18 @@ index 4b01816..ee7b9c3 100644
  document.addEventListener('DOMContentLoaded', () => {
      const userRole = document.querySelector('meta[name="user-role"]')?.getAttribute('content');
 -    console.log('Rol de usuario detectado:', userRole);
--    
+-
 -    if (window.Echo) {
 -        if (userRole === 'cocinero' || userRole === 'admin') {
 -            console.log('Intentando suscribirse al canal privado: pedidos.cocineros');
--            
+-
 -            window.Echo.channel('pedidos.cocineros')
 -                .subscribed(() => {
 -                    console.log('✅ Suscripción exitosa al canal pedidos.cocineros');
 -                })
 -                .listen('.pedido.creado', (e) => {
 -                    console.log('🔔 ¡Nuevo pedido recibido!', e);
--                    
+-
 -                    // Notificación de escritorio
 -                    if (Notification.permission === "granted") {
 -                        new Notification("Nuevo Pedido", {
@@ -7600,10 +7600,10 @@ index 4b01816..ee7b9c3 100644
 +            })
 +            .error((err) => console.error('❌ Error en pedidos.cocineros:', err));
 +    }
- 
+
 -                    // Disparar evento global para otros componentes
 -                    window.dispatchEvent(new CustomEvent('nuevo-pedido', { detail: e }));
--                    
+-
 -                    // Alerta visual simple
 -                    alert(e.mensaje);
 -                })
@@ -8094,7 +8094,7 @@ index 9369447..97d030e 100644
 @@ -192,24 +192,31 @@ function showNotification(message, type = 'success') {
          t.addEventListener('click', function () { tabActivoWS = this.dataset.tab; });
      });
- 
+
 -    function conectarCocinaWS() {
 -        if (typeof window.Echo === 'undefined') {
 -            console.warn('Echo aún no cargó, reintentando...');
@@ -8110,7 +8110,7 @@ index 9369447..97d030e 100644
 +        console.log('🆕 Comandas: refrescando por pedido nuevo', e);
 +        reproducirCampana();
 +        loadComandas(tabActivoWS);
- 
+
 -        window.Echo.private('pedidos.cocineros')
 -            .listen('.pedido.creado', (e) => {
 -                console.log('🆕 Pedido nuevo recibido:', e);
@@ -8124,7 +8124,7 @@ index 9369447..97d030e 100644
 +            setTimeout(() => destacarCard(e.numero_pedido), 800);
 +        }
 +    });
- 
+
 -        console.log('✅ Cocina: suscrita correctamente al canal pedidos.cocineros');
 +    function destacarCard(numeroPedido) {
 +        const cards = document.querySelectorAll('[data-pedido-numero], .comanda-card');
@@ -8137,12 +8137,12 @@ index 9369447..97d030e 100644
 +            }
 +        });
      }
- 
+
      function reproducirCampana() {
 @@ -227,7 +234,6 @@ function reproducirCampana() {
          } catch (err) { /* sin audio, no es crítico */ }
      }
- 
+
 -    conectarCocinaWS();
  });
  </script>
@@ -8514,7 +8514,7 @@ index 83f6001..2f73993 100644
              </tr>
          </table>
      </div>
- 
+
 -    <table class="details-table">
 +    {{-- ============ DATOS CLIENTE + PEDIDO ============ --}}
 +    <table class="info-grid">
@@ -8568,7 +8568,7 @@ index 83f6001..2f73993 100644
              </td>
          </tr>
      </table>
- 
+
 +    {{-- ============ DETALLE DE ITEMS ============ --}}
      <table class="items-table">
          <thead>
@@ -8619,7 +8619,7 @@ index 83f6001..2f73993 100644
              @endif
          </tbody>
      </table>
- 
+
 -    <table class="totals-table">
 -        <tr>
 -            <td class="label">Subtotal:</td>
@@ -8672,7 +8672,7 @@ index 83f6001..2f73993 100644
 +            </td>
          </tr>
      </table>
- 
+
 +    {{-- ============ INFO DEL PAGO ============ --}}
 +    @if($factura->estado === 'pagada')
 +        @php
@@ -8716,8 +8716,8 @@ index 68da59f..a58d4b4 100644
 +++ b/resources/views/layouts/sidebar.blade.php
 @@ -320,12 +320,14 @@ class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:t
          @endif
- 
- 
+
+
 -        <!-- RESERVAR MESA cliente -->
 -        @if(in_array($role, ['cliente']))
 +        <!-- RESERVAS (cliente: las propias / admin·mesero: todas) -->
@@ -8735,7 +8735,7 @@ index 68da59f..a58d4b4 100644
 @@ -378,11 +380,14 @@ class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:t
              <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Pagos</span>
          </a>
- 
+
 -        <!-- Cierre de Caja - stub que redirige a Reportes -->
 +        @endif
 +
@@ -8755,26 +8755,26 @@ index d453ba2..db1b515 100644
 +++ b/resources/views/mesas/create.blade.php
 @@ -37,7 +37,7 @@ class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus
                  </div>
- 
+
                  <div>
 -                    <label class="block text-text font-medium mb-2">Área</label>
 +                    <label class="block text-text font-medium mb-2">Ubicación</label>
-                     <input type="text" 
-                            name="area" 
-                            value="{{ old('area') }}" 
+                     <input type="text"
+                            name="area"
+                            value="{{ old('area') }}"
 diff --git a/resources/views/mesas/edit.blade.php b/resources/views/mesas/edit.blade.php
 index 80ae902..c3fc4e4 100644
 --- a/resources/views/mesas/edit.blade.php
 +++ b/resources/views/mesas/edit.blade.php
 @@ -37,7 +37,7 @@ class="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus
                  </div>
- 
+
                  <div>
 -                    <label class="block text-text font-medium mb-2">Área</label>
 +                    <label class="block text-text font-medium mb-2">Ubicación</label>
-                     <input type="text" 
-                            name="area" 
-                            value="{{ old('area', $mesa->area) }}" 
+                     <input type="text"
+                            name="area"
+                            value="{{ old('area', $mesa->area) }}"
 diff --git a/resources/views/mesas/index.blade.php b/resources/views/mesas/index.blade.php
 index 006f598..c0abc84 100644
 --- a/resources/views/mesas/index.blade.php
@@ -8786,7 +8786,7 @@ index 006f598..c0abc84 100644
 -                📍 {{ $area ?: 'Sin área asignada' }}
 +                📍 {{ $area ?: 'Sin ubicación asignada' }}
              </h2>
-             
+
              <div class="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
 diff --git a/resources/views/mesas/reserva.blade.php b/resources/views/mesas/reserva.blade.php
 index e046762..0d54cdb 100644
@@ -8800,13 +8800,13 @@ index e046762..0d54cdb 100644
 +                            <i class="fas fa-map-marker-alt mr-2"></i> Ubicación: <span class="font-semibold">{{ $mesa->area ?? 'General' }}</span>
                          </p>
                      </div>
- 
+
 diff --git a/resources/views/mesas/show.blade.php b/resources/views/mesas/show.blade.php
 index 27ab88f..07db5d4 100644
 --- a/resources/views/mesas/show.blade.php
 +++ b/resources/views/mesas/show.blade.php
 @@ -28,7 +28,7 @@
-                     
+
                      <div>
                          <label class="text-muted text-sm uppercase tracking-wide">
 -                            <i class="fas fa-map-marker-alt mr-1"></i> Área
@@ -9048,7 +9048,7 @@ index 9aa36bd..c2b78bb 100644
 @@ -161,20 +161,19 @@ class="text-indigo-600 hover:underline"
                  Esperando confirmación del pago...
              </p>
- 
+
 -            {{-- Botón solo para entorno local: el sitio externo del QR no
 -                 puede llegar a localhost, así que simulamos el webhook acá. --}}
 -            @if(app()->environment('local'))
@@ -9081,7 +9081,7 @@ index b06c17c..b22f09f 100644
 @@ -213,13 +213,41 @@ class="agregar-plato text-white rounded-lg px-3 py-1.5 text-sm transition flex i
                              </select>
                          </div>
- 
+
 -                        <!-- Datos del Cliente -->
 +                        @php
 +                            $authUser = auth()->user();
@@ -9116,7 +9116,7 @@ index b06c17c..b22f09f 100644
                                  <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                      <i class="fas fa-user mr-1"></i> Nombre del Cliente *
                                  </label>
--                                <input type="text" name="cliente_nombre" 
+-                                <input type="text" name="cliente_nombre"
 +                                <input type="text" name="cliente_nombre"
 +                                    value="{{ old('cliente_nombre', $nombreDefault) }}"
                                      class="w-full px-3 py-2 rounded-lg outline-none transition-all"
@@ -9126,13 +9126,13 @@ index b06c17c..b22f09f 100644
                                  <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                      <i class="fas fa-phone mr-1"></i> Teléfono *
                                  </label>
--                                <input type="tel" name="cliente_telefono" 
+-                                <input type="tel" name="cliente_telefono"
 +                                <input type="tel" name="cliente_telefono"
 +                                    value="{{ old('cliente_telefono', $telefonoDefault) }}"
                                      class="w-full px-3 py-2 rounded-lg outline-none transition-all"
                                      style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
                              </div>
--                            
+-
 +
                              <div id="direccionContainer" class="hidden">
                                  <label class="block text-sm font-medium mb-1" style="color: #111827;">
@@ -9144,9 +9144,9 @@ index b06c17c..b22f09f 100644
 +                                    style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">{{ old('direccion', $direccionDefault) }}</textarea>
                              </div>
                          </div>
- 
+
 @@ -342,6 +371,8 @@ class="w-full px-3 py-2 rounded-lg outline-none transition-all"
- 
+
  // Reverse geocoding con Nominatim (gratis, sin API key) — llena el textarea
  // "direccion" cuando el usuario hace click en el mapa.
 +// Política: click en el mapa = el usuario quiere ESA dirección, así que siempre
@@ -9176,7 +9176,7 @@ index aba0cc6..4b16d08 100644
 @@ -182,6 +182,23 @@ class="w-full px-4 py-2 pl-10 rounded-lg border border-border focus:border-prima
                                      <i class="fas fa-print"></i>
                                  </a>
- 
+
 +                                {{-- Marcar entregado: visible para staff cuando el pedido está "listo" --}}
 +                                @auth
 +                                    @if($pedido->estado === 'listo' && in_array(auth()->user()->role, ['admin','mesero','cajero']))
@@ -9203,7 +9203,7 @@ index bf62947..786087e 100644
 +++ b/resources/views/pedidos/misPedidos.blade.php
 @@ -3,6 +3,14 @@
  @section('title', 'Mis Pedidos')
- 
+
  @section('content')
 +<script>
 +    // Auto-refresh cuando llega un evento de cambio de estado de cualquier pedido
@@ -9213,13 +9213,13 @@ index bf62947..786087e 100644
 +    });
 +</script>
 +
- 
+
  <div class="space-y-6">
- 
+
 @@ -121,25 +129,9 @@ class="bg-primary hover:bg-secondary text-white px-5 py-3 rounded-lg shadow-lg t
- 
+
                              </td>
- 
+
 -                            <!-- Estado -->
 -                            <td class="px-6 py-4">
 -
@@ -9243,7 +9243,7 @@ index bf62947..786087e 100644
 +                            <td class="px-6 py-4 min-w-[260px]" data-pedido-estado="{{ $pedido->id }}">
 +                                <x-pedido-timeline :estado="$pedido->estado" />
                              </td>
- 
+
                              <!-- Ubicación -->
 diff --git a/resources/views/pedidos/show.blade.php b/resources/views/pedidos/show.blade.php
 index 94bda4b..73e4b81 100644
@@ -9251,7 +9251,7 @@ index 94bda4b..73e4b81 100644
 +++ b/resources/views/pedidos/show.blade.php
 @@ -44,6 +44,16 @@ class="inline-flex items-center px-4 py-2 text-white transition-colors duration-
                  </div>
- 
+
                  <div class="p-6 overflow-x-auto">
 +                    @if(session('success'))
 +                        <div class="px-4 py-3 mb-4 text-green-800 bg-green-100 border border-green-300 rounded">
@@ -9269,7 +9269,7 @@ index 94bda4b..73e4b81 100644
 @@ -102,6 +112,83 @@ class="inline-flex items-center px-4 py-2 text-white transition-colors duration-
                  </div>
              </div>
- 
+
 +            <!-- D4: Agregar productos al pedido abierto -->
 +            @if(in_array($pedido->estado, ['pendiente', 'en_preparacion']) && $platosDisponibles->isNotEmpty())
 +            <div x-data="agregarItems()" class="overflow-hidden bg-white shadow-lg rounded-xl">
@@ -9367,7 +9367,7 @@ index 94bda4b..73e4b81 100644
 +                    <div id="pedidoTimelineWrap" class="mb-5 pb-5 border-b border-gray-100">
 +                        <x-pedido-timeline :estado="$pedido->estado" />
                      </div>
- 
+
 +                    {{-- Auto-refresh al recibir evento Reverb del cambio de estado --}}
 +                    <script>
 +                        window.addEventListener('pedido-estado-cambiado', (ev) => {
@@ -9435,7 +9435,7 @@ index 94bda4b..73e4b81 100644
 @@ -197,6 +339,165 @@ class="inline-flex items-center px-4 py-2 text-white transition-colors duration-
                  </div>
              </div>
- 
+
 +            {{-- Pago de cuenta para el cliente (puntos #5 y #5.1 del spec) --}}
 +            @auth
 +                @if(auth()->user()->isCliente() && $pedido->factura && $pedido->factura->estado === 'pendiente')
@@ -9610,7 +9610,7 @@ index 94bda4b..73e4b81 100644
 @@ -252,67 +553,37 @@ class="inline-flex items-center px-4 py-2 text-white transition-colors duration-
                              @endif
                          @endif
- 
+
 +                        @php
 +                            $creadorPedido = $pedido->usuario;
 +                            $pedidoEsAutopedido = $creadorPedido && method_exists($creadorPedido, 'isCliente') && $creadorPedido->isCliente();
@@ -9624,7 +9624,7 @@ index 94bda4b..73e4b81 100644
                      </div>
                  </div>
              </div>
- 
+
 -            <!-- Totales -->
 -            <div class="card bg-gradient-to-r from-primary/5 to-primary/10">
 -                <h3 class="mb-3 font-semibold">Resumen de Pago</h3>
@@ -9701,7 +9701,7 @@ index 94bda4b..73e4b81 100644
 @@ -341,16 +612,8 @@ class="inline-flex items-center px-4 py-2 text-white transition-colors duration-
                          </div>
                      </div>
- 
+
 -                    @if($pedido->estado != 'facturado' && $pedido->estado == 'entregado')
 -                    <div class="mt-6">
 -                        <form action="{{ route('facturas.create') }}" method="GET">
@@ -9736,7 +9736,7 @@ index b6f190e..84c5a82 100644
 +                <span>{{ $creador->name ?? 'N/A' }}</span>
              </div>
          </div>
-         
+
 @@ -169,7 +173,7 @@
                  <tr>
                      <td>{{ $detalle->cantidad }}</td>
@@ -9772,16 +9772,16 @@ index b6f190e..84c5a82 100644
 +                <span>Bs {{ number_format($pedido->total, 2) }}</span>
              </div>
          </div>
-         
+
 diff --git a/resources/views/reservas/create.blade.php b/resources/views/reservas/create.blade.php
 index 960529f..49a322f 100644
 --- a/resources/views/reservas/create.blade.php
 +++ b/resources/views/reservas/create.blade.php
 @@ -30,7 +30,23 @@
              @csrf
-             
+
              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
--                
+-
 +
 +                {{-- Cliente: solo visible para admin/mesero (reserva a nombre de un cliente) --}}
 +                @if(!empty($esPersonal) && $esPersonal)
@@ -9809,7 +9809,7 @@ index 1af0a6f..2f2ee97 100644
 @@ -62,6 +62,33 @@ class="space-y-6">
              @csrf
              @method('PUT')
- 
+
 +            {{-- Cliente y estado: solo personal (admin/mesero) --}}
 +            @if(!empty($esPersonal) && $esPersonal)
 +                <div>
@@ -9839,7 +9839,7 @@ index 1af0a6f..2f2ee97 100644
 +
              <!-- Mesa -->
              <div>
- 
+
 diff --git a/resources/views/reservas/index.blade.php b/resources/views/reservas/index.blade.php
 index e086635..dc21db4 100644
 --- a/resources/views/reservas/index.blade.php
@@ -9852,7 +9852,7 @@ index e086635..dc21db4 100644
 +            <i class="fas fa-calendar-alt mr-2"></i>
 +            {{ (!empty($esPersonal) && $esPersonal) ? 'Reservas' : 'Mis Reservas' }}
          </h1>
- 
+
          <a href="{{ route('reserva.create') }}"
 @@ -28,6 +29,9 @@ class="bg-primary hover:bg-secondary text-surface px-4 py-2 rounded-lg transitio
                  <!-- Header -->
@@ -9865,9 +9865,9 @@ index e086635..dc21db4 100644
                          <th class="px-6 py-4">Fecha y Hora</th>
                          <th class="px-6 py-4">Personas</th>
 @@ -43,6 +47,13 @@ class="bg-primary hover:bg-secondary text-surface px-4 py-2 rounded-lg transitio
- 
+
                          <tr class="hover:bg-background/50 transition-colors">
- 
+
 +                            @if(!empty($esPersonal) && $esPersonal)
 +                                <td class="px-6 py-4">
 +                                    <span class="font-medium">{{ $reserva->usuario->name ?? 'N/D' }}</span>
@@ -9879,28 +9879,28 @@ index e086635..dc21db4 100644
                              <td class="px-6 py-4">
                                  <span class="font-medium">
 @@ -130,17 +141,19 @@ class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg transition du
- 
+
                          <tr>
- 
+
 -                            <td colspan="5"
 +                            <td colspan="{{ (!empty($esPersonal) && $esPersonal) ? 6 : 5 }}"
                                  class="px-6 py-8 text-center text-muted">
- 
+
                                  <i class="fas fa-calendar-times text-4xl mb-3 text-border"></i>
- 
+
 -                                <p>No tienes reservas registradas.</p>
 +                                <p>
 +                                    {{ (!empty($esPersonal) && $esPersonal) ? 'No hay reservas registradas.' : 'No tienes reservas registradas.' }}
 +                                </p>
- 
+
                                  <a href="{{ route('reserva.create') }}"
                                     class="text-primary hover:underline mt-2 inline-block">
- 
+
 -                                    Realiza tu primera reserva
 +                                    {{ (!empty($esPersonal) && $esPersonal) ? 'Registrar una reserva' : 'Realiza tu primera reserva' }}
- 
+
                                  </a>
- 
+
 diff --git a/routes/web.php b/routes/web.php
 index b18735d..fda406f 100644
 --- a/routes/web.php
@@ -9908,7 +9908,7 @@ index b18735d..fda406f 100644
 @@ -24,6 +24,12 @@
      return view('home');
  })->name('home');
- 
+
 +// Página pública del simulador de pago QR. El QR de cada factura apunta acá
 +// para que el cliente escanee con su celular, presione "Pagar" y nuestro
 +// propio backend confirme la factura (sin depender de una app externa).
@@ -9919,15 +9919,15 @@ index b18735d..fda406f 100644
  Route::get('/inicio', function () {
      return view('home');
 @@ -45,8 +51,8 @@
-     
+
      // Mesas
      Route::resource('mesas', MesaController::class)->middleware('role:admin,mesero');
 -    // Reserva de mesa, disponible solo para cliente
 -    Route::resource('reserva', ReservaMesaController::class)->middleware('role:cliente');
 +    // Reserva de mesa: cliente (autoservicio) o personal (admin/mesero a nombre de un cliente)
 +    Route::resource('reserva', ReservaMesaController::class)->middleware('role:cliente,mesero,admin');
- 
- 
+
+
      // Comandas (Cocina)
 @@ -64,14 +70,22 @@
      Route::resource('facturas', FacturaController::class)->middleware('role:admin,cajero');
@@ -9940,10 +9940,10 @@ index b18735d..fda406f 100644
 +    Route::get('/facturas/{factura}/generar-qr', [FacturaController::class, 'generarQr'])->name('facturas.generar-qr')->middleware('role:admin,cajero,cliente');
 +    Route::post('/facturas/{factura}/enviar-correo', [FacturaController::class, 'enviarPorCorreo'])->name('facturas.enviar-correo')->middleware('role:admin,cajero,cliente');
 +    Route::get('/facturas/{factura}/pdf', [FacturaController::class, 'descargarPdf'])->name('facturas.pdf')->middleware('role:admin,cajero,cliente');
-     
+
      // Pagos — STUB: redirige a Facturas. PagoQrController (webhook) sigue separado.
      Route::resource('pagos', PagoController::class)->middleware('role:admin,cajero');
- 
+
 -    // Cierre de Caja — STUB: redirige a Reportes/Dashboard.
 -    Route::resource('cierres', CierreCajaController::class)->middleware('role:admin,cajero');
 +    // Cierre de Cuenta por mesa (punto #6): lista mesas con cuenta abierta,
@@ -9953,7 +9953,7 @@ index b18735d..fda406f 100644
 +        Route::get('/mesa/{cierre}', [CierreCajaController::class, 'show'])->name('show');
 +        Route::post('/mesa/{cierre}/cerrar', [CierreCajaController::class, 'cerrar'])->name('cerrar');
 +    });
-     
+
      // Gestión de Categorías (Solo Admin) - CON todas las rutas CRUD
      Route::resource('categorias', CategoriaController::class)->middleware('role:admin');
 @@ -98,10 +112,18 @@
@@ -9977,3 +9977,7 @@ index b18735d..fda406f 100644
      Route::get('/misPedidos', [PedidoController::class, 'misPedidos'])
      ->name('pedidos.misPedidos')
      ->middleware('auth');
+
+
+
+mysqldump -h gateway01.us-east-1.prod.aws.tidbcloud.com -u 3Z76JHETThLiUEQ.root -P 4000 -p \ --ssl-ca=G:/LARAVE/proyectop/saborGestion/storage/ssl/isrgrootx1.pem \ --ssl-mode=VERIFY_IDENTITY \ --no-data --databases saborgestion > estructura.sql

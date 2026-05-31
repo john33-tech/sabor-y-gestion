@@ -1,5 +1,5 @@
 # Project Technical Analysis Report
-Generated on: 2026-05-28 15:11:00
+Generated on: 2026-05-30 10:15:24
 Project Path: `G:\LARAVE\proyectop\saborGestion`
 
 ## Environment Information
@@ -20,26 +20,21 @@ main
 ```
 ### Short Status
 ```
-M docker-compose.yml
- M project_analysis.txt
+M app/Http/Controllers/CashClosureController.php
+ M resources/views/cierreCaja/create.blade.php
+ M resources/views/cierreCaja/show.blade.php
  M resources/views/layouts/navigation.blade.php
+ M resources/views/layouts/sidebar.blade.php
  M routes/web.php
-?? app/Http/Controllers/CashClosureController.php
-?? cambios_be9d469_key.txt
-?? cambios_caaa1dd_key.txt
-?? commit_32c2fc4_Dockerfile.txt
-?? commit_32c2fc4_docker-compose.txt
-?? commit_be9d469.txt
-?? commit_be9d469_docker.txt
-?? resources/views/cierreCaja/
+?? resources/views/cierreCaja/edit.blade.php
 ```
 ### Recent History (last 5 commits)
 ```
+a39496a feat: Implementar gestión de caja con apertura y cierre
 0d5cab1 refactor: replace cierre caja controller with cierre pedido and update user-cash closure relation<
 59972ad fix(pedidos): mejorar validación de stock y persistencia de datos en creación de pedidos<
 0dc23d1 Merge branch 'main' of https://github.com/john33-tech/sabor-y-gestion
 300176f feat(pedidos): implementar pago con QR para clientes y optimizar dashboard de cocina
-60d400a fix: cocina refresca cuando mesero elimina un pedido pendiente
 ```
 ### Remote Repositories
 ```
@@ -173,8 +168,6 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 │   │   ├── 2026_05_10_114415_create_inventario_table.php
 │   │   ├── 2026_05_10_175417_create_consumos_table.php
 │   │   ├── 2026_05_11_000001_cleanup_duplicate_platos.php
-│   │   ├── 2026_05_13_213118_add_telefono_direccion_to_users_table.php
-│   │   ├── 2026_05_14_223145_add_estado_to_pedidos_table.php
 │   │   ├── 2026_05_16_120000_cleanup_duplicate_categorias.php
 │   │   ├── 2026_05_16_180000_add_cliente_email_to_pedidos.php
 │   │   └── 2026_05_27_080510_create_cash_closures_table.php
@@ -197,31 +190,7 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 │   ├── php.ini
 │   └── reverb-proxy.conf
 ├── public
-│   ├── storage
-│   │   ├── ingredientes
-│   │   │   ├── 8XbTw3XK5lqUDLjoAhScsUUgBZihsyd4ookFsyrS.jpg
-│   │   │   ├── BNtBKqfUwgHWWeIdcHeGPtTzWVCpMYxSoGzf3Kcg.jpg
-│   │   │   ├── D0tZflROCvqR8BjUb1g2Miu2VqeOj4XQOu83hDfJ.jpg
-│   │   │   ├── E22JrD0cuIcKk5HqfLiVwGUG0VW8uTdN80IavlX1.jpg
-│   │   │   ├── FSMLV8H7jJdnZhDWqFrVjXGQ7oeziceYHieKoo6Y.jpg
-│   │   │   ├── HadvaivjRp82c8jqaZQb2HqHIcn3edNsOUmmw9sq.jpg
-│   │   │   ├── iUQAlaOt0iDZrcaVSYfuKSb95FQwLGl3wOkwz157.jpg
-│   │   │   ├── Kq0Btqzt79DxddLrqMuFwAzzf2CozdKcl1SAh13B.jpg
-│   │   │   └── PHfWLV96pBunHdkhQoH1fIU9XN7TbrPayQn8JjOw.jpg
-│   │   ├── platos
-│   │   │   ├── J433FK8C3sz2iGxDBNYmjllI0gMNlvVPruVDzWNs.jpg
-│   │   │   ├── jEVeBhiumjurt493eIbFwQwuCytUPQmDtWK2yb9E.jpg
-│   │   │   ├── Opu7APVw0qbTJ3yoHwRKQvz35xwdCvNeDnbJUIzY.jpg
-│   │   │   ├── RjPZYsLw5E8su8hbWL9WX6LcQXLrfdtlNx7lvytn.jpg
-│   │   │   ├── Y07zRMYjqUz2pLnBr8IkVy64wazfqXIlOmy1I1XM.jpg
-│   │   │   └── ZR0Zgp7v6TJHGzKkmVBf14LEezqSpIo73KE5pAUH.jpg
-│   │   └── .gitignore
-│   ├── .htaccess
-│   ├── diagnostico.php
-│   ├── favicon.ico
-│   ├── index.php
-│   ├── logo.png
-│   └── robots.txt
+│    [Error: [WinError 1920] El sistema no tiene acceso al archivo: 'G:\\LARAVE\\proyectop\\saborGestion\\public\\storage']
 ├── resources
 │   ├── css
 │   │   └── app.css
@@ -247,6 +216,7 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 │       │   └── show.blade.php
 │       ├── cierreCaja
 │       │   ├── create.blade.php
+│       │   ├── edit.blade.php
 │       │   └── show.blade.php
 │       ├── cierres
 │       │   ├── index.blade.php
@@ -391,16 +361,14 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 │   │   │   └── .gitignore
 │   │   ├── sessions
 │   │   │   ├── .gitignore
-│   │   │   ├── 1XCcwe0v25N97Efe9Y8wUyaYKV78ikAn9osDooQS
-│   │   │   ├── DtpmOiwC0RcHk36H17EGjuPMaapaPN6pbyVjQ2F7
-│   │   │   ├── j8mwwaYfLHomRuCIG5e7u1BEf89GqMlCMZNJ1UCg
-│   │   │   └── SWURahW3cfjVgCIl92OR6CJxplFPMPdDjbeugBUU
+│   │   │   └── VeOR8gZiMwPbOd8SiklbnqJlqJZ62vpFMwJbJ3L7
 │   │   ├── testing
 │   │   │   └── .gitignore
 │   │   ├── views
 │   │   │   ├── .gitignore
 │   │   │   ├── 03f5121d49441da71c326fadce5e0071.php
 │   │   │   ├── 042099cff1ec5e48b8030ba7fdc469d5.php
+│   │   │   ├── 0bf1c479312e6d5530db9e11af7f9d42.php
 │   │   │   ├── 11fbdd41b84db82bc039dcda40bfbf20.php
 │   │   │   ├── 12075cce71d9cad8d3b0be08b7fbc59a.php
 │   │   │   ├── 1675ed88b2abc460376fae504b416733.php
@@ -468,10 +436,12 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 │   │   │   ├── a1771c8d3b5fb34c103e22e446006c2a.php
 │   │   │   ├── a2d461197bb4db0221064bab3890378c.php
 │   │   │   ├── a54ba4934d8ce678ffaf435dde20c714.php
+│   │   │   ├── a81a77d1d40fb986e8083d7476f19ce6.php
 │   │   │   ├── ad6acde40c713f7da0733e29c1752fe9.php
 │   │   │   ├── b1b822af16afb7860c84c690138c3989.php
 │   │   │   ├── b22dd668c8896aaad915becbaf4d5ff0.php
 │   │   │   ├── b4b8401f9e56b9f11fcd8e7fb1b340d5.php
+│   │   │   ├── b5aaa3a33664c940222684b5b76a486a.php
 │   │   │   ├── b62064a5a2ace239c64941e30cbeed6e.php
 │   │   │   ├── b8e3d17fc5b2425a6f439cf88cd925fb.php
 │   │   │   ├── bdb2bac3976972f2306cfd1609988b9f.php
@@ -479,6 +449,7 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 │   │   │   ├── c34a1a255c3e7dc47f15cf1a14c4c494.php
 │   │   │   ├── c48770ffdfb7aaabe122c98961ea938a.php
 │   │   │   ├── c5fa96e784af47f14d392cb0d2aa7f1d.php
+│   │   │   ├── c6abc166ad60dd4aeb1b7784e45f1423.php
 │   │   │   ├── c6ba86c35b4da9b6724b0f640d1e0c3c.php
 │   │   │   ├── c72d86078bb701b59bc467ba7ccbf8e0.php
 │   │   │   ├── c81f54f1de425e15dd917fbd5e21ef87.php
@@ -11737,8 +11708,10 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 ├── cambios_caaa1dd_key.txt
 ├── commit_32c2fc4_docker-compose.txt
 ├── commit_32c2fc4_Dockerfile.txt
+├── commit_a30980d_docker_entrypoint.txt
 ├── commit_be9d469.txt
 ├── commit_be9d469_docker.txt
+├── commit_be9d469_docker_entrypointAnagua.txt
 ├── composer.json
 ├── composer.lock
 ├── docker-compose.yml
@@ -11794,7 +11767,7 @@ tisorigin	https://github.com/john33-tech/TIS-1-2026-Grp4.git (push)
 
 ## Stack and Configuration Detection
 ### Detected Frameworks
-Vite, Laravel
+Laravel, Vite
 ### Database / ORM
 *None detected.*
 ### Key Configuration Files
