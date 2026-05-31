@@ -17,6 +17,7 @@ class Factura extends Model
         'cliente_nombre',
         'cliente_nit',
         'cliente_telefono',
+        'cliente_email',
         'subtotal',
         'impuesto',
         'descuento',

@@ -133,6 +133,9 @@ class CierreCajaController extends Controller
                     // Guardar los datos del cliente que pidió el cajero.
                     $pedido->factura->cliente_nombre = $request->cliente_nombre;
                     $pedido->factura->cliente_nit = $request->cliente_nit;
+                    if ($request->filled('cliente_email')) {
+                        $pedido->factura->cliente_email = $request->cliente_email;
+                    }
 
                     if ($pedido->factura->estado === Factura::ESTADO_PENDIENTE) {
                         $pedido->factura->metodo_pago = $request->metodo_pago;
