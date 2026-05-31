@@ -149,7 +149,7 @@
                         </td>
 
                         <td class="py-3 px-4 font-bold text-primary">
-                            ${{ number_format($pedido->total,2) }}
+                            Bs {{ number_format($pedido->total,2) }}
                         </td>
 
                         <td class="py-3 px-4">

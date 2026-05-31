@@ -36,6 +36,8 @@ Route::get('/inicio', function () {
     return view('home');
 })->name('inicio');
 
+
+
 Route::middleware(['auth'])->group(function () {
     // Dashboards
     Route::get('/dashboard/administrador', [DashboardController::class, 'administrador'])->name('dashboard.administrador');
@@ -129,6 +131,42 @@ Route::middleware(['auth'])->group(function () {
     ->name('pedidos.misPedidos')
     ->middleware('auth');
 
+    Route::get('/pedidos/{pedido}/ver-cliente', [PedidoController::class, 'showCliente'])
+    ->name('pedidos.showCliente')
+    ->middleware('role:cliente,admin,cajero,mesero');
+
+
+    Route::get('/pedidos/{pedido}/editar-cliente', [PedidoController::class, 'editCliente'])
+    ->name('pedidos.edit.cliente')
+    ->middleware('role:cliente');
+
+    Route::put('/pedidos/{pedido}/actualizar-cliente', [PedidoController::class, 'updateCliente'])
+    ->name('pedidos.update.cliente')
+    ->middleware('role:cliente');
+
+    Route::delete('/pedidos/{pedido}/cancelar-cliente', [PedidoController::class, 'destroyCliente'])
+    ->name('pedidos.destroy.cliente')
+    ->middleware('role:cliente');
+
+
+    
+    Route::get('/cliente', [PedidoController::class, 'pedidoCliente'])
+    ->name('pedidos.cliente')
+    ->middleware('auth');
+
+     Route::post('/pedido/cliente/store', [PedidoController::class, 'storeCliente'])
+    ->name('pedidos.store.cliente')
+    ->middleware('auth');
+
+    Route::get('/misPedidosPendientes', [PedidoController::class, 'misPedidosPendientes'])
+    ->name('pedidos.pendientes.json');
+
+    Route::get('/misPedidosPendientes', [PedidoController::class, 'misPedidosPendientes'])
+    ->name('pedidos.pendientes.json');
+    
+    Route::get('/cliente/pedidos/{pedido}/generar-qr', [PedidoController::class, 'generarQrPedido'])
+    ->name('cliente.pedido.generar-qr');
+
 
 
     // Reportes de Consumos
@@ -139,6 +177,8 @@ Route::middleware(['auth'])->group(function () {
 
 
 });
+
+
 //Ruta para la notificacion de pedidos
 use App\Models\Pedido;
 

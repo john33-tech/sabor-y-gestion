@@ -21,32 +21,52 @@ class DashboardController extends Controller
     public function mesero()
     {
         $this->authorizeRole('mesero');
-        return view('dashboard.mesero.index');
+
+        // Pedidos activos del mesero: pendiente, en preparación y listos para entregar
+        $pedidos = \App\Models\Pedido::where('usuario_id', \Illuminate\Support\Facades\Auth::id())
+            ->whereIn('estado', [
+                \App\Models\Pedido::ESTADO_PENDIENTE,
+                \App\Models\Pedido::ESTADO_EN_PREPARACION,
+                \App\Models\Pedido::ESTADO_LISTO,
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Pedidos que el mesero ya entregó al cajero
+        $pedidosFinalizados = \App\Models\Pedido::where('usuario_id', \Illuminate\Support\Facades\Auth::id())
+            ->where('estado', \App\Models\Pedido::ESTADO_ENTREGADO)
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return view('dashboard.mesero.index', compact('pedidos', 'pedidosFinalizados'));
     }
     
     public function cocinero()
     {
         $this->authorizeRole('cocinero');
 
-        // Solo hoy y solo pendientes para el dashboard del cocinero
+        // Mostrar pedidos de hoy: En espera (pendiente) y En preparación
         $query = \App\Models\Pedido::with(['detalles.plato', 'mesa', 'usuario'])
             ->whereDate('created_at', now()->today())
-            ->where('estado', \App\Models\Pedido::ESTADO_PENDIENTE);
-        
+            ->whereIn('estado', [
+                \App\Models\Pedido::ESTADO_PENDIENTE,
+                \App\Models\Pedido::ESTADO_EN_PREPARACION,
+            ]);
+
         $comandas = $query->orderBy('created_at', 'asc')->paginate(12);
-        
+
         $tipos = \App\Models\Pedido::getTipos();
-        
+
         // Estadísticas solo de HOY
         $stats = [
-            'total' => \App\Models\Pedido::whereDate('created_at', now()->today())
-                ->whereIn('estado', ['pendiente', 'en_preparacion', 'listo'])->count(),
-            'pendientes' => \App\Models\Pedido::whereDate('created_at', now()->today())
-                ->where('estado', 'pendiente')->count(),
+            'total'          => \App\Models\Pedido::whereDate('created_at', now()->today())
+                                    ->whereIn('estado', ['pendiente', 'en_preparacion', 'listo'])->count(),
+            'pendientes'     => \App\Models\Pedido::whereDate('created_at', now()->today())
+                                    ->where('estado', 'pendiente')->count(),
             'en_preparacion' => \App\Models\Pedido::whereDate('created_at', now()->today())
-                ->where('estado', 'en_preparacion')->count(),
-            'listos' => \App\Models\Pedido::whereDate('created_at', now()->today())
-                ->where('estado', 'listos')->count()
+                                    ->where('estado', 'en_preparacion')->count(),
+            'listos'         => \App\Models\Pedido::whereDate('created_at', now()->today())
+                                    ->where('estado', 'listo')->count(),
         ];
 
         return view('dashboard.cocinero.index', compact('comandas', 'tipos', 'stats'));
@@ -55,7 +75,14 @@ class DashboardController extends Controller
     public function cajero()
     {
         $this->authorizeRole('cajero');
-        return view('dashboard.cajero.index');
+
+        // Todos los pedidos que el mesero marcó como entregados
+        $pedidosEntregados = \App\Models\Pedido::with(['usuario', 'mesa', 'detalles.plato'])
+            ->where('estado', \App\Models\Pedido::ESTADO_ENTREGADO)
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return view('dashboard.cajero.index', compact('pedidosEntregados'));
     }
     
     public function cliente()
