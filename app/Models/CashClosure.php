@@ -60,6 +60,8 @@ class CashClosure extends Model
      * Get paid orders that belong to this closed shift.
      * Returns a query builder, not a relation.
      */
+   // En app/Models/CashClosure.php
+
     public function paidOrders()
     {
         if (!$this->closing_date) {

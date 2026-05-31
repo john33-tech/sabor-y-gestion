@@ -149,7 +149,7 @@ Route::middleware(['auth'])->group(function () {
     ->middleware('role:cliente');
 
 
-    
+
     Route::get('/cliente', [PedidoController::class, 'pedidoCliente'])
     ->name('pedidos.cliente')
     ->middleware('auth');
@@ -163,7 +163,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/misPedidosPendientes', [PedidoController::class, 'misPedidosPendientes'])
     ->name('pedidos.pendientes.json');
-    
+
     Route::get('/cliente/pedidos/{pedido}/generar-qr', [PedidoController::class, 'generarQrPedido'])
     ->name('cliente.pedido.generar-qr');
 
@@ -193,12 +193,15 @@ Route::get('/notificaciones/pedidos', function () {
 })->middleware('auth');
 
 Route::middleware(['auth', 'role:cajero,admin'])->prefix('cierres')->name('caja.')->group(function () {
-    Route::get('cierres/historial', [CashClosureController::class, 'index'])->name('index');
+    Route::get('/historial', [CashClosureController::class, 'index'])->name('index');
     Route::get('/create', [CashClosureController::class, 'create'])->name('create');
     Route::post('/', [CashClosureController::class, 'store'])->name('store');
     Route::get('/{cierre}', [CashClosureController::class, 'show'])->name('show');
     Route::get('/{cierre}/edit', [CashClosureController::class, 'edit'])->name('edit');
     Route::put('/{cierre}', [CashClosureController::class, 'update'])->name('update');
+    Route::get('/{cierre}/pdf', [CashClosureController::class, 'generatePdf'])
+        ->name('pdf')
+        ->middleware('role:admin,cajero');
 });
 
 //Rutas de las apis utilizadas

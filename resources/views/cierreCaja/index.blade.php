@@ -83,6 +83,13 @@
                             </td>
                             <td class="px-6 py-4 text-sm whitespace-nowrap">
                                 <a href="{{ route('caja.show', $closure) }}" class="text-primary hover:text-orange-700">Ver detalles</a>
+                                @if($closure->status === 'Closed')
+                                    <a href="{{ route('caja.pdf', $closure) }}" title="Descargar PDF" class="ml-2 text-primary hover:text-orange-700">
+                                        <svg class="inline w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m-6 4h6M4 4h16v16H4V4z"></path>
+                                        </svg>
+                                    </a>
+                                @endif
                             </td>
                         </tr>
                         @empty

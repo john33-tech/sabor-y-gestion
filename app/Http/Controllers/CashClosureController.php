@@ -6,6 +6,7 @@ use App\Models\CashClosure;
 use App\Models\Factura;
 use App\Models\Pedido;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -256,4 +257,40 @@ class CashClosureController extends Controller
             ->whereNotIn('estado', ['entregado', 'cancelado', 'facturado'])
             ->exists();
     }
+
+    /**
+     * Genera y descarga el PDF del cierre de caja.
+     *
+     * @param  CashClosure  $cierre
+     * @return \Illuminate\Http\Response
+     */
+    public function generatePdf(CashClosure $cierre)
+    {
+        // Solo permitir PDF si la caja está cerrada
+        if ($cierre->status !== 'Closed') {
+            return redirect()->route('caja.show', $cierre)
+                ->with('error', 'No se puede generar el PDF de una caja abierta.');
+        }
+
+        // Obtener los pedidos pagados dentro del período
+        $orders = $cierre->paidOrders()
+            ->with(['mesa', 'usuario'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Totales ya están guardados en $cierre, pero los pasamos para la vista
+        $totals = [
+            'total_sales' => $cierre->total_sales,
+            'total_cash'  => $cierre->total_cash,
+            'total_card'  => $cierre->total_card,
+            'total_qr'    => $cierre->total_qr,
+        ];
+
+        // Cargar la vista del PDF
+        $pdf = Pdf::loadView('cierreCaja.pdf', compact('cierre', 'orders', 'totals'));
+
+        // Descargar el PDF con nombre específico
+        return $pdf->download('cierre_caja_' . $cierre->id . '.pdf');
+    }
+
 }
