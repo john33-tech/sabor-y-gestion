@@ -35,6 +35,7 @@ class IngredienteSeeder extends Seeder
             ['nombre' => 'Maní',            'unidad_medida' => 'gr'],
             ['nombre' => 'Harina',          'unidad_medida' => 'gr'],
             ['nombre' => 'Yuca',            'unidad_medida' => 'gr'],
+            ['nombre' => 'Pan',             'unidad_medida' => 'unidad'],
 
             // Verduras
             ['nombre' => 'Tomate',          'unidad_medida' => 'gr'],
@@ -45,6 +46,7 @@ class IngredienteSeeder extends Seeder
             ['nombre' => 'Haba',            'unidad_medida' => 'gr'],
             ['nombre' => 'Arveja',          'unidad_medida' => 'gr'],
             ['nombre' => 'Perejil',         'unidad_medida' => 'gr'],
+            ['nombre' => 'Albahaca',        'unidad_medida' => 'gr'],
 
             // Lácteos y grasas
             ['nombre' => 'Queso',           'unidad_medida' => 'gr'],

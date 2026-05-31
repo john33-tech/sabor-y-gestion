@@ -53,6 +53,9 @@ class PlatoIngredienteSeeder extends Seeder
             // Ensaladas
             'Ensalada Criolla'    => ['Tomate' => 80, 'Cebolla' => 60, 'Locoto' => 20, 'Perejil' => 10],
             'Ensalada de Quinua'  => ['Quinua' => 80, 'Lechuga' => 50, 'Tomate' => 50, 'Zanahoria' => 40],
+            'Ensalada César'      => ['Lechuga' => 80, 'Pollo' => 100, 'Queso' => 30, 'Pan' => 1],
+            'Ensalada Caprese'    => ['Tomate' => 100, 'Queso' => 80, 'Albahaca' => 10, 'Aceite' => 15],
+            'Ensalada Rusa'       => ['Papa' => 100, 'Zanahoria' => 60, 'Arveja' => 50, 'Huevo' => 1],
 
             // Postres
             'Arroz con Leche'     => ['Arroz' => 80, 'Leche' => 200, 'Azúcar' => 50, 'Canela' => 5],

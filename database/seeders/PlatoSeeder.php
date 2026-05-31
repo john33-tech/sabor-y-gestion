@@ -53,6 +53,9 @@ class PlatoSeeder extends Seeder
             // ── Ensaladas ────────────────────────────────────────────
             ['nombre' => 'Ensalada Criolla',     'precio' => 8.00,  'cat' => 'Ensaladas', 'score' => 4.4, 'desc' => 'Tomate, cebolla y locoto picados con perejil.'],
             ['nombre' => 'Ensalada de Quinua',   'precio' => 12.00, 'cat' => 'Ensaladas', 'score' => 4.6, 'desc' => 'Quinua con lechuga, tomate y zanahoria.'],
+            ['nombre' => 'Ensalada César',       'precio' => 14.00, 'cat' => 'Ensaladas', 'score' => 4.7, 'desc' => 'Clásica italiana: lechuga, pollo, queso parmesano y crutones.'],
+            ['nombre' => 'Ensalada Caprese',     'precio' => 13.00, 'cat' => 'Ensaladas', 'score' => 4.6, 'desc' => 'Italiana: tomate, queso fresco, albahaca y aceite de oliva.'],
+            ['nombre' => 'Ensalada Rusa',        'precio' => 10.00, 'cat' => 'Ensaladas', 'score' => 4.5, 'desc' => 'Rusa: papa, zanahoria, arveja y huevo con mayonesa.'],
 
             // ── Postres ──────────────────────────────────────────────
             ['nombre' => 'Arroz con Leche',      'precio' => 8.00,  'cat' => 'Postres', 'score' => 4.7, 'desc' => 'Postre cremoso de arroz con leche y canela.'],
