@@ -131,6 +131,21 @@ class Pedido extends Model
             });
     }
 
+    /**
+     * ¿Se le pueden seguir agregando productos a la cuenta? Solo si el pedido
+     * no está facturado/cancelado Y su factura sigue PENDIENTE (sin pagar).
+     * Una vez pagada (mesa pagada por QR, o para llevar), la cuenta se cierra:
+     * no se puede agregar nada que no se haya pagado.
+     */
+    public function puedeAgregarProductos(): bool
+    {
+        if (in_array($this->estado, [self::ESTADO_FACTURADO, self::ESTADO_CANCELADO])) {
+            return false;
+        }
+        $estadoFactura = optional($this->factura)->estado;
+        return $estadoFactura === null || $estadoFactura === Factura::ESTADO_PENDIENTE;
+    }
+
     public function calcularTotales()
     {
         $this->subtotal = $this->detalles->sum('subtotal');

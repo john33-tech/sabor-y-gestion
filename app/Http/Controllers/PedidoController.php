@@ -257,11 +257,11 @@ class PedidoController extends Controller
         $tipos = Pedido::getTipos();
         $estadosDetalle = DetallePedido::getEstados();
 
-        // Para D4: mientras la cuenta esté ABIERTA (no cobrada ni cancelada),
+        // Para D4: mientras la cuenta esté ABIERTA (no pagada ni cerrada),
         // cargar platos disponibles para que el panel "Agregar productos" se
         // pueda renderizar — aunque el pedido ya esté listo/entregado.
         $platosDisponibles = collect();
-        if (!in_array($pedido->estado, [Pedido::ESTADO_FACTURADO, Pedido::ESTADO_CANCELADO])) {
+        if ($pedido->puedeAgregarProductos()) {
             $platosDisponibles = Plato::where('disponible', true)
                 ->with('categoria')
                 ->orderBy('categoria_id')
@@ -747,11 +747,12 @@ private function guardarConsumo(Pedido $pedido)
             abort(403, 'No puedes modificar pedidos de otros usuarios.');
         }
 
-        // Se puede seguir agregando a la MISMA cuenta hasta que el cajero cobre.
-        // Solo se bloquea si ya está facturada (cobrada) o cancelada.
-        if (in_array($pedido->estado, [Pedido::ESTADO_FACTURADO, Pedido::ESTADO_CANCELADO])) {
+        // Solo se puede agregar mientras la cuenta NO esté PAGADA ni cerrada.
+        // (Una mesa pagada por QR, o un para-llevar ya pagado, queda cerrada.)
+        $pedido->loadMissing('factura');
+        if (!$pedido->puedeAgregarProductos()) {
             return redirect()->route('pedidos.show', $pedido)
-                ->with('error', 'No se pueden agregar productos: la cuenta ya está ' . $pedido->estado . '.');
+                ->with('error', 'No se pueden agregar productos: la cuenta ya está pagada o cerrada.');
         }
 
         // Estado antes de agregar: si ya estaba listo/entregado, el producto

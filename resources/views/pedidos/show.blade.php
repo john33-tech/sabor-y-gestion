@@ -112,8 +112,8 @@
                 </div>
             </div>
 
-            <!-- D4: Agregar productos a la cuenta abierta (hasta que el cajero cobre) -->
-            @if(!in_array($pedido->estado, ['facturado', 'cancelado']) && $platosDisponibles->isNotEmpty())
+            <!-- D4: Agregar productos solo mientras la cuenta NO esté pagada/cerrada -->
+            @if($pedido->puedeAgregarProductos() && $platosDisponibles->isNotEmpty())
             <div x-data="agregarItems()" class="overflow-hidden bg-white shadow-lg rounded-xl">
                 <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-white">
                     <h2 class="text-xl font-semibold text-emerald-700">
