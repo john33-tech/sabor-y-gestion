@@ -11,16 +11,15 @@ class CategoriaSeeder extends Seeder
     public function run(): void
     {
         $categorias = [
-            ['nombre' => 'Entradas', 'icono' => 'fa-bread-slice', 'descripcion' => 'Aperitivos y entradas'],
-            ['nombre' => 'Platos Principales', 'icono' => 'fa-utensils', 'descripcion' => 'Nuestros platos estrella'],
-            ['nombre' => 'Bebidas', 'icono' => 'fa-wine-bottle', 'descripcion' => 'Bebidas refrescantes'],
-            ['nombre' => 'Postres', 'icono' => 'fa-ice-cream', 'descripcion' => 'Dulces tentaciones'],
-            ['nombre' => 'Ensaladas', 'icono' => 'fa-leaf', 'descripcion' => 'Opciones saludables'],
+            ['nombre' => 'Entradas',           'icono' => 'fa-empanada',     'descripcion' => 'Salteñas, tucumanas y empanadas'],
+            ['nombre' => 'Sopas',              'icono' => 'fa-mug-hot',      'descripcion' => 'Sopas y caldos tradicionales'],
+            ['nombre' => 'Platos Principales', 'icono' => 'fa-utensils',     'descripcion' => 'Lo mejor de la cocina criolla boliviana'],
+            ['nombre' => 'Parrillas',          'icono' => 'fa-fire',         'descripcion' => 'Carnes a la brasa y parrilla'],
+            ['nombre' => 'Ensaladas',          'icono' => 'fa-leaf',         'descripcion' => 'Opciones frescas y saludables'],
+            ['nombre' => 'Postres',            'icono' => 'fa-ice-cream',    'descripcion' => 'Dulces típicos para cerrar'],
+            ['nombre' => 'Bebidas',            'icono' => 'fa-wine-bottle',  'descripcion' => 'Refrescos y bebidas tradicionales'],
         ];
-        
-        // Usamos firstOrCreate para que el seeder sea idempotente y no
-        // duplique las categorías si corre varias veces (ej. RUN_SEEDERS=true
-        // en varios deploys consecutivos).
+
         foreach ($categorias as $categoria) {
             Categoria::firstOrCreate(
                 ['nombre' => $categoria['nombre']],

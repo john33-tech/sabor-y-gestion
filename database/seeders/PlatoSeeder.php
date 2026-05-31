@@ -8,180 +8,85 @@ use App\Models\Plato;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
-class PlatoSeeder extends Seeder  // ← Debe ser PlatoSeeder, NO DatabaseSeeder
+/**
+ * Menú profesional de cocina BOLIVIANA (~30 platos). Cada plato tiene su
+ * categoría, precio (Bs), descripción y puntuación. La imagen queda en null;
+ * se sube luego desde Platos → Editar. Idempotente (updateOrCreate por nombre).
+ */
+class PlatoSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        // Obtener las categorías por su nombre para relacionar
         $categorias = Categoria::all()->keyBy('nombre');
-        
-        // Definir los platos con sus respectivas categorías y fechas
-        $platos = [
-            // Entradas
-            [
-                'nombre' => 'Bruschetta Italiana',
-                'precio' => 8.50,
-                'categoria_nombre' => 'Entradas',
-                'imagen' => 'bruschetta.jpg',
-                'disponible' => true,
-                'score' => 4.5,
-                'descripcion' => 'Pan tostado con tomates frescos, albahaca y aceite de oliva',
-                'created_at' => Carbon::now()->subDays(30),
-                'updated_at' => Carbon::now()->subDays(30),
-            ],
-            [
-                'nombre' => 'Nachos con Queso',
-                'precio' => 7.90,
-                'categoria_nombre' => 'Entradas',
-                'imagen' => 'nachos.jpg',
-                'disponible' => true,
-                'score' => 4.2,
-                'descripcion' => 'Totopos de maíz con queso fundido y guacamole',
-                'created_at' => Carbon::now()->subDays(28),
-                'updated_at' => Carbon::now()->subDays(28),
-            ],
-            
-            // Platos Principales
-            [
-                'nombre' => 'Lomo Saltado',
-                'precio' => 18.50,
-                'categoria_nombre' => 'Platos Principales',
-                'imagen' => 'lomo_saltado.jpg',
-                'disponible' => true,
-                'score' => 4.8,
-                'descripcion' => 'Lomo de res salteado con cebolla, tomate y papas fritas',
-                'created_at' => Carbon::now()->subDays(25),
-                'updated_at' => Carbon::now()->subDays(25),
-            ],
-            [
-                'nombre' => 'Pollo a la Brasa',
-                'precio' => 15.90,
-                'categoria_nombre' => 'Platos Principales',
-                'imagen' => 'pollo_brasa.jpg',
-                'disponible' => true,
-                'score' => 4.7,
-                'descripcion' => 'Pollo asado al estilo tradicional con papas y ensalada',
-                'created_at' => Carbon::now()->subDays(27),
-                'updated_at' => Carbon::now()->subDays(27),
-            ],
-            [
-                'nombre' => 'Ceviche Mixto',
-                'precio' => 22.00,
-                'categoria_nombre' => 'Platos Principales',
-                'imagen' => 'ceviche.jpg',
-                'disponible' => true,
-                'score' => 4.9,
-                'descripcion' => 'Pescado y mariscos marinados en limón con ají y camote',
-                'created_at' => Carbon::now()->subDays(20),
-                'updated_at' => Carbon::now()->subDays(20),
-            ],
-            
-            // Bebidas
-            [
-                'nombre' => 'Pisco Sour',
-                'precio' => 12.00,
-                'categoria_nombre' => 'Bebidas',
-                'imagen' => 'pisco_sour.jpg',
-                'disponible' => true,
-                'score' => 4.9,
-                'descripcion' => 'Bebida tradicional peruana con pisco, limón y claras de huevo',
-                'created_at' => Carbon::now()->subDays(29),
-                'updated_at' => Carbon::now()->subDays(29),
-            ],
-            [
-                'nombre' => 'Chicha Morada',
-                'precio' => 5.00,
-                'categoria_nombre' => 'Bebidas',
-                'imagen' => 'chicha_morada.jpg',
-                'disponible' => true,
-                'score' => 4.6,
-                'descripcion' => 'Refresco de maíz morado con especias y frutas',
-                'created_at' => Carbon::now()->subDays(26),
-                'updated_at' => Carbon::now()->subDays(26),
-            ],
-            [
-                'nombre' => 'Limonada Frozen',
-                'precio' => 6.50,
-                'categoria_nombre' => 'Bebidas',
-                'imagen' => 'limonada_frozen.jpg',
-                'disponible' => true,
-                'score' => 4.4,
-                'descripcion' => 'Limonada con hielo raspado y hierba buena',
-                'created_at' => Carbon::now()->subDays(24),
-                'updated_at' => Carbon::now()->subDays(24),
-            ],
-            
-            // Postres
-            [
-                'nombre' => 'Suspiro a la Limeña',
-                'precio' => 9.00,
-                'categoria_nombre' => 'Postres',
-                'imagen' => 'suspiro.jpg',
-                'disponible' => true,
-                'score' => 4.8,
-                'descripcion' => 'Dulce de leche con merengue de vino oporto',
-                'created_at' => Carbon::now()->subDays(23),
-                'updated_at' => Carbon::now()->subDays(23),
-            ],
-            [
-                'nombre' => 'Volcán de Chocolate',
-                'precio' => 8.50,
-                'categoria_nombre' => 'Postres',
-                'imagen' => 'volcan_chocolate.jpg',
-                'disponible' => true,
-                'score' => 4.7,
-                'descripcion' => 'Pastel de chocolate con centro líquido y helado de vainilla',
-                'created_at' => Carbon::now()->subDays(22),
-                'updated_at' => Carbon::now()->subDays(22),
-            ],
-            
-            // Ensaladas
-            [
-                'nombre' => 'Ensalada César',
-                'precio' => 11.50,
-                'categoria_nombre' => 'Ensaladas',
-                'imagen' => 'ensalada_cesar.jpg',
-                'disponible' => true,
-                'score' => 4.3,
-                'descripcion' => 'Lechuga romana, pollo grillado, crutones y salsa césar',
-                'created_at' => Carbon::now()->subDays(21),
-                'updated_at' => Carbon::now()->subDays(21),
-            ],
-            [
-                'nombre' => 'Ensalada de Quinoa',
-                'precio' => 12.00,
-                'categoria_nombre' => 'Ensaladas',
-                'imagen' => 'quinoa.jpg',
-                'disponible' => true,
-                'score' => 4.5,
-                'descripcion' => 'Quinoa orgánica con vegetales asados y vinagreta balsámica',
-                'created_at' => Carbon::now()->subDays(19),
-                'updated_at' => Carbon::now()->subDays(19),
-            ],
-        ];
-        
-        // Insertar los platos (idempotente: updateOrCreate por nombre).
-        foreach ($platos as $plato) {
-            $categoria = $categorias[$plato['categoria_nombre']] ?? null;
 
-            if ($categoria) {
-                Plato::updateOrCreate(
-                    ['nombre' => $plato['nombre']],
-                    [
-                        'precio'       => $plato['precio'],
-                        'categoria_id' => $categoria->id,
-                        'imagen'       => $plato['imagen'],
-                        'disponible'   => $plato['disponible'],
-                        'score'        => $plato['score'],
-                        'descripcion'  => $plato['descripcion'],
-                        'created_at'   => $plato['created_at'],
-                        'updated_at'   => $plato['updated_at'],
-                    ]
-                );
+        $platos = [
+            // ── Entradas ─────────────────────────────────────────────
+            ['nombre' => 'Salteña de Carne',     'precio' => 8.00,  'cat' => 'Entradas', 'score' => 4.9, 'desc' => 'Empanada jugosa de carne con papa, arveja y huevo.'],
+            ['nombre' => 'Salteña de Pollo',     'precio' => 8.00,  'cat' => 'Entradas', 'score' => 4.8, 'desc' => 'Empanada jugosa de pollo con papa y arveja.'],
+            ['nombre' => 'Tucumana',             'precio' => 6.00,  'cat' => 'Entradas', 'score' => 4.6, 'desc' => 'Empanada frita rellena de carne, papa y cebolla.'],
+            ['nombre' => 'Empanada de Queso',    'precio' => 5.00,  'cat' => 'Entradas', 'score' => 4.5, 'desc' => 'Empanada al horno rellena de queso fundido.'],
+            ['nombre' => 'Cuñapé',               'precio' => 4.00,  'cat' => 'Entradas', 'score' => 4.7, 'desc' => 'Pancito de almidón de yuca con queso.'],
+
+            // ── Sopas ────────────────────────────────────────────────
+            ['nombre' => 'Sopa de Maní',         'precio' => 15.00, 'cat' => 'Sopas', 'score' => 4.9, 'desc' => 'Tradicional sopa de maní con carne, papa y fideo.'],
+            ['nombre' => 'Chairo Paceño',        'precio' => 16.00, 'cat' => 'Sopas', 'score' => 4.7, 'desc' => 'Sopa paceña con chuño, carne, mondongo y haba.'],
+            ['nombre' => 'Sopa de Quinua',       'precio' => 14.00, 'cat' => 'Sopas', 'score' => 4.6, 'desc' => 'Sopa nutritiva de quinua con verduras y carne.'],
+            ['nombre' => 'Fricasé',              'precio' => 18.00, 'cat' => 'Sopas', 'score' => 4.8, 'desc' => 'Cerdo en caldo de ají amarillo con mote y chuño.'],
+
+            // ── Platos Principales ───────────────────────────────────
+            ['nombre' => 'Silpancho',            'precio' => 22.00, 'cat' => 'Platos Principales', 'score' => 4.9, 'desc' => 'Carne apanada sobre arroz y papa con huevo frito y ensalada.'],
+            ['nombre' => 'Pique Macho',          'precio' => 30.00, 'cat' => 'Platos Principales', 'score' => 5.0, 'desc' => 'Carne, salchicha y papas fritas con tomate, cebolla y locoto.'],
+            ['nombre' => 'Charquekan',           'precio' => 25.00, 'cat' => 'Platos Principales', 'score' => 4.7, 'desc' => 'Charque desmenuzado con mote, papa, huevo y queso.'],
+            ['nombre' => 'Majadito',             'precio' => 20.00, 'cat' => 'Platos Principales', 'score' => 4.6, 'desc' => 'Arroz graneado con charque y huevo frito.'],
+            ['nombre' => 'Sajta de Pollo',       'precio' => 20.00, 'cat' => 'Platos Principales', 'score' => 4.7, 'desc' => 'Pollo en salsa de ají amarillo con chuño y papa.'],
+            ['nombre' => 'Picante de Pollo',     'precio' => 20.00, 'cat' => 'Platos Principales', 'score' => 4.7, 'desc' => 'Pollo en ají colorado con papa, chuño y arroz.'],
+            ['nombre' => 'Falso Conejo',         'precio' => 18.00, 'cat' => 'Platos Principales', 'score' => 4.5, 'desc' => 'Carne apanada en salsa con arroz, papa y arveja.'],
+            ['nombre' => 'Ranga Ranga',          'precio' => 18.00, 'cat' => 'Platos Principales', 'score' => 4.4, 'desc' => 'Guiso de mondongo en ají colorado con papa.'],
+            ['nombre' => 'Lengua a la Plancha',  'precio' => 24.00, 'cat' => 'Platos Principales', 'score' => 4.6, 'desc' => 'Lengua de res a la plancha con arroz y papa.'],
+
+            // ── Parrillas ────────────────────────────────────────────
+            ['nombre' => 'Pacumutu',             'precio' => 35.00, 'cat' => 'Parrillas', 'score' => 4.8, 'desc' => 'Brocheta gigante de carne con yuca y arroz.'],
+            ['nombre' => 'Chicharrón de Cerdo',  'precio' => 28.00, 'cat' => 'Parrillas', 'score' => 4.9, 'desc' => 'Chicharrón crocante con mote y papa.'],
+            ['nombre' => 'Pollo a la Brasa',     'precio' => 25.00, 'cat' => 'Parrillas', 'score' => 4.7, 'desc' => 'Pollo asado a la brasa con papas fritas.'],
+            ['nombre' => 'Anticucho',            'precio' => 15.00, 'cat' => 'Parrillas', 'score' => 4.6, 'desc' => 'Brocheta a la parrilla con papa y salsa de maní.'],
+
+            // ── Ensaladas ────────────────────────────────────────────
+            ['nombre' => 'Ensalada Criolla',     'precio' => 8.00,  'cat' => 'Ensaladas', 'score' => 4.4, 'desc' => 'Tomate, cebolla y locoto picados con perejil.'],
+            ['nombre' => 'Ensalada de Quinua',   'precio' => 12.00, 'cat' => 'Ensaladas', 'score' => 4.6, 'desc' => 'Quinua con lechuga, tomate y zanahoria.'],
+
+            // ── Postres ──────────────────────────────────────────────
+            ['nombre' => 'Arroz con Leche',      'precio' => 8.00,  'cat' => 'Postres', 'score' => 4.7, 'desc' => 'Postre cremoso de arroz con leche y canela.'],
+            ['nombre' => 'Tawa Tawa',            'precio' => 6.00,  'cat' => 'Postres', 'score' => 4.5, 'desc' => 'Masa frita dulce bañada en miel.'],
+            ['nombre' => 'Flan Casero',          'precio' => 8.00,  'cat' => 'Postres', 'score' => 4.6, 'desc' => 'Flan de huevo con caramelo.'],
+
+            // ── Bebidas ──────────────────────────────────────────────
+            ['nombre' => 'Mocochinchi',          'precio' => 5.00,  'cat' => 'Bebidas', 'score' => 4.6, 'desc' => 'Refresco de durazno deshidratado con canela.'],
+            ['nombre' => 'Api con Pastel',       'precio' => 8.00,  'cat' => 'Bebidas', 'score' => 4.8, 'desc' => 'Bebida caliente de maíz morado con pastel frito.'],
+            ['nombre' => 'Refresco de Linaza',   'precio' => 5.00,  'cat' => 'Bebidas', 'score' => 4.4, 'desc' => 'Refresco de linaza con limón.'],
+            ['nombre' => 'Café con Leche',       'precio' => 5.00,  'cat' => 'Bebidas', 'score' => 4.5, 'desc' => 'Café caliente con leche.'],
+        ];
+
+        $i = 0;
+        foreach ($platos as $p) {
+            $categoria = $categorias[$p['cat']] ?? null;
+            if (!$categoria) {
+                continue;
             }
+            $fecha = Carbon::now()->subDays(30 - ($i % 30));
+            Plato::updateOrCreate(
+                ['nombre' => $p['nombre']],
+                [
+                    'precio'       => $p['precio'],
+                    'categoria_id' => $categoria->id,
+                    'imagen'       => null,
+                    'disponible'   => true,
+                    'score'        => $p['score'],
+                    'descripcion'  => $p['desc'],
+                    'created_at'   => $fecha,
+                    'updated_at'   => $fecha,
+                ]
+            );
+            $i++;
         }
     }
 }
