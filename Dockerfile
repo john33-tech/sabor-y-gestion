@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.6
+
 # ---------------------------------------------------------------------------
 # Sabor & Gestión — Dockerfile para Laravel 12 + PHP 8.2 + Apache
 # Multi-stage: composer (deps PHP) -> node (build Vite) -> runtime (Apache+PHP)

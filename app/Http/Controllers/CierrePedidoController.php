@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Mail;
  * Una mesa puede tener varios pedidos durante la visita; el cierre los
  * factura todos a la vez y libera la mesa.
  */
-class CierreCajaController extends Controller
+class CierrePedidoController extends Controller
 {
     public function index()
     {

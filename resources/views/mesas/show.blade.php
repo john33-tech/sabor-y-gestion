@@ -57,37 +57,56 @@
                     </div>
                 </div>
 
-                @if($mesa->estado == 'reservado' && ($mesa->cliente_reserva || $mesa->hora_reserva))
+                @php
+                    $hasReservaInfo = false;
+                    $clienteName = null;
+                    $clientePhone = null;
+                    $reservaDateTime = null;
+
+                    if (isset($reservaActiva) && $reservaActiva) {
+                        $hasReservaInfo = true;
+                        $clienteName = $reservaActiva->usuario->name ?? 'Desconocido';
+                        $clientePhone = $reservaActiva->usuario->celular ?? 'No especificado';
+                        $reservaDateTime = \Carbon\Carbon::parse($reservaActiva->fecha_reserva->format('Y-m-d') . ' ' . $reservaActiva->hora_reserva);
+                    } elseif ($mesa->cliente_reserva || $mesa->hora_reserva) {
+                        $hasReservaInfo = true;
+                        $clienteName = $mesa->cliente_reserva;
+                        $clientePhone = $mesa->telefono_reserva;
+                        $reservaDateTime = $mesa->hora_reserva ? \Carbon\Carbon::parse($mesa->hora_reserva) : null;
+                    }
+                @endphp
+
+                @if($mesa->estado == 'reservado' && $hasReservaInfo)
                     <div class="border-t-2 border-border pt-4">
                         <h2 class="font-semibold text-text text-lg mb-4">
                             <i class="fas fa-clipboard-list mr-2 text-primary"></i> Información de Reserva
                         </h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            @if($mesa->cliente_reserva)
+                            @if($clienteName)
                                 <div>
                                     <label class="text-muted text-sm">
                                         <i class="fas fa-user mr-1"></i> Cliente
                                     </label>
-                                    <p class="text-text font-medium">{{ $mesa->cliente_reserva }}</p>
+                                    <p class="text-text font-medium">{{ $clienteName }}</p>
                                 </div>
                             @endif
                             
-                            @if($mesa->telefono_reserva)
+                            @if($clientePhone)
                                 <div>
                                     <label class="text-muted text-sm">
                                         <i class="fas fa-phone mr-1"></i> Teléfono
                                     </label>
-                                    <p class="text-text font-medium">{{ $mesa->telefono_reserva }}</p>
+                                    <p class="text-text font-medium">{{ $clientePhone }}</p>
                                 </div>
                             @endif
                             
-                            @if($mesa->hora_reserva)
+                            @if($reservaDateTime)
                                 <div class="md:col-span-2">
                                     <label class="text-muted text-sm">
                                         <i class="far fa-calendar-alt mr-1"></i> Fecha y Hora
                                     </label>
                                     <p class="text-text font-medium">
-                                        {{ \Carbon\Carbon::parse($mesa->hora_reserva)->format('d/m/Y H:i') }}
+                                        {{ $reservaDateTime->format('d/m/Y H:i') }}
                                     </p>
                                 </div>
                             @endif

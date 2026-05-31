@@ -19,7 +19,17 @@ class ComandaController extends Controller
         $query = Pedido::with(['detalles.plato', 'mesa', 'usuario'])
             ->visibleEnCocina();
 
-        // Filtrar por estado si se especifica
+        // Filtro Solo Hoy (grupo)
+        if ($request->boolean('soloHoy')) {
+            $query->whereDate('created_at', now()->today());
+        }
+
+        // Filtro Solo Pendientes (grupo)
+        if ($request->boolean('soloPendientes')) {
+            $query->where('estado', 'pendiente');
+        }
+
+        // Filtrar por estado si se especifica manualmente
         if ($request->filled('estado') && $request->estado != 'todos') {
             $query->where('estado', $request->estado);
         }
@@ -28,17 +38,22 @@ class ComandaController extends Controller
 
         $tipos = Pedido::getTipos();
 
-        // Estadísticas (mismo criterio que la cocina)
+        // Estadísticas: mismo criterio que la cocina (visibleEnCocina) + filtro
+        // opcional "solo hoy" del grupo.
+        $soloHoy = $request->boolean('soloHoy');
+        $statBase = fn() => Pedido::visibleEnCocina()
+            ->when($soloHoy, fn($q) => $q->whereDate('created_at', now()->today()));
         $stats = [
-            'total' => Pedido::visibleEnCocina()->count(),
-            'pendientes' => Pedido::visibleEnCocina()->where('estado', 'pendiente')->count(),
-            'en_preparacion' => Pedido::visibleEnCocina()->where('estado', 'en_preparacion')->count(),
-            'listos' => Pedido::visibleEnCocina()->where('estado', 'listo')->count()
+            'total' => $statBase()->whereIn('estado', ['pendiente', 'en_preparacion', 'listo'])->count(),
+            'pendientes' => $statBase()->where('estado', 'pendiente')->count(),
+            'en_preparacion' => $statBase()->where('estado', 'en_preparacion')->count(),
+            'listos' => $statBase()->where('estado', 'listo')->count()
         ];
         
         // Si es petición AJAX, devolver solo el HTML de las tarjetas
         if ($request->ajax()) {
-            $html = view('comandas.partials.comanda-cards', compact('comandas', 'tipos'))->render();
+            $soloPlatos = $request->boolean('soloPlatos');
+            $html = view('comandas.partials.comanda-cards', compact('comandas', 'tipos', 'soloPlatos'))->render();
             $pagination = $comandas->links()->render();
             
             return response()->json([
@@ -66,6 +81,9 @@ class ComandaController extends Controller
             $comanda->detalles()->update(['estado' => 'en_preparacion']);
             
             DB::commit();
+
+            // Emitir evento
+            event(new \App\Events\PedidoEstadoActualizado($comanda));
             
             return redirect()->route('comandas.index')
                 ->with('success', 'Preparación iniciada para el pedido #' . $comanda->numero_pedido);
@@ -96,7 +114,7 @@ class ComandaController extends Controller
             // Descontar inventario
             foreach ($comanda->detalles as $detalle) {
                 if ($detalle->plato) {
-                    $detalle->plato->descontarInventario();
+                    $detalle->plato->descontarInventario($detalle->cantidad);
                 }
             }
             
@@ -113,6 +131,9 @@ class ComandaController extends Controller
             Cache::forget('low_stock_count_direct');
             
             DB::commit();
+            
+            // Emitir evento para tiempo real
+            event(new \App\Events\PedidoEstadoActualizado($comanda));
             
             return redirect()->route('comandas.index')
                 ->with('success', 'Pedido #' . $comanda->numero_pedido . ' marcado como listo. Inventario actualizado.');
@@ -179,6 +200,9 @@ class ComandaController extends Controller
                 $pedido->save();
             }
         }
+        
+        // Emitir evento para tiempo real
+        event(new \App\Events\PedidoEstadoActualizado($pedido));
         
         return response()->json([
             'success' => true,

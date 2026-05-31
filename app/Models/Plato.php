@@ -39,13 +39,13 @@ class Plato extends Model
     }
     
     // Método: Descontar ingredientes del inventario
-    public function descontarInventario()
+    public function descontarInventario($cantidad = 1)
     {
         foreach ($this->ingredientes as $ingrediente) {
             $inventario = $ingrediente->inventario;
             
             if ($inventario) {
-                $cantidadADescontar = $ingrediente->pivot->cantidad;
+                $cantidadADescontar = $ingrediente->pivot->cantidad * $cantidad;
                 $nuevaCantidad = $inventario->cantidad_actual - $cantidadADescontar;
                 
                 // Actualizar el inventario (no permite negativo)
@@ -56,13 +56,13 @@ class Plato extends Model
     }
     
     // Método para revertir el inventario (cuando se cancela un pedido)
-    public function revertirInventario()
+    public function revertirInventario($cantidad = 1)
     {
         foreach ($this->ingredientes as $ingrediente) {
             $inventario = $ingrediente->inventario;
             
             if ($inventario) {
-                $cantidadARevertir = $ingrediente->pivot->cantidad;
+                $cantidadARevertir = $ingrediente->pivot->cantidad * $cantidad;
                 $nuevaCantidad = $inventario->cantidad_actual + $cantidadARevertir;
                 
                 $inventario->cantidad_actual = $nuevaCantidad;

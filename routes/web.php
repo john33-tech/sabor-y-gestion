@@ -6,20 +6,20 @@ use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\MesaController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\ComandaController;
-// NOTA: DeliveryController/PagoController/CierreCajaController son STUBS que
 // redirigen a otros módulos (Facturas, Pedidos, Reportes). El equipo todavía
 // no implementó estas pantallas. TODO equipo: reemplazar los stubs.
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\FacturaController;
 use App\Http\Controllers\PagoController;
-use App\Http\Controllers\CierreCajaController;
-use App\Http\Controllers\CajaController;
+use App\Http\Controllers\CierrePedidoController;
 use App\Http\Controllers\UsuarioController;
-use App\Http\Controllers\CategoriaController; 
-use App\Http\Controllers\IngredienteController; 
+use App\Http\Controllers\CategoriaController;
+use App\Http\Controllers\IngredienteController;
 use App\Http\Controllers\ReservaMesaController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Cache;
+use App\Http\Controllers\CashClosureController;
+
 
 Route::get('/', function () {
     return view('home');
@@ -36,6 +36,8 @@ Route::get('/inicio', function () {
     return view('home');
 })->name('inicio');
 
+
+
 Route::middleware(['auth'])->group(function () {
     // Dashboards
     Route::get('/dashboard/administrador', [DashboardController::class, 'administrador'])->name('dashboard.administrador');
@@ -43,13 +45,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/cocinero', [DashboardController::class, 'cocinero'])->name('dashboard.cocinero');
     Route::get('/dashboard/cajero', [DashboardController::class, 'cajero'])->name('dashboard.cajero');
     Route::get('/dashboard/cliente', [DashboardController::class, 'cliente'])->name('dashboard.cliente');
-    
+
     // Gestión de Platos (Admin y Cocinero)
     Route::resource('platos', PlatoController::class)->middleware('role:admin,cocinero');
     Route::post('/platos/{plato}/toggle-disponible', [PlatoController::class, 'toggleDisponible'])
         ->name('platos.toggle-disponible')
         ->middleware('role:admin,cocinero');
-    
+
     // Mesas
     Route::resource('mesas', MesaController::class)->middleware('role:admin,mesero');
     // Reserva de mesa: cliente (autoservicio) o personal (admin/mesero a nombre de un cliente)
@@ -64,46 +66,37 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/detalle/{detalle}/actualizar', [ComandaController::class, 'actualizarDetalle'])->name('actualizar-detalle');
         Route::get('/{comanda}/print', [ComandaController::class, 'print'])->name('print');
     });
-    
+
     // Delivery — STUB: DeliveryController redirige a Pedidos.
     Route::resource('delivery', DeliveryController::class)->middleware('role:admin,cajero');
 
     Route::resource('facturas', FacturaController::class)->middleware('role:admin,cajero');
-    Route::post('/facturas/{factura}/pagar', [FacturaController::class, 'pagar'])->name('facturas.pagar')->middleware('role:admin,cajero');
+    Route::post('/facturas/{factura}/pagar', [FacturaController::class, 'pagar'])->name('facturas.pagar')->middleware('role:admin,cajero,cliente');
     Route::post('/facturas/{factura}/anular', [FacturaController::class, 'anular'])->name('facturas.anular')->middleware('role:admin,cajero');
     // Generar QR y enviar factura: el cliente puede invocar sobre su PROPIA factura
     // (validado por ownership en el controller).
     Route::get('/facturas/{factura}/generar-qr', [FacturaController::class, 'generarQr'])->name('facturas.generar-qr')->middleware('role:admin,cajero,cliente');
     Route::post('/facturas/{factura}/enviar-correo', [FacturaController::class, 'enviarPorCorreo'])->name('facturas.enviar-correo')->middleware('role:admin,cajero,cliente');
-    // El PDF se sirve inline (stream): el mesero puede VERLO en el navegador.
+    // El PDF se sirve inline (stream): el mesero puede VERLO en el navegador (tu mejora).
     Route::get('/facturas/{factura}/pdf', [FacturaController::class, 'descargarPdf'])->name('facturas.pdf')->middleware('role:admin,cajero,cliente,mesero');
-    
+
     // Pagos — STUB: redirige a Facturas. PagoQrController (webhook) sigue separado.
     Route::resource('pagos', PagoController::class)->middleware('role:admin,cajero');
 
-    // Cierre de CUENTA por mesa (punto #6): lista mesas con cuenta abierta,
-    // permite ver la comanda consolidada y COBRAR para liberar la mesa.
-    // El cobro se hace en CAJA: solo admin y cajero (el mesero ya no cobra).
-    Route::prefix('cierres')->name('cierres.')->middleware('role:admin,cajero')->group(function () {
-        Route::get('/', [CierreCajaController::class, 'index'])->name('index');
-        Route::get('/mesa/{cierre}', [CierreCajaController::class, 'show'])->name('show');
-        Route::post('/mesa/{cierre}/cerrar', [CierreCajaController::class, 'cerrar'])->name('cerrar');
+    // Cierre de Cuenta por mesa (punto #6): versión del GRUPO (CierrePedidoController).
+    // El arqueo/cierre de caja del grupo está más abajo (CashClosureController, name caja.*).
+    Route::prefix('cierres')->name('cierres.')->middleware('role:admin,cajero,mesero')->group(function () {
+        Route::get('/', [CierrePedidoController::class, 'index'])->name('index');
+        Route::get('/mesa/{cierre}', [CierrePedidoController::class, 'show'])->name('show');
+        Route::post('/mesa/{cierre}/cerrar', [CierrePedidoController::class, 'cerrar'])->name('cerrar');
     });
 
-    // Cierre de CAJA (arqueo del turno): detalle del día + arqueo por método
-    // de pago (efectivo contado vs registrado) + historial de cierres. Solo caja.
-    Route::prefix('caja')->name('caja.')->middleware('role:admin,cajero')->group(function () {
-        Route::get('/', [CajaController::class, 'index'])->name('index');
-        Route::post('/cerrar', [CajaController::class, 'cerrar'])->name('cerrar');
-        Route::get('/{caja}', [CajaController::class, 'show'])->name('show');
-    });
-    
     // Gestión de Categorías (Solo Admin) - CON todas las rutas CRUD
     Route::resource('categorias', CategoriaController::class)->middleware('role:admin');
     Route::post('/categorias/{categoria}/toggle-activo', [CategoriaController::class, 'toggleActivo'])
         ->name('categorias.toggle-activo')
         ->middleware('role:admin');
-    
+
     // Gestión de Ingredientes (Admin y Cocinero) - CON todas las rutas CRUD
     Route::resource('ingredientes', IngredienteController::class)->middleware('role:admin,cocinero');
 
@@ -143,6 +136,42 @@ Route::middleware(['auth'])->group(function () {
     ->name('pedidos.misPedidos')
     ->middleware('auth');
 
+    Route::get('/pedidos/{pedido}/ver-cliente', [PedidoController::class, 'showCliente'])
+    ->name('pedidos.showCliente')
+    ->middleware('role:cliente,admin,cajero,mesero');
+
+
+    Route::get('/pedidos/{pedido}/editar-cliente', [PedidoController::class, 'editCliente'])
+    ->name('pedidos.edit.cliente')
+    ->middleware('role:cliente');
+
+    Route::put('/pedidos/{pedido}/actualizar-cliente', [PedidoController::class, 'updateCliente'])
+    ->name('pedidos.update.cliente')
+    ->middleware('role:cliente');
+
+    Route::delete('/pedidos/{pedido}/cancelar-cliente', [PedidoController::class, 'destroyCliente'])
+    ->name('pedidos.destroy.cliente')
+    ->middleware('role:cliente');
+
+
+
+    Route::get('/cliente', [PedidoController::class, 'pedidoCliente'])
+    ->name('pedidos.cliente')
+    ->middleware('auth');
+
+     Route::post('/pedido/cliente/store', [PedidoController::class, 'storeCliente'])
+    ->name('pedidos.store.cliente')
+    ->middleware('auth');
+
+    Route::get('/misPedidosPendientes', [PedidoController::class, 'misPedidosPendientes'])
+    ->name('pedidos.pendientes.json');
+
+    Route::get('/misPedidosPendientes', [PedidoController::class, 'misPedidosPendientes'])
+    ->name('pedidos.pendientes.json');
+
+    Route::get('/cliente/pedidos/{pedido}/generar-qr', [PedidoController::class, 'generarQrPedido'])
+    ->name('cliente.pedido.generar-qr');
+
 
 
     // Reportes de Consumos
@@ -155,7 +184,30 @@ Route::middleware(['auth'])->group(function () {
 });
 
 
+//Ruta para la notificacion de pedidos
+use App\Models\Pedido;
 
+Route::get('/notificaciones/pedidos', function () {
+
+    $cantidad = Pedido::where('estado', 'pendiente')->count();
+
+    return response()->json([
+        'cantidad' => $cantidad
+    ]);
+
+})->middleware('auth');
+
+Route::middleware(['auth', 'role:cajero,admin'])->prefix('cierres')->name('caja.')->group(function () {
+    Route::get('/historial', [CashClosureController::class, 'index'])->name('index');
+    Route::get('/create', [CashClosureController::class, 'create'])->name('create');
+    Route::post('/', [CashClosureController::class, 'store'])->name('store');
+    Route::get('/{cierre}', [CashClosureController::class, 'show'])->name('show');
+    Route::get('/{cierre}/edit', [CashClosureController::class, 'edit'])->name('edit');
+    Route::put('/{cierre}', [CashClosureController::class, 'update'])->name('update');
+    Route::get('/{cierre}/pdf', [CashClosureController::class, 'generatePdf'])
+        ->name('pdf')
+        ->middleware('role:admin,cajero');
+});
 
 //Rutas de las apis utilizadas
 Route::prefix('api')->group(base_path('routes/api.php'));

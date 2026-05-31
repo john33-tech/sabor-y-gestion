@@ -21,7 +21,7 @@
         </div>
     </div>
 
-    <form action="{{ route('pedidos.update', $pedido) }}" method="POST" id="pedidoForm">
+    <form action="{{ route('pedidos.update.cliente', $pedido)}}" method="POST" id="pedidoForm">
         @csrf
         @method('PUT')
 
@@ -112,39 +112,7 @@
                                                         </p>
                                                     @endif
                                                     
-                                                    @if(!$tieneStock && count($stockInsuficiente) > 0)
-                                                        <div class="mt-2 p-2 rounded text-xs" style="background-color: #FEF2F2; border: 1px solid #FECACA;">
-                                                            <p class="font-semibold text-red-700 mb-1">
-                                                                <i class="fas fa-box mr-1"></i> Stock insuficiente:
-                                                            </p>
-                                                            @foreach($stockInsuficiente as $ingrediente)
-                                                                <p class="text-red-600 ml-2">
-                                                                    • {{ $ingrediente['nombre'] }}: 
-                                                                    disponible {{ number_format($ingrediente['disponible'], 2) }} {{ $ingrediente['unidad'] }} 
-                                                                    (necesita {{ number_format($ingrediente['necesario'], 2) }} {{ $ingrediente['unidad'] }})
-                                                                </p>
-                                                            @endforeach
-                                                        </div>
-                                                    @endif
-                                                    
-                                                    @if($tieneStock && isset($plato->ingredientes) && count($plato->ingredientes) > 0)
-                                                        <div class="mt-2">
-                                                            <div class="flex flex-wrap gap-1 text-xs">
-                                                                @foreach($plato->ingredientes as $ingrediente)
-                                                                    @php
-                                                                        $inventario = $ingrediente->inventario;
-                                                                        $stockActual = $inventario?->cantidad_actual ?? 0;
-                                                                        $stockMinimo = $inventario?->stock_minimo ?? 0;
-                                                                        $isLowStock = $stockActual <= $stockMinimo;
-                                                                    @endphp
-                                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded-full {{ $isLowStock ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700' }}" style="font-size: 10px;">
-                                                                        <i class="fas {{ $isLowStock ? 'fa-exclamation-triangle' : 'fa-check-circle' }} mr-0.5 text-xs"></i>
-                                                                        {{ $ingrediente->nombre }}: {{ number_format($stockActual, 0) }} {{ $ingrediente->unidad_medida }}
-                                                                    </span>
-                                                                @endforeach
-                                                            </div>
-                                                        </div>
-                                                    @endif
+
                                                 </div>
                                                 
                                                 <button type="button"
@@ -181,34 +149,6 @@
                     </div>
 
                     <div class="p-4" style="background-color: #FFFFFF;">
-                        <!-- Estado del Pedido -->
-                        <div class="mb-6">
-                            <label class="block text-sm font-medium mb-2" style="color: #111827;">
-                                <i class="fas fa-tag mr-1"></i> Estado del Pedido
-                            </label>
-                            <select name="estado" id="estadoPedido" class="w-full px-3 py-2 rounded-lg outline-none transition-all"
-                                style="border: 1px solid #FED7AA; background-color: #FFFFFF; color: #111827;">
-                                <option value="pendiente" {{ $pedido->estado == 'pendiente' ? 'selected' : '' }}>
-                                    ⏳ Pendiente
-                                </option>
-                                <option value="en_preparacion" {{ $pedido->estado == 'en_preparacion' ? 'selected' : '' }}>
-                                    🔥 En Preparación
-                                </option>
-                                <option value="listo" {{ $pedido->estado == 'listo' ? 'selected' : '' }}>
-                                    ✅ Listo
-                                </option>
-                                <option value="entregado" {{ $pedido->estado == 'entregado' ? 'selected' : '' }}>
-                                    📦 Entregado
-                                </option>
-                                <option value="cancelado" {{ $pedido->estado == 'cancelado' ? 'selected' : '' }}>
-                                    ❌ Cancelado
-                                </option>
-                            </select>
-                            <p class="text-xs mt-1" style="color: #78716C;">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Cambiar estado también actualizará el inventario automáticamente
-                            </p>
-                        </div>
 
                         @if($pedido->tipo_pedido == 'delivery')
                         <!-- MAPA Delivery -->
@@ -219,7 +159,7 @@
                             <div id="map" style="height: 350px;" class="rounded-lg border z-0"></div>
                             <input type="hidden" name="latitud" id="latitud" value="{{ $pedido->latitud }}">
                             <input type="hidden" name="longitud" id="longitud" value="{{ $pedido->longitud }}">
-                            <div class="mt-2 text-xs text-gray-500">Haz clic en el mapa para actualizar la ubicación.</div>
+                            <div class="mt-2 text-xs text-gray-500">Haz clic en el mapa para actualizar tu ubicación.</div>
                         </div>
                         @endif
 
@@ -247,7 +187,7 @@
                         </div>
 
                         <!-- Descuento -->
-                        <div class="mb-6">
+                        <div class="mb-6 hidden">
                             <label class="block text-sm font-medium mb-1" style="color: #111827;">
                                 <i class="fas fa-tag mr-1"></i> Descuento (Bs.)
                             </label>
@@ -262,6 +202,10 @@
                                 <div class="flex justify-between text-sm">
                                     <span style="color: #78716C;">Subtotal:</span>
                                     <span id="subtotal" class="font-semibold" style="color: #111827;">Bs. 0.00</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span style="color: #78716C;">IVA (13%):</span>
+                                    <span id="impuesto" class="font-semibold" style="color: #111827;">Bs. 0.00</span>
                                 </div>
                                 <div class="flex justify-between text-sm">
                                     <span style="color: #78716C;">Descuento:</span>
@@ -398,10 +342,11 @@ function updateItemNotes(index, notes) {
 function updateTotals() {
     let subtotal = items.reduce((sum, item) => sum + (item.precio_unitario * item.cantidad), 0);
     let descuento = parseFloat(document.querySelector('input[name="descuento"]').value) || 0;
-    let impuesto = 0; // IVA desactivado
-    let total = subtotal - descuento;
+    let impuesto = subtotal * 0.13;
+    let total = subtotal + impuesto - descuento;
     
     document.getElementById('subtotal').innerHTML = `Bs. ${subtotal.toFixed(2)}`;
+    document.getElementById('impuesto').innerHTML = `Bs. ${impuesto.toFixed(2)}`;
     document.getElementById('descuentoDisplay').innerHTML = `Bs. ${descuento.toFixed(2)}`;
     document.getElementById('total').innerHTML = `Bs. ${total.toFixed(2)}`;
 }

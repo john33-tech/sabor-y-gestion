@@ -22,17 +22,17 @@ class FacturaController extends Controller
             ->where('estado', 'pendiente')
             ->orderBy('created_at', 'desc')
             ->get();
-            
+
         $pagadas = Factura::with(['pedido', 'usuario'])
             ->where('estado', 'pagada')
             ->orderBy('created_at', 'desc')
             ->get();
-            
+
         $anuladas = Factura::with(['pedido', 'usuario'])
             ->where('estado', 'anulada')
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         return view('facturas.index', compact('pendientes', 'pagadas', 'anuladas'));
     }
 
@@ -46,7 +46,7 @@ class FacturaController extends Controller
         ]);
 
         $pedido = Pedido::findOrFail($request->pedido_id);
-        
+
         // Usar la lógica del modelo Pedido para generar o actualizar la factura
         $factura = $pedido->generarOrUpdateFactura();
 
@@ -95,6 +95,11 @@ class FacturaController extends Controller
      */
     public function pagar(Request $request, Factura $factura)
     {
+        // Seguridad: Si es cliente, solo puede pagar sus propias facturas
+        if (Auth::user()->role === 'cliente' && $factura->pedido->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
         $request->validate([
             'metodo_pago' => 'sometimes|required|in:efectivo,tarjeta,qr,transferencia',
         ]);
@@ -110,7 +115,7 @@ class FacturaController extends Controller
             $factura->pedido->update(['estado' => Pedido::ESTADO_FACTURADO]);
         }
 
-        // Avisar en vivo (mesero/cajero/admin) que esta cuenta se pagó.
+        // Avisar en vivo (mesero/cajero/admin) que esta cuenta se pagó (tu mejora).
         // El pago ya quedó guardado; si Reverb falla, no rompemos la respuesta.
         try {
             $factura->loadMissing('pedido.mesa');
@@ -123,6 +128,11 @@ class FacturaController extends Controller
             ]));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('No se pudo emitir CuentaPagada (factura): ' . $e->getMessage());
+        }
+
+        // Respuesta AJAX/JSON del grupo (p. ej. cobro desde modal).
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Factura pagada']);
         }
 
         return redirect()->back()->with('success', 'Factura ' . $factura->numero_factura . ' marcada como PAGADA');
@@ -154,6 +164,11 @@ class FacturaController extends Controller
      */
     public function generarQr(Factura $factura)
     {
+        // Seguridad: Si es cliente, solo puede ver sus propias facturas
+        if (Auth::user()->role === 'cliente' && $factura->pedido->usuario_id !== Auth::id()) {
+            return response()->json(['error' => 'No autorizado'], 403);
+        }
+
         $factura->load('pedido');
 
         // Cliente solo puede generar QR de su propia factura
@@ -177,9 +192,9 @@ class FacturaController extends Controller
             'pedido'    => $factura->pedido_id,
         ];
 
-        // QR apunta a nuestra propia página de pago (autocontenida): no
-        // dependemos de un sistema externo que pueda fallar.
-        $url = url('/pago-externo') . '?' . http_build_query($params);
+
+        $baseUrl = 'https://proyecto-tis-umss.infinityfreeapp.com';
+        $url = $baseUrl . '/?' . http_build_query($params);
 
         // Generar QR 300x300 en formato SVG
         $qrSvg = (string) QrCode::size(300)

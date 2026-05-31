@@ -1,12 +1,12 @@
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex">
                 <!-- Logo -->
-                <div class="shrink-0 flex items-center">
+                <div class="flex items-center shrink-0">
                     <a href="{{ route('dashboard') }}">
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                        <x-application-logo class="block w-auto text-gray-800 fill-current h-9" />
                     </a>
                 </div>
 
@@ -15,18 +15,53 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
+
+                    @auth
+                        @if(in_array(Auth::user()->role, ['cajero', 'admin']))
+                            @php
+                                $openClosure = \App\Models\CashClosure::where('status', 'Open')->first();
+                            @endphp
+
+                            @if(!$openClosure)
+                                <x-nav-link :href="route('caja.create')" :active="request()->routeIs('caja.create')">
+                                    {{ __('Abrir Caja') }}
+                                </x-nav-link>
+                            @else
+                                <x-nav-link :href="route('caja.show', $openClosure)" :active="request()->routeIs('caja.show')">
+                                    {{ __('Cerrar Caja') }}
+                                </x-nav-link>
+                            @endif
+                        @endif
+                    @endauth
                 </div>
+                @auth
+                    @if(in_array(Auth::user()->role, ['cajero', 'admin']))
+                        @php
+                            $openClosure = \App\Models\CashClosure::where('status', 'Open')->first();
+                        @endphp
+                        @if($openClosure)
+                            <div class="hidden ml-4 text-sm text-yellow-600 sm:flex sm:items-center dark:text-yellow-400">
+                                <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Caja abierta por {{ $openClosure->user->name }}
+                                <a href="{{ route('caja.show', $openClosure) }}" class="ml-1 underline hover:text-yellow-800">Ver</a>
+                            </div>
+                        @endif
+                    @endif
+                @endauth
+
             </div>
 
             <!-- Settings Dropdown -->
             <div class="hidden sm:flex sm:items-center sm:ms-6">
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
-                        <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
+                        <button class="inline-flex items-center px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out bg-white border border-transparent rounded-md hover:text-gray-700 focus:outline-none">
                             <div>{{ Auth::user()->name }}</div>
 
                             <div class="ms-1">
-                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                <svg class="w-4 h-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                                 </svg>
                             </div>
@@ -53,9 +88,9 @@
             </div>
 
             <!-- Hamburger -->
-            <div class="-me-2 flex items-center sm:hidden">
-                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+            <div class="flex items-center -me-2 sm:hidden">
+                <button @click="open = ! open" class="inline-flex items-center justify-center p-2 text-gray-400 transition duration-150 ease-in-out rounded-md hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500">
+                    <svg class="w-6 h-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                         <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -70,13 +105,50 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+
+            @auth
+                @if(in_array(Auth::user()->role, ['cajero', 'admin']))
+                    @php
+                        $openClosure = \App\Models\CashClosure::where('status', 'Open')->first();
+                    @endphp
+                    @if(!$openClosure)
+                        <x-responsive-nav-link :href="route('caja.create')" :active="request()->routeIs('caja.create')">
+                            {{ __('Abrir Caja') }}
+                        </x-responsive-nav-link>
+                    @else
+                        <x-responsive-nav-link :href="route('caja.show', $openClosure)" :active="request()->routeIs('caja.show')">
+                            {{ __('Cerrar Caja') }}
+                        </x-responsive-nav-link>
+                    @endif
+                @endif
+            @endauth
         </div>
+
+        @auth
+            @if(in_array(Auth::user()->role, ['cajero', 'admin']))
+                @php
+                    $openClosure = \App\Models\CashClosure::where('status', 'Open')->first();
+                @endphp
+                @if($openClosure)
+                    <div class="px-4 py-2 text-sm text-yellow-600 border-l-4 border-yellow-400 dark:text-yellow-400">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Caja abierta por {{ $openClosure->user->name }}</span>
+                        </div>
+                        <a href="{{ route('caja.show', $openClosure) }}" class="block mt-1 text-xs underline ml-7">Ver detalles</a>
+                    </div>
+                @endif
+            @endif
+        @endauth
+
 
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200">
             <div class="px-4">
-                <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
-                <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
+                <div class="text-base font-medium text-gray-800">{{ Auth::user()->name }}</div>
+                <div class="text-sm font-medium text-gray-500">{{ Auth::user()->email }}</div>
             </div>
 
             <div class="mt-3 space-y-1">

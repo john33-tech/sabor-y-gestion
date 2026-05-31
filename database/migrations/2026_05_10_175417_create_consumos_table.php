@@ -24,7 +24,7 @@ return new class extends Migration
             $table->json('detalles'); // Guardar los platos consumidos
             $table->dateTime('fecha_consumo');
             $table->timestamps();
-            
+
             $table->index(['fecha_consumo', 'tipo_pedido', 'estado']);
         });
     }

@@ -15,21 +15,20 @@
 <div class="space-y-6">
 
     <!-- Encabezado -->
-    <div class="flex justify-between items-center">
+    <div class="flex items-center justify-between">
 
         <h1 class="text-3xl font-bold text-primary">
 
-            <i class="fas fa-shopping-cart mr-2"></i>
-            Mis Pedidos
+            <i class="mr-2 fas fa-shopping-cart"></i>
+            Mis Pedidos Cliente
 
         </h1>
 
-        <a href="{{ route('pedidos.create') }}"
-           class="bg-primary hover:bg-secondary text-white px-5 py-3 rounded-lg shadow-lg transition">
+        <a href="{{ route('pedidos.cliente') }}"
+           class="px-5 py-3 text-white transition rounded-lg shadow-lg bg-primary hover:bg-secondary">
 
-            <i class="fas fa-plus mr-2"></i>
+            <i class="mr-2 fas fa-plus"></i>
             Nuevo Pedido
-
         </a>
 
     </div>
@@ -37,7 +36,7 @@
     <!-- Mensajes -->
     @if(session('success'))
 
-        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+        <div class="px-4 py-3 text-green-700 bg-green-100 border border-green-400 rounded">
 
             {{ session('success') }}
 
@@ -47,7 +46,7 @@
 
     @if(session('error'))
 
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        <div class="px-4 py-3 text-red-700 bg-red-100 border border-red-400 rounded">
 
             {{ session('error') }}
 
@@ -56,7 +55,7 @@
     @endif
 
     <!-- Tabla -->
-    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+    <div class="overflow-hidden bg-white shadow-lg rounded-xl">
 
         <div class="overflow-x-auto">
 
@@ -64,7 +63,7 @@
 
                 <thead class="bg-gray-100">
 
-                    <tr class="text-left text-sm uppercase text-gray-600">
+                    <tr class="text-sm text-left text-gray-600 uppercase">
 
                         <th class="px-6 py-4">Pedido</th>
 
@@ -88,7 +87,7 @@
 
                     @forelse($pedidos as $pedido)
 
-                        <tr class="hover:bg-gray-50 transition">
+                        <tr class="transition hover:bg-gray-50">
 
                             <!-- Número Pedido -->
                             <td class="px-6 py-4">
@@ -143,7 +142,7 @@
                                        target="_blank"
                                        class="text-blue-600 hover:underline">
 
-                                        <i class="fas fa-map-marker-alt mr-1"></i>
+                                        <i class="mr-1 fas fa-map-marker-alt"></i>
                                         Ver Mapa
 
                                     </a>
@@ -168,32 +167,44 @@
                             </td>
 
                             <!-- Acciones -->
-                            <td class="px-6 py-4">
+                            <td class="px-4 py-2">
+                                <div class="flex gap-2">
 
-                                <div class="flex justify-center gap-2">
-
-                                    <!-- Ver -->
-                                    <a href="{{ route('pedidos.show', $pedido) }}"
-                                       class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg text-sm">
-
-                                        <i class="fas fa-eye"></i>
-
+                                    {{-- VER --}}
+                                    <a href="{{ route('pedidos.showCliente', $pedido) }}"
+                                    class="px-3 py-1 text-sm text-white rounded"
+                                    style="background-color:#3B82F6;">
+                                    <i class="fas fa-eye"></i>
                                     </a>
 
-                                    <!-- Editar -->
+                                    {{-- EDITAR --}}
                                     @if(in_array($pedido->estado, ['pendiente', 'en_preparacion']))
+                                    <a href="{{ route('pedidos.edit.cliente', $pedido) }}"
+                                    class="px-3 py-1 text-sm text-white rounded"
+                                      style="background-color:#F59E0B;">
+                                    <i class="fas fa-edit"></i>
+                                    </a>
+                                    @endif
 
-                                        <a href="{{ route('pedidos.edit', $pedido) }}"
-                                           class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm">
+                                    {{-- CANCELAR --}}
+                                    @if($pedido->estado == 'pendiente')
+                                    <form action="{{ route('pedidos.destroy.cliente', $pedido) }}"
+                                     method="POST"
+                                      onsubmit="return confirm('¿Cancelar este pedido?')">
 
-                                            <i class="fas fa-edit"></i>
+                                         @csrf
+                                         @method('DELETE')
 
-                                        </a>
+                                         <button type="submit"
+                                         class="px-3 py-1 text-sm text-white rounded"
+                                         style="background-color:#EF4444;">
+                                         <i class="fas fa-trash"></i>
+                                         </button>
 
+                                    </form>
                                     @endif
 
                                 </div>
-
                             </td>
 
                         </tr>
@@ -204,16 +215,16 @@
 
                             <td colspan="7" class="px-6 py-10 text-center">
 
-                                <i class="fas fa-shopping-cart text-5xl text-gray-300 mb-4"></i>
+                                <i class="mb-4 text-5xl text-gray-300 fas fa-shopping-cart"></i>
 
-                                <p class="text-gray-500 mb-4">
+                                <p class="mb-4 text-gray-500">
 
                                     No tienes pedidos registrados.
 
                                 </p>
 
-                                <a href="{{ route('pedidos.create') }}"
-                                   class="bg-primary hover:bg-secondary text-white px-5 py-3 rounded-lg shadow">
+                                <a href="{{ route('pedidos.cliente')  }}"
+                                   class="px-5 py-3 text-white rounded-lg shadow bg-primary hover:bg-secondary">
 
                                     Realizar mi primer pedido
 

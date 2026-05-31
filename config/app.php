@@ -123,4 +123,8 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'ruc' => env('APP_RUC', ''),
+    'phone' => env('APP_PHONE', ''),
+    'address' => env('APP_ADDRESS', ''),
+
 ];

@@ -43,7 +43,14 @@ class MesaController extends Controller
 
     public function show(Mesa $mesa)
     {
-        return view('mesas.show', compact('mesa'));
+        $reservaActiva = \App\Models\Reserva::with('usuario')
+            ->where('mesa_id', $mesa->id)
+            ->whereIn('estado', ['pendiente', 'confirmada'])
+            ->orderBy('fecha_reserva', 'asc')
+            ->orderBy('hora_reserva', 'asc')
+            ->first();
+            
+        return view('mesas.show', compact('mesa', 'reservaActiva'));
     }
 
     public function edit(Mesa $mesa)

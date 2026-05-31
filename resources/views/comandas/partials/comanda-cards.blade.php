@@ -36,6 +36,7 @@
     <!-- Cuerpo -->
     <div class="p-4">
         <!-- Información del Pedido -->
+        @if(!isset($soloPlatos) || !$soloPlatos)
         <div class="mb-3 pb-3 border-b" style="border-color: #FED7AA;">
             <div class="grid grid-cols-2 gap-2 text-sm">
                 <div>
@@ -73,6 +74,7 @@
                 @endif
             </div>
         </div>
+        @endif
 
         <!-- Lista de Platos -->
         <div class="mb-3">
