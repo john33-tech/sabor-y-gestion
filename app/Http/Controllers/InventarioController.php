@@ -22,8 +22,12 @@ class InventarioController extends Controller
         $stockBajo = $ingredientes->filter(fn($i) => $i->hasLowStock())->count();
         $stockAgotado = $ingredientes->filter(fn($i) => $i->cantidad_actual <= 0)->count();
 
-        // Platos (con receta) para la reposición por producción.
-        $platos = \App\Models\Plato::has('ingredientes')->orderBy('nombre')->get(['id', 'nombre']);
+        // Platos (con receta) para la reposición por producción. Incluye sus
+        // ingredientes con la cantidad de la receta (pivot) para el cálculo en vivo.
+        $platos = \App\Models\Plato::has('ingredientes')
+            ->with('ingredientes:id,nombre,unidad_medida')
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
 
         return view('inventario.index', compact(
             'ingredientes',

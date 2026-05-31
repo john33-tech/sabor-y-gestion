@@ -23,29 +23,81 @@
     </div>
     @endif
 
-    {{-- Reposición por PRODUCCIÓN: suma al inventario lo justo para producir N unidades de un plato --}}
-    <div class="bg-white border border-emerald-200 rounded-lg shadow-sm p-4">
+    {{-- Reposición por PRODUCCIÓN: Calcular (preview) y luego Reponer --}}
+    @php
+        $platosData = $platos->map(fn($p) => [
+            'id' => $p->id,
+            'nombre' => $p->nombre,
+            'ingredientes' => $p->ingredientes->map(fn($i) => [
+                'nombre'   => $i->nombre,
+                'unidad'   => $i->unidad_medida,
+                'cantidad' => (float) $i->pivot->cantidad,
+            ])->values(),
+        ])->values();
+    @endphp
+    <div class="bg-white border border-emerald-200 rounded-lg shadow-sm p-4" x-data="reposicionProduccion()">
         <h2 class="font-semibold text-gray-800 mb-1"><i class="fas fa-calculator text-emerald-600 mr-1"></i> Reponer ingredientes por producción</h2>
-        <p class="text-xs text-gray-500 mb-3">Elige un plato y cuántas unidades vas a preparar; el sistema suma al inventario los ingredientes necesarios (receta × cantidad).</p>
-        <form action="{{ route('inventario.reponer-producto') }}" method="POST" class="flex flex-col sm:flex-row gap-3 sm:items-end">
+        <p class="text-xs text-gray-500 mb-3">Elige un plato y cuántas unidades vas a preparar, presiona <strong>Calcular</strong> para ver lo necesario, y luego <strong>Reponer</strong> para sumarlo al inventario.</p>
+
+        <form action="{{ route('inventario.reponer-producto') }}" method="POST">
             @csrf
-            <div class="flex-1">
-                <label class="block text-sm font-medium text-gray-600 mb-1">Plato</label>
-                <select name="plato_id" required class="w-full border-gray-300 rounded-lg shadow-sm focus:border-primary focus:ring-primary">
-                    <option value="">Selecciona un plato…</option>
-                    @foreach($platos as $pl)
-                        <option value="{{ $pl->id }}">{{ $pl->nombre }}</option>
-                    @endforeach
-                </select>
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-end">
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Plato</label>
+                    <select name="plato_id" x-model="platoId" @change="preview=null" required class="w-full border-gray-300 rounded-lg shadow-sm focus:border-primary focus:ring-primary">
+                        <option value="">Selecciona un plato…</option>
+                        @foreach($platos as $pl)
+                            <option value="{{ $pl->id }}">{{ $pl->nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="w-full sm:w-44">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Unidades a producir</label>
+                    <input type="number" name="cantidad" x-model="cantidad" @input="preview=null" min="1" max="1000" required class="w-full border-gray-300 rounded-lg shadow-sm focus:border-primary focus:ring-primary">
+                </div>
+                <button type="button" @click="calcular()" class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition whitespace-nowrap">
+                    <i class="fas fa-calculator mr-1"></i> Calcular
+                </button>
             </div>
-            <div class="w-full sm:w-44">
-                <label class="block text-sm font-medium text-gray-600 mb-1">Unidades a producir</label>
-                <input type="number" name="cantidad" min="1" max="1000" value="10" required class="w-full border-gray-300 rounded-lg shadow-sm focus:border-primary focus:ring-primary">
-            </div>
-            <button type="submit" class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition whitespace-nowrap">
-                <i class="fas fa-plus mr-1"></i> Calcular y reponer
-            </button>
+
+            {{-- Preview del cálculo + botón Reponer (aparece tras Calcular) --}}
+            <template x-if="preview && preview.length">
+                <div class="mt-4 border-t border-gray-100 pt-3">
+                    <p class="text-sm text-gray-600 mb-2">Para <strong x-text="cantidad"></strong> unidad(es) se necesita:</p>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <template x-for="item in preview" :key="item.nombre">
+                            <span class="px-2 py-1 rounded-full text-xs bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                +<span x-text="item.total"></span><span x-text="item.unidad"></span> <span x-text="item.nombre"></span>
+                            </span>
+                        </template>
+                    </div>
+                    <button type="submit" class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition">
+                        <i class="fas fa-plus mr-1"></i> Reponer al inventario
+                    </button>
+                </div>
+            </template>
         </form>
+
+        <script>
+            function reposicionProduccion() {
+                return {
+                    platos: @json($platosData),
+                    platoId: '',
+                    cantidad: 10,
+                    preview: null,
+                    calcular() {
+                        const p = this.platos.find(x => String(x.id) === String(this.platoId));
+                        const n = parseInt(this.cantidad) || 0;
+                        if (!p || n < 1) { this.preview = null; return; }
+                        this.preview = p.ingredientes.map(i => ({
+                            nombre: i.nombre,
+                            unidad: i.unidad,
+                            total: Math.round(i.cantidad * n),
+                        }));
+                    }
+                }
+            }
+        </script>
     </div>
 
     <!-- Tarjetas de estadísticas -->
