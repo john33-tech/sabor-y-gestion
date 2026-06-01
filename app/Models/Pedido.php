@@ -41,7 +41,7 @@ class Pedido extends Model
         'cuenta_solicitada',
         'cuenta_solicitada_at',
         'subtotal',
-        'impuesto',
+        // 'impuesto' eliminado: la columna no existe en la tabla pedidos (IVA desactivado).
         'descuento',
         'total',
         'notas',
@@ -54,7 +54,6 @@ class Pedido extends Model
 
     protected $casts = [
         'subtotal' => 'decimal:2',
-        'impuesto' => 'decimal:2',
         'descuento' => 'decimal:2',
         'total' => 'decimal:2',
         'fecha_hora_estimada' => 'datetime',
@@ -160,7 +159,8 @@ class Pedido extends Model
     public function calcularTotales()
     {
         $this->subtotal = $this->detalles->sum('subtotal');
-        $this->impuesto = 0; // IVA desactivado: no se cobra (total = subtotal - descuento)
+        // IVA desactivado. NO escribimos 'impuesto' en pedidos: la columna no
+        // existe en la BD del grupo (total = subtotal - descuento).
         $this->total = $this->subtotal - $this->descuento;
         $this->save();
     }
