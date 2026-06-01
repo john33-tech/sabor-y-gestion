@@ -193,8 +193,12 @@ class FacturaController extends Controller
         ];
 
 
-        $baseUrl = 'https://proyecto-tis-umss.infinityfreeapp.com';
-        $url = $baseUrl . '/?' . http_build_query($params);
+        // El QR apunta a la página de pago DENTRO de esta misma app (/pago-externo),
+        // así el cliente escanea, paga y la confirmación llega directo a este
+        // servidor (sin depender de un sitio externo). Se puede sobreescribir con
+        // APP_URL_QR si se quiere usar otro simulador.
+        $baseUrl = rtrim(env('APP_URL_QR', config('app.url')), '/');
+        $url = $baseUrl . '/pago-externo?' . http_build_query($params);
 
         // Generar QR 300x300 en formato SVG
         $qrSvg = (string) QrCode::size(300)
