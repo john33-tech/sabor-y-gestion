@@ -72,7 +72,7 @@ class FacturaController extends Controller
             'cliente_nombre' => 'required|string|max:255',
             'cliente_nit' => 'nullable|string|max:20',
             'cliente_telefono' => 'nullable|string|max:20',
-            'descuento' => 'required|numeric|min:0|max:' . ($factura->subtotal + $factura->impuesto),
+            'descuento' => 'required|numeric|min:0|max:' . $factura->subtotal,
             'metodo_pago' => 'required|in:efectivo,tarjeta,qr,transferencia',
         ]);
 
@@ -214,7 +214,7 @@ class FacturaController extends Controller
                 'total'           => number_format($factura->total, 2),
                 'descuento'       => number_format($factura->descuento, 2),
                 'subtotal'        => number_format($factura->subtotal, 2),
-                'impuesto'        => number_format($factura->impuesto, 2),
+                'impuesto'        => '0.00', // IVA desactivado
                 'pedido_id'       => $factura->pedido_id,
             ],
         ]);

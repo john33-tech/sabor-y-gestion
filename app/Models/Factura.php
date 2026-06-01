@@ -19,7 +19,7 @@ class Factura extends Model
         'cliente_telefono',
         'cliente_email',
         'subtotal',
-        'impuesto',
+        // 'impuesto' eliminado: la columna no existe en facturas (IVA desactivado).
         'descuento',
         'total',
         'metodo_pago',
@@ -31,7 +31,6 @@ class Factura extends Model
 
     protected $casts = [
         'subtotal' => 'decimal:2',
-        'impuesto' => 'decimal:2',
         'descuento' => 'decimal:2',
         'total' => 'decimal:2',
         'fecha_emision' => 'datetime'
@@ -86,7 +85,8 @@ class Factura extends Model
      */
     public function recalculateTotal()
     {
-        $this->total = ($this->subtotal + $this->impuesto) - $this->descuento;
+        // IVA desactivado: total = subtotal - descuento (sin impuesto).
+        $this->total = $this->subtotal - $this->descuento;
         return $this;
     }
 

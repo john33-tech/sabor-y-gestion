@@ -165,7 +165,7 @@ class ComandaController extends Controller
             'tipo_pedido' => $pedido->tipo_pedido,
             'estado' => 'completado',
             'subtotal' => $pedido->subtotal,
-            'impuesto' => $pedido->impuesto,
+            'impuesto' => 0, // IVA desactivado (pedidos no tiene columna impuesto)
             'descuento' => $pedido->descuento,
             'total' => $pedido->total,
             'detalles' => $detalles,

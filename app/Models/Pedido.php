@@ -234,7 +234,7 @@ public function generarOrUpdateFactura()
     $factura->cliente_nombre = $this->cliente_nombre ?? 'Cliente';
     $factura->cliente_telefono = $this->cliente_telefono;
     $factura->subtotal = $this->subtotal;
-    $factura->impuesto = $this->impuesto;
+    // IVA desactivado: la columna 'impuesto' no existe en facturas.
     $factura->descuento = $this->descuento;
     $factura->total = $this->total;
     //dd($factura->toArray()); // El código se detiene AQUÍ
