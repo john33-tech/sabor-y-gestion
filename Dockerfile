@@ -36,6 +36,14 @@ RUN npm ci
 COPY . .
 COPY --from=vendor /app/vendor ./vendor
 
+# Variables de Pusher para el build de Vite (se compilan en el JS del cliente).
+# Se inyectan desde GitHub Actions (--build-arg). Con esto el front se conecta
+# a Pusher cloud (tiempo real real en producción/AKS).
+ARG VITE_PUSHER_APP_KEY
+ARG VITE_PUSHER_APP_CLUSTER
+ENV VITE_PUSHER_APP_KEY=${VITE_PUSHER_APP_KEY}
+ENV VITE_PUSHER_APP_CLUSTER=${VITE_PUSHER_APP_CLUSTER}
+
 RUN npm run build
 
 # ============================================================================

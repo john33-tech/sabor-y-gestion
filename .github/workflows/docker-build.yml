@@ -58,3 +58,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # Pusher cloud para el tiempo real (la KEY es pública: va en el JS del
+          # cliente, no es secreto; el SECRET sí va solo en el backend/Secret K8s).
+          build-args: |
+            VITE_PUSHER_APP_KEY=a42d53009b7b282bc22d
+            VITE_PUSHER_APP_CLUSTER=us2
