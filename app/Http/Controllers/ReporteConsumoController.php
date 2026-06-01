@@ -121,7 +121,7 @@ class ReporteConsumoController extends Controller
                 $consumo->usuario->name ?? 'N/A',
                 $consumo->fecha_consumo->format('d/m/Y H:i'),
                 $consumo->subtotal,
-                $consumo->impuesto,
+                0, // Impuesto: IVA desactivado (columna no existe)
                 $consumo->descuento,
                 $consumo->total
             ]);

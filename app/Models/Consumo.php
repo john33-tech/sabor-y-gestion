@@ -14,17 +14,16 @@ class Consumo extends Model
         'tipo_pedido',
         'estado',
         'subtotal',
-        'impuesto',
+        // 'impuesto' eliminado: la columna no existe en consumos (IVA desactivado).
         'descuento',
         'total',
         'detalles',
         'fecha_consumo'
     ];
-    
+
     protected $casts = [
         'detalles' => 'array',
         'subtotal' => 'decimal:2',
-        'impuesto' => 'decimal:2',
         'descuento' => 'decimal:2',
         'total' => 'decimal:2',
         'fecha_consumo' => 'datetime'
