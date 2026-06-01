@@ -26,18 +26,12 @@ class CierrePedidoController extends Controller
 {
     public function index()
     {
+        // La mesa aparece en Caja en cuanto tiene cuenta abierta: factura
+        // PENDIENTE (por cobrar) o ya PAGADA por QR (falta cerrar/liberar mesa).
         $pedidosAbiertos = Pedido::with(['mesa', 'factura', 'usuario'])
             ->where('tipo_pedido', Pedido::TIPO_MESA)
             ->whereNotNull('mesa_id')
             ->whereNotIn('estado', [Pedido::ESTADO_CANCELADO, Pedido::ESTADO_FACTURADO])
-            // Fase 4 (spec): la mesa aparece en Caja SOLO cuando se solicitó la
-            // cuenta. (O ya fue pagada por QR pero falta cerrar.)
-            ->where(function ($q) {
-                $q->where('cuenta_solicitada', true)
-                  ->orWhereHas('factura', function ($f) {
-                      $f->where('estado', Factura::ESTADO_PAGADA);
-                  });
-            })
             ->whereHas('factura', function ($q) {
                 $q->whereIn('estado', [Factura::ESTADO_PENDIENTE, Factura::ESTADO_PAGADA]);
             })
