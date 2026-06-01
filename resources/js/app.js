@@ -294,17 +294,26 @@ document.addEventListener('DOMContentLoaded', () => {
         window.Echo.channel('pedidos.meseros')
             .subscribed(() => console.log('✅ Suscrito a pedidos.meseros'))
             .listen('.pedido.estado.cambiado', (e) => {
-                if (e.estado !== 'listo') return; // solo nos interesa "listo"
-                console.log('🍽️ Pedido listo para entregar', e);
-                mostrarToastEstadoPedido(e.numero_pedido, 'listo', 'Pedido listo, retirar de cocina');
-                beep(1100, 250);
-                if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                    new Notification('🔔 Pedido listo para entregar', {
-                        body: e.numero_pedido ? `${e.numero_pedido} esperando ser entregado` : '',
-                        icon: '/favicon.ico',
-                        tag: 'mesero-listo-' + e.pedido_id,
-                    });
+                console.log('🍽️ Cambio de estado (mesero/cajero)', e);
+                // Aviso sonoro/visual SOLO cuando un pedido pasa a "listo".
+                if (e.estado === 'listo') {
+                    mostrarToastEstadoPedido(e.numero_pedido, 'listo', 'Pedido listo, retirar de cocina');
+                    beep(1100, 250);
+                    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                        new Notification('🔔 Pedido listo para entregar', {
+                            body: e.numero_pedido ? `${e.numero_pedido} esperando ser entregado` : '',
+                            icon: '/favicon.ico',
+                            tag: 'mesero-listo-' + e.pedido_id,
+                        });
+                    }
                 }
+                // Si estoy en MI dashboard (mesero/cajero) o en pedidos, refresco
+                // para que el estado del pedido se actualice en vivo, sin recargar a mano.
+                const ruta = window.location.pathname;
+                if (ruta.startsWith('/dashboard') || ruta.startsWith('/pedidos') || ruta.startsWith('/cierres') || ruta.startsWith('/caja')) {
+                    setTimeout(() => window.location.reload(), 1200);
+                }
+                window.dispatchEvent(new CustomEvent('pedido-estado-cambiado', { detail: e }));
             })
             .listen('.cuenta.pagada', (e) => {
                 console.log('💰 Cuenta pagada/cerrada', e);

@@ -32,14 +32,14 @@ class PedidoEstadoActualizado implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
+        // Solo cocina (refresco del kitchen display). El aviso a mesero/cajero/
+        // cliente lo cubre el evento PedidoEstadoCambiado (hook del modelo), que
+        // ya emite a los 3 canales — evitamos doble disparo.
         return [
             new Channel('pedidos.cocineros'),
         ];
     }
 
-    /**
-     * The event's broadcast name.
-     */
     public function broadcastAs(): string
     {
         return 'pedido.estado_actualizado';
