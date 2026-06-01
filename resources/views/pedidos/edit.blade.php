@@ -311,14 +311,16 @@
 let items = [];
 let searchTimeout;
 
-// Cargar items existentes
+// Cargar items existentes. 'entregado' marca los items YA servidos: no se
+// pueden eliminar ni cambiar (un producto entregado ya se consumió).
 @foreach($pedido->detalles as $detalle)
 items.push({
     plato_id: {{ $detalle->plato_id }},
     nombre: '{{ addslashes($detalle->plato->nombre) }}',
     precio_unitario: {{ $detalle->precio_unitario }},
     cantidad: {{ $detalle->cantidad }},
-    notas: '{{ addslashes($detalle->notas) }}'
+    notas: '{{ addslashes($detalle->notas) }}',
+    entregado: {{ $detalle->estado === 'entregado' ? 'true' : 'false' }}
 });
 @endforeach
 
@@ -331,7 +333,28 @@ function renderItems() {
         return;
     }
     
-    container.innerHTML = items.map((item, index) => `
+    container.innerHTML = items.map((item, index) => {
+        if (item.entregado) {
+            // Item YA ENTREGADO: se muestra bloqueado (sin borrar ni editar).
+            return `
+            <div class="border rounded-lg p-3 mb-2 shadow-sm" style="border-color:#A7F3D0; background:#ECFDF5;">
+                <div class="flex justify-between items-start mb-1">
+                    <div class="flex-1">
+                        <div class="font-semibold" style="color:#065F46;">${escapeHtml(item.nombre)}</div>
+                        <div class="font-bold text-sm mt-1" style="color:#059669;">Bs. ${item.precio_unitario.toFixed(2)} × ${item.cantidad}</div>
+                    </div>
+                    <span class="ml-2 text-xs px-2 py-0.5 rounded-full" style="background:#A7F3D0;color:#065F46;">
+                        <i class="fas fa-check-circle mr-1"></i>Entregado
+                    </span>
+                </div>
+                <p class="text-xs" style="color:#047857;">Ya servido — no se puede modificar ni eliminar.</p>
+                <input type="hidden" name="items[${index}][plato_id]" value="${item.plato_id}">
+                <input type="hidden" name="items[${index}][cantidad]" value="${item.cantidad}">
+                <input type="hidden" name="items[${index}][notas]" value="${escapeHtml(item.notas)}">
+            </div>`;
+        }
+        // Item editable (no entregado).
+        return `
         <div class="bg-white border rounded-lg p-3 mb-2 shadow-sm" style="border-color: #FED7AA;">
             <div class="flex justify-between items-start mb-2">
                 <div class="flex-1">
@@ -350,8 +373,8 @@ function renderItems() {
             <input type="hidden" name="items[${index}][plato_id]" value="${item.plato_id}">
             <input type="hidden" name="items[${index}][cantidad]" value="${item.cantidad}">
             <input type="hidden" name="items[${index}][notas]" value="${escapeHtml(item.notas)}">
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
     
     updateTotals();
 }
@@ -377,6 +400,11 @@ function addItem(platoId, nombre, precio, tieneStock) {
 }
 
 function removeItem(index) {
+    // Blindaje: un item ya entregado no se puede eliminar.
+    if (items[index] && items[index].entregado) {
+        showNotification('No se puede eliminar un producto ya entregado.', 'error');
+        return;
+    }
     const itemName = items[index].nombre;
     items.splice(index, 1);
     renderItems();

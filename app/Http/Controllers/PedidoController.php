@@ -407,9 +407,12 @@ public function storeCliente(Request $request)
                 }
             }
 
-            // ── INVENTARIO: revertir si el pedido ya lo había descontado ───────
+            // ── INVENTARIO: revertir solo lo de los detalles NO entregados ─────
+            // (los entregados ya se consumieron; su inventario no se revierte).
             if (in_array($pedido->estado, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
-                $detallesAntiguos = $pedido->detalles()->with('plato.ingredientes')->get();
+                $detallesAntiguos = $pedido->detalles()
+                    ->where('estado', '!=', DetallePedido::ESTADO_ENTREGADO)
+                    ->with('plato.ingredientes')->get();
                 foreach ($detallesAntiguos as $detalle) {
                     if ($detalle->plato) {
                         $detalle->plato->revertirInventario($detalle->cantidad);
@@ -454,11 +457,24 @@ public function storeCliente(Request $request)
                 }
             }
 
-            // ── DETALLES: eliminar anteriores y crear nuevos ───────────────────
-            $pedido->detalles()->delete();
+            // ── DETALLES: PRESERVAR los entregados, reemplazar el resto ────────
+            // Los items ya entregados (servidos) no se tocan: no se borran ni se
+            // pueden quitar desde la edición. Solo se reemplazan los no entregados.
+            $platosEntregados = $pedido->detalles()
+                ->where('estado', DetallePedido::ESTADO_ENTREGADO)
+                ->pluck('plato_id')->all();
+
+            // Borrar únicamente los detalles NO entregados.
+            $pedido->detalles()
+                ->where('estado', '!=', DetallePedido::ESTADO_ENTREGADO)
+                ->delete();
 
             $nuevosItems = [];
             foreach ($request->items as $item) {
+                // No re-insertar un plato que ya está entregado (ya existe su fila).
+                if (in_array($item['plato_id'], $platosEntregados)) {
+                    continue;
+                }
                 $plato = Plato::find($item['plato_id']);
 
                 $nuevosItems[] = [
@@ -474,11 +490,16 @@ public function storeCliente(Request $request)
                 ];
             }
 
-            DetallePedido::insert($nuevosItems);
+            if (!empty($nuevosItems)) {
+                DetallePedido::insert($nuevosItems);
+            }
 
-            // ── INVENTARIO: descontar el nuevo si aplica ───────────────────────
+            // ── INVENTARIO: descontar solo lo NUEVO (no los ya entregados) ─────
             if (in_array($pedido->estado, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
                 foreach ($request->items as $item) {
+                    if (in_array($item['plato_id'], $platosEntregados)) {
+                        continue; // ya entregado: su inventario no se vuelve a descontar
+                    }
                     $plato = Plato::find($item['plato_id']);
                     if ($plato) {
                         $plato->descontarInventario($item['cantidad']);
