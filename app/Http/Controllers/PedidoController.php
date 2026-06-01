@@ -66,32 +66,26 @@ class PedidoController extends Controller
         foreach ($platos as $categoria => $platosCategoria) {
             $platosProcesados = [];
             foreach ($platosCategoria as $plato) {
-                // Verificar stock para 1 unidad
                 $tieneStock = true;
                 $stockInsuficiente = [];
 
-                // Obtener detalles de ingredientes con stock insuficiente
-                if (!$tieneStock) {
-                    foreach ($plato->ingredientes as $ingrediente) {
-                        $inventario = $ingrediente->inventario;
-                        $cantidadNecesaria = $ingrediente->pivot->cantidad;
-
-                        if (!$inventario || $inventario->cantidad_actual < $cantidadNecesaria) {
-                            $stockInsuficiente[] = [
-                                'nombre' => $ingrediente->nombre,
-                                'disponible' => $inventario?->cantidad_actual ?? 0,
-                                'necesario' => $cantidadNecesaria,
-                                'unidad' => $ingrediente->unidad_medida
-                            ];
-                        }
-                    }
+                // Sin ingredientes registrados -> no se puede preparar.
+                if ($plato->ingredientes->count() === 0) {
+                    $tieneStock = false;
+                    $stockInsuficiente[] = [
+                        'nombre' => 'Sin ingredientes',
+                        'disponible' => 0,
+                        'necesario' => 1,
+                        'unidad' => 'N/A',
+                        'motivo' => 'El plato no tiene ingredientes registrados'
+                    ];
                 }
-                // Verificar cada ingrediente del plato
+
+                // Verificar stock de cada ingrediente del plato.
                 foreach ($plato->ingredientes as $ingrediente) {
                     $inventario = $ingrediente->inventario;
                     $cantidadNecesaria = $ingrediente->pivot->cantidad;
 
-                    // Si no tiene inventario registrado o el stock es insuficiente
                     if (!$inventario) {
                         $tieneStock = false;
                         $stockInsuficiente[] = [
@@ -113,31 +107,7 @@ class PedidoController extends Controller
                     }
                 }
 
-                // Crear un objeto con los datos necesarios
-                $platosProcesados[] = (object)[
-                    'id' => $plato->id,
-                    'nombre' => $plato->nombre,
-                    'precio' => $plato->precio,
-                    'descripcion' => $plato->descripcion,
-                    'categoria_id' => $plato->categoria_id,
-                    'tiene_stock' => $tieneStock,
-                    'stock_insuficiente' => $stockInsuficiente,
-                    'ingredientes' => $plato->ingredientes
-                ];
-
-                // Si el plato no tiene ingredientes registrados, también sin stock
-                if ($plato->ingredientes->count() === 0) {
-                    $tieneStock = false;
-                    $stockInsuficiente[] = [
-                        'nombre' => 'Sin ingredientes',
-                        'disponible' => 0,
-                        'necesario' => 1,
-                        'unidad' => 'N/A',
-                        'motivo' => 'El plato no tiene ingredientes registrados'
-                    ];
-                }
-
-                // Agregar propiedades al plato
+                // UN SOLO append por plato (antes se agregaba 2 veces -> menú duplicado).
                 $plato->tiene_stock = $tieneStock;
                 $plato->stock_insuficiente = $stockInsuficiente;
                 $platosProcesados[] = $plato;
