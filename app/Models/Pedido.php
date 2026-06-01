@@ -38,6 +38,8 @@ class Pedido extends Model
         'direccion',  // Campo agregado
         'tipo_pedido',
         'estado',
+        'cuenta_solicitada',
+        'cuenta_solicitada_at',
         'subtotal',
         'impuesto',
         'descuento',
@@ -57,6 +59,8 @@ class Pedido extends Model
         'total' => 'decimal:2',
         'fecha_hora_estimada' => 'datetime',
         'fecha_hora_entrega' => 'datetime',
+        'cuenta_solicitada' => 'boolean',
+        'cuenta_solicitada_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
     ];
@@ -71,6 +75,8 @@ class Pedido extends Model
     const TIPO_MESA = 'mesa';
     const TIPO_DELIVERY = 'delivery';
     const TIPO_PARA_LLEVAR = 'para_llevar';
+
+    const ESTADO_MESA_CUENTA_SOLICITADA = 'cuenta_solicitada';
 
     public static function getEstados()
     {

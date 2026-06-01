@@ -85,7 +85,34 @@ class DashboardController extends Controller
             ->orderBy('updated_at', 'desc')
             ->get();
 
-        return view('dashboard.cajero.index', compact('pedidosEntregados'));
+        // Fase 5/7 (spec): total de INGRESOS DEL DÍA en Bs (facturas pagadas hoy).
+        $totalIngresosDia = \App\Models\Factura::where('estado', \App\Models\Factura::ESTADO_PAGADA)
+            ->whereDate('updated_at', now()->today())
+            ->sum('total');
+
+        // Desglose por método de pago (para el resumen de caja).
+        $ingresosPorMetodo = \App\Models\Factura::where('estado', \App\Models\Factura::ESTADO_PAGADA)
+            ->whereDate('updated_at', now()->today())
+            ->selectRaw("metodo_pago, SUM(total) as total")
+            ->groupBy('metodo_pago')
+            ->pluck('total', 'metodo_pago');
+
+        $facturasPagadasHoy = \App\Models\Factura::where('estado', \App\Models\Factura::ESTADO_PAGADA)
+            ->whereDate('updated_at', now()->today())
+            ->count();
+
+        // Cuentas en espera de cobro (mesas con la cuenta ya solicitada).
+        $cuentasPorCobrar = \App\Models\Pedido::where('cuenta_solicitada', true)
+            ->whereNotIn('estado', [\App\Models\Pedido::ESTADO_CANCELADO, \App\Models\Pedido::ESTADO_FACTURADO])
+            ->distinct('mesa_id')->count('mesa_id');
+
+        return view('dashboard.cajero.index', compact(
+            'pedidosEntregados',
+            'totalIngresosDia',
+            'ingresosPorMetodo',
+            'facturasPagadasHoy',
+            'cuentasPorCobrar'
+        ));
     }
     
     public function cliente()

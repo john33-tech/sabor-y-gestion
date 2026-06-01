@@ -206,14 +206,27 @@
                                             </div>
                                         </div>
                                         @if($esListo)
-                                            <form method="POST" action="{{ route('pedidos.cambiar-estado', $pedido) }}">
-                                                @csrf
-                                                <input type="hidden" name="estado" value="{{ \App\Models\Pedido::ESTADO_ENTREGADO }}">
-                                                <button type="submit"
-                                                    class="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow hover:shadow-lg hover:scale-105 transition-all duration-200">
-                                                    <i class="fas fa-hand-holding"></i> Entregar
-                                                </button>
-                                            </form>
+                                            <div class="flex flex-col gap-2 sm:flex-row">
+                                                <form method="POST" action="{{ route('pedidos.cambiar-estado', $pedido) }}">
+                                                    @csrf
+                                                    <input type="hidden" name="estado" value="{{ \App\Models\Pedido::ESTADO_ENTREGADO }}">
+                                                    <button type="submit"
+                                                        class="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow hover:shadow-lg hover:scale-105 transition-all duration-200">
+                                                        <i class="fas fa-hand-holding"></i> Entregar
+                                                    </button>
+                                                </form>
+                                                {{-- Fase 4: confirmar entrega y solicitar la cuenta (solo pedidos de mesa) --}}
+                                                @if($pedido->tipo_pedido === \App\Models\Pedido::TIPO_MESA && $pedido->mesa_id)
+                                                    <form method="POST" action="{{ route('pedidos.solicitar-cuenta', $pedido) }}"
+                                                          onsubmit="return confirm('¿Confirmar entrega y solicitar la cuenta para esta mesa? Pasará a Caja.');">
+                                                        @csrf
+                                                        <button type="submit"
+                                                            class="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-primary to-secondary rounded-xl shadow hover:shadow-lg hover:scale-105 transition-all duration-200">
+                                                            <i class="fas fa-receipt"></i> Solicitar cuenta
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            </div>
                                         @else
                                             <span class="text-xs text-gray-400 italic">Esperando cocina…</span>
                                         @endif

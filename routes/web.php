@@ -118,6 +118,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/pedidos/{pedido}/cambiar-estado', [PedidoController::class, 'cambiarEstado'])
         ->name('pedidos.cambiar-estado')
         ->middleware('role:admin,mesero,cocinero,cliente');
+    // Fase 4: solicitar la cuenta (mesa -> "cuenta_solicitada", visible en Caja).
+    Route::post('/pedidos/{pedido}/solicitar-cuenta', [PedidoController::class, 'solicitarCuenta'])
+        ->name('pedidos.solicitar-cuenta')
+        ->middleware('role:admin,mesero,cajero,cliente');
     Route::post('/detalle-pedido/{detalle}/cambiar-estado', [PedidoController::class, 'cambiarEstadoDetalle'])
         ->name('pedidos.detalle.cambiar-estado')
         ->middleware('role:admin,cocinero,cliente');

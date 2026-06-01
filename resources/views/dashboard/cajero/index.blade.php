@@ -64,13 +64,13 @@
                 <div class="relative p-6">
                     <div class="flex items-start justify-between">
                         <div class="space-y-2">
-                            <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Ventas Totales</p>
-                            <p class="text-4xl font-bold text-gray-800">$0.00</p>
+                            <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Ingresos del Día</p>
+                            <p class="text-4xl font-bold text-gray-800" id="totalIngresosDia">Bs {{ number_format($totalIngresosDia ?? 0, 2) }}</p>
                             <div class="flex items-center gap-1">
                                 <span class="inline-flex items-center px-2 py-0.5 text-xs font-medium text-green-600 bg-green-100 rounded-full">
-                                    <i class="mr-1 text-xs fas fa-arrow-up"></i>0%
+                                    <i class="mr-1 text-xs fas fa-receipt"></i>{{ $facturasPagadasHoy ?? 0 }}
                                 </span>
-                                <span class="text-xs text-gray-400">vs mes anterior</span>
+                                <span class="text-xs text-gray-400">facturas pagadas hoy</span>
                             </div>
                         </div>
                         <div class="flex items-center justify-center transition-transform duration-300 w-14 h-14 bg-gradient-to-br from-primary/10 to-primary/5 rounded-2xl group-hover:scale-110">
@@ -87,11 +87,10 @@
                 <div class="relative p-6">
                     <div class="flex items-start justify-between">
                         <div class="space-y-2">
-                            <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Pedidos Hoy</p>
-                            <p class="text-4xl font-bold text-gray-800">0</p>
+                            <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Cuentas por Cobrar</p>
+                            <p class="text-4xl font-bold text-gray-800">{{ $cuentasPorCobrar ?? 0 }}</p>
                             <div class="flex items-center gap-2">
-                                <span class="text-xs text-gray-500">Pendientes:</span>
-                                <span class="text-xs font-semibold text-amber-600">0</span>
+                                <span class="text-xs text-gray-500">Mesas con cuenta solicitada</span>
                             </div>
                         </div>
                         <div class="flex items-center justify-center transition-transform duration-300 w-14 h-14 bg-gradient-to-br from-secondary/10 to-secondary/5 rounded-2xl group-hover:scale-110">
@@ -108,11 +107,11 @@
                 <div class="relative p-6">
                     <div class="flex items-start justify-between">
                         <div class="space-y-2">
-                            <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Clientes Atendidos</p>
-                            <p class="text-4xl font-bold text-gray-800">0</p>
+                            <p class="text-xs font-semibold tracking-wider text-gray-400 uppercase">Entregados al Cajero</p>
+                            <p class="text-4xl font-bold text-gray-800">{{ $pedidosEntregados->count() }}</p>
                             <div class="flex items-center gap-2">
-                                <i class="text-xs text-accent fas fa-user-plus"></i>
-                                <span class="text-xs text-gray-500">Hoy: 0</span>
+                                <i class="text-xs text-accent fas fa-hand-holding"></i>
+                                <span class="text-xs text-gray-500">Pedidos esperando cobro</span>
                             </div>
                         </div>
                         <div class="flex items-center justify-center transition-transform duration-300 w-14 h-14 bg-gradient-to-br from-accent/10 to-accent/5 rounded-2xl group-hover:scale-110">
@@ -353,4 +352,28 @@
 
     </div>
 </div>
+
+@push('scripts')
+<script>
+    // Fase 7 (spec): cuando se cobra una cuenta, el evento global 'cuenta-pagada'
+    // (lo despacha resources/js/app.js al recibir el broadcast) actualiza el
+    // Dashboard del cajero en tiempo real, sin recargar la página.
+    window.addEventListener('cuenta-pagada', function () {
+        // Releer el total del día desde el servidor y refrescar la tarjeta.
+        fetch('{{ route('dashboard.cajero') }}', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.text())
+            .then(html => {
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const nuevo = doc.getElementById('totalIngresosDia');
+                const actual = document.getElementById('totalIngresosDia');
+                if (nuevo && actual) {
+                    actual.textContent = nuevo.textContent;
+                    actual.classList.add('animate-pulse');
+                    setTimeout(() => actual.classList.remove('animate-pulse'), 1500);
+                }
+            })
+            .catch(() => { /* si falla, no rompemos la página */ });
+    });
+</script>
+@endpush
 @endsection

@@ -703,6 +703,65 @@ public function storeCliente(Request $request)
     }
 }
 
+/**
+ * Fase 4 (spec): el mesero/cliente CONFIRMA la entrega y SOLICITA LA CUENTA.
+ * Marca TODOS los pedidos abiertos de la mesa como "cuenta solicitada" y pasa
+ * la mesa al estado "cuenta_solicitada" para que aparezca habilitada en Caja.
+ */
+public function solicitarCuenta(Request $request, Pedido $pedido)
+{
+    if ($pedido->tipo_pedido !== Pedido::TIPO_MESA || !$pedido->mesa_id) {
+        return back()->with('error', 'Solo se puede solicitar la cuenta de un pedido de mesa.');
+    }
+
+    DB::beginTransaction();
+    try {
+        // Todos los pedidos vivos de esta mesa entran al cobro.
+        $pedidos = Pedido::where('mesa_id', $pedido->mesa_id)
+            ->where('tipo_pedido', Pedido::TIPO_MESA)
+            ->whereNotIn('estado', [Pedido::ESTADO_CANCELADO, Pedido::ESTADO_FACTURADO])
+            ->get();
+
+        foreach ($pedidos as $p) {
+            $p->cuenta_solicitada = true;
+            $p->cuenta_solicitada_at = now();
+            // Al pedir la cuenta el plato ya se entregó.
+            if (in_array($p->estado, [Pedido::ESTADO_LISTO])) {
+                $p->estado = Pedido::ESTADO_ENTREGADO;
+                $p->fecha_hora_entrega = now();
+            }
+            $p->save();
+        }
+
+        // La mesa pasa a "cuenta_solicitada" (visible en Caja).
+        if ($pedido->mesa) {
+            $pedido->mesa->update(['estado' => Pedido::ESTADO_MESA_CUENTA_SOLICITADA]);
+        }
+
+        DB::commit();
+
+        // Avisar a Caja en vivo que hay una cuenta lista para cobrar.
+        try {
+            broadcast(new \App\Events\CuentaPagada([
+                'mesa'   => $pedido->mesa?->numero_mesa,
+                'total'  => number_format($pedidos->sum('total'), 2),
+                'origen' => 'solicitud',
+            ]));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('No se pudo notificar solicitud de cuenta: ' . $e->getMessage());
+        }
+
+        $msg = 'Cuenta solicitada para la Mesa ' . ($pedido->mesa?->numero_mesa ?? '') . '. Ya está habilitada en Caja.';
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'mensaje' => $msg]);
+        }
+        return back()->with('success', $msg);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->with('error', 'Error al solicitar la cuenta: ' . $e->getMessage());
+    }
+}
+
 private function guardarConsumo(Pedido $pedido)
 {
     $detalles = [];

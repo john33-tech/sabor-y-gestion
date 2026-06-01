@@ -45,4 +45,10 @@ class Mesa extends Model
     {
         return $this->estado === 'fuera_servicio';
     }
+
+    // Fase 4: el cliente/mesero pidió la cuenta; la mesa está lista para cobrar en Caja.
+    public function isCuentaSolicitada()
+    {
+        return $this->estado === 'cuenta_solicitada';
+    }
 }
