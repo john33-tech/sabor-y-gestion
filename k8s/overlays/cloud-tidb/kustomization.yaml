@@ -72,4 +72,4 @@ patches:
 images:
   - name: sabor-gestion
     newName: ghcr.io/john33-tech/sabor-gestion
-    newTag: latest
+    newTag: e584144

@@ -8,10 +8,10 @@ data:
   # APP_ENV != production para no forzar https sin dominio/TLS (demo por IP).
   APP_ENV: "local"
   APP_DEBUG: "false"
-  APP_URL: "https://4.157.216.0.nip.io"
+  APP_URL: "http://CAMBIAR-POR-IP-PUBLICA"
   # URL base del QR de pago: apunta a /pago-externo de ESTA app (no a un sitio
   # externo), para que el cliente escanee, pague y confirme en este servidor.
-  APP_URL_QR: "https://4.157.216.0.nip.io"
+  APP_URL_QR: "http://CAMBIAR-POR-IP-PUBLICA"
   LOG_LEVEL: "warning"
 
   DB_CONNECTION: "mysql"
