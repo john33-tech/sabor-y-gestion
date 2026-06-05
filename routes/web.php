@@ -46,6 +46,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/cajero', [DashboardController::class, 'cajero'])->name('dashboard.cajero');
     Route::get('/dashboard/cliente', [DashboardController::class, 'cliente'])->name('dashboard.cliente');
 
+    // Dashboard Ejecutivo / Analytics (solo admin). Módulo extraído del repo de Henry
+    // y adaptado al esquema local (ver app/Services/DashboardAnalyticsService.php).
+    Route::get('/admin/analytics', [\App\Http\Controllers\AdminAnalyticsController::class, 'index'])
+        ->name('admin.analytics')
+        ->middleware('role:admin');
+
     // Gestión de Platos (Admin y Cocinero)
     Route::resource('platos', PlatoController::class)->middleware('role:admin,cocinero');
     Route::post('/platos/{plato}/toggle-disponible', [PlatoController::class, 'toggleDisponible'])
