@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ServerDashboardController;
 use App\Http\Controllers\PlatoController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\MesaController;
@@ -41,7 +42,8 @@ Route::get('/inicio', function () {
 Route::middleware(['auth'])->group(function () {
     // Dashboards
     Route::get('/dashboard/administrador', [DashboardController::class, 'administrador'])->name('dashboard.administrador');
-    Route::get('/dashboard/mesero', [DashboardController::class, 'mesero'])->name('dashboard.mesero');
+    Route::get('/dashboard/mesero', [ServerDashboardController::class, 'index'])->name('dashboard.mesero')->middleware('role:admin,mesero');
+    Route::get('/dashboard/mesero/refresh', [ServerDashboardController::class, 'refreshData'])->name('mesero.refresh-data')->middleware('role:admin,mesero');
     Route::get('/dashboard/cocinero', [DashboardController::class, 'cocinero'])->name('dashboard.cocinero');
     Route::get('/dashboard/cajero', [DashboardController::class, 'cajero'])->name('dashboard.cajero');
     Route::get('/dashboard/cliente', [DashboardController::class, 'cliente'])->name('dashboard.cliente');
