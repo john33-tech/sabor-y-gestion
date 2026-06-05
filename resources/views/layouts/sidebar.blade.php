@@ -86,11 +86,11 @@
                      x-cloak
                      class="mt-1 ml-2 space-y-1 sm:ml-3">
                     @if($role == 'admin')
-                        <a href="{{ route('dashboard.administrador') }}"
+                        <!-- <a href="{{ route('dashboard.administrador') }}"
                            class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
                             <i class="fas fa-chart-pie text-[10px] sm:text-xs w-4"></i>
                             <span x-show="sidebarExpanded || (windowWidth < 1024 && mobileSidebarOpen)" class="whitespace-nowrap">Dashboard Admin</span>
-                        </a>
+                        </a> -->
                         <a href="{{ route('admin.analytics') }}"
                            class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all duration-200 group">
                             <i class="fas fa-chart-line text-[10px] sm:text-xs w-4"></i>
