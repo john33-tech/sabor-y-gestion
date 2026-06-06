@@ -25,6 +25,12 @@ data:
   RUN_MIGRATIONS: "false"
   RUN_SEEDERS: "false"
 
+  # --- Perf: sacar sesión y caché de TiDB (cada round-trip a us-east-1 ~150ms).
+  #     cookie = sesión en cookie cifrada (no toca BD, sirve con múltiples réplicas).
+  #     file   = caché local en el pod (no toca BD).
+  SESSION_DRIVER: "cookie"
+  CACHE_STORE: "file"
+
   MAIL_MAILER: "log"
 
   # --- Tiempo real con Pusher Cloud (el APP_SECRET va en el Secret) ---
