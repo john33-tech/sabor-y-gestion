@@ -1,0 +1,76 @@
+# ---------------------------------------------------------------------------
+# Overlay LOCAL-TUNNEL: cluster LOCAL (Docker Desktop) publicado a internet por
+# un TUNEL (Cloudflare Tunnel / LocalTunnel) sobre el dominio sabor-y-gestion.com.
+# Es el setup de la DEFENSA, ahora reproducible con un solo `apply -k` (antes
+# eran comandos imperativos sueltos que se perdian al reaplicar overlays).
+#
+#   - Conecta a TiDB Cloud (BD compartida) + monta su CA.
+#   - Quita el MySQL del cluster.
+#   - MANTIENE el Ingress pero lo deja CATCH-ALL (sin host) -> responde a
+#     cualquier Host (localhost y el dominio del tunel).
+#   - APP_ENV=production (https) + Pusher (tiempo real por la nube).
+#   - BORRA el Secret de dev del base: el Secret real (password TiDB + Pusher)
+#     lo creas tu con `kubectl create secret` y NO se pisa al reaplicar.
+#
+# Aplicar:
+#   kubectl apply -k k8s/overlays/local-tunnel
+#   # crear el Secret real una vez (ver RUNBOOK-TUNNEL.md)
+# ---------------------------------------------------------------------------
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+configMapGenerator:
+  - name: tidb-ca
+    files:
+      - isrgrootx1.pem
+generatorOptions:
+  disableNameSuffixHash: true
+
+patches:
+  - path: configmap-patch.yaml
+  - path: deployment-patch.yaml
+  # Ingress catch-all: quitar el host (era "localhost") para que responda al
+  # Host del tunel (sabor-y-gestion.com) y a localhost por igual.
+  - target:
+      kind: Ingress
+      name: sabor-ingress
+    patch: |
+      - op: remove
+        path: /spec/rules/0/host
+  # Quitar el Secret de dev del base (lo creas tu con kubectl create secret)
+  - target:
+      kind: Secret
+      name: sabor-secret
+    patch: |
+      $patch: delete
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: sabor-secret
+  # Quitar MySQL del cluster (usamos TiDB Cloud)
+  - target:
+      kind: StatefulSet
+      name: mysql
+    patch: |
+      $patch: delete
+      apiVersion: apps/v1
+      kind: StatefulSet
+      metadata:
+        name: mysql
+  - target:
+      kind: Service
+      name: mysql
+    patch: |
+      $patch: delete
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: mysql
+
+images:
+  - name: sabor-gestion
+    newName: ghcr.io/john33-tech/sabor-gestion
+    newTag: e584144

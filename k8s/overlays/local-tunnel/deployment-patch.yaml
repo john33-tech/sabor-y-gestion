@@ -1,0 +1,25 @@
+# Monta el CA de TiDB Cloud dentro del pod + probes con margen (SSL remoto lento).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+spec:
+  template:
+    spec:
+      volumes:
+        - name: tidb-ca
+          configMap:
+            name: tidb-ca
+      containers:
+        - name: app
+          volumeMounts:
+            - name: tidb-ca
+              mountPath: /etc/ssl/tidb
+              readOnly: true
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 15
+            failureThreshold: 30
