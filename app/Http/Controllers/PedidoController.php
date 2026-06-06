@@ -533,6 +533,12 @@ public function storeCliente(Request $request)
     // Método auxiliar para actualizar la comanda
     private function actualizarComanda(Pedido $pedido)
     {
+        // Recalcular el estado del pedido según sus ítems (frescos): si tras
+        // editar/borrar productos ya no queda ninguno pendiente, el badge no
+        // debe seguir diciendo "Pendiente".
+        $pedido->load('detalles');
+        $pedido->recalcularEstadoCocina();
+
         // Si el pedido está en comanda (pendiente/en preparación/listo),
         // avisamos a cocina que fue editado para que el kitchen display se
         // refresque en vivo (p. ej. al quitar un producto equivocado).
@@ -848,14 +854,11 @@ private function guardarConsumo(Pedido $pedido)
 
             $detalle->actualizarEstado($request->estado);
 
-            // Verificar si todos los detalles están listos para actualizar el pedido
+            // Recalcular el estado del pedido según sus ítems (cubre listo y
+            // entregado, no solo "todos listos"; y baja a pendiente si se revierte).
             $pedido = $detalle->pedido;
-            $todosListos = $pedido->detalles->every(fn($d) => $d->estado === DetallePedido::ESTADO_LISTO);
-
-            if ($todosListos && !in_array($pedido->estado, [Pedido::ESTADO_LISTO, Pedido::ESTADO_ENTREGADO])) {
-                $pedido->estado = Pedido::ESTADO_LISTO;
-                $pedido->save();
-            }
+            $pedido->load('detalles');
+            $pedido->recalcularEstadoCocina();
 
             // Limpiar caché
             Cache::forget('low_stock_count_direct');

@@ -182,6 +182,42 @@ class Pedido extends Model
         }
     }
 
+    /**
+     * Recalcula el estado del pedido según el estado de sus ítems, SOLO si el
+     * pedido sigue en cocina (no toca entregado/facturado/cancelado). Evita que
+     * el badge quede en "Pendiente" cuando ya no hay ítems pendientes (p. ej.
+     * tras borrar el único ítem pendiente o marcarlos todos entregado).
+     * Regla: hay ítem pendiente -> Pendiente; si no, hay en preparación -> En
+     * Preparación; si no (todos listo/entregado) -> Listo. Devuelve true si cambió.
+     */
+    public function recalcularEstadoCocina(): bool
+    {
+        if (!in_array($this->estado, [self::ESTADO_PENDIENTE, self::ESTADO_EN_PREPARACION, self::ESTADO_LISTO])) {
+            return false;
+        }
+
+        $activos = $this->detalles->where('estado', '!=', DetallePedido::ESTADO_CANCELADO);
+        if ($activos->isEmpty()) {
+            return false; // sin ítems activos: no forzar un estado de cocina
+        }
+
+        if ($activos->contains('estado', DetallePedido::ESTADO_PENDIENTE)) {
+            $nuevo = self::ESTADO_PENDIENTE;
+        } elseif ($activos->contains('estado', DetallePedido::ESTADO_EN_PREPARACION)) {
+            $nuevo = self::ESTADO_EN_PREPARACION;
+        } else {
+            $nuevo = self::ESTADO_LISTO;
+        }
+
+        if ($this->estado !== $nuevo) {
+            $this->estado = $nuevo;
+            $this->save();
+            return true;
+        }
+
+        return false;
+    }
+
    // app/Models/Pedido.php
 
 public function generarNumeroPedido()
