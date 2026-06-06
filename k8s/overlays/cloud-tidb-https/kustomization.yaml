@@ -1,0 +1,62 @@
+# ---------------------------------------------------------------------------
+# Overlay CLOUD-TIDB-HTTPS: como cloud-tidb (AKS + TiDB Cloud + Pusher + GHCR)
+# pero expone la app por DOMINIO con HTTPS:
+#   - mantiene el Ingress del base (no lo borra) y lo apunta a sabor-y-gestion.com
+#   - app vuelve a ClusterIP; el LoadBalancer publico es el de ingress-nginx
+#   - TLS automatico con cert-manager + ClusterIssuer "letsencrypt-prod"
+# Prerrequisitos en el cluster (una sola vez): ingress-nginx, cert-manager y el
+# ClusterIssuer. Ver RUNBOOK-AKS-HTTPS.md.
+# ---------------------------------------------------------------------------
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# CA publico de TiDB Cloud (Let's Encrypt ISRG Root X1) montado en el pod.
+configMapGenerator:
+  - name: tidb-ca
+    files:
+      - isrgrootx1.pem
+generatorOptions:
+  disableNameSuffixHash: true
+
+patches:
+  - path: configmap-patch.yaml
+  - path: deployment-patch.yaml
+  - path: ingress-patch.yaml
+  # Quitar el Secret de dev del base: en AKS lo creas tu con `kubectl create
+  # secret` (password REAL de TiDB + REVERB/PUSHER secret).
+  - target:
+      kind: Secret
+      name: sabor-secret
+    patch: |
+      $patch: delete
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: sabor-secret
+  # Quitar MySQL del cluster (usamos TiDB Cloud)
+  - target:
+      kind: StatefulSet
+      name: mysql
+    patch: |
+      $patch: delete
+      apiVersion: apps/v1
+      kind: StatefulSet
+      metadata:
+        name: mysql
+  - target:
+      kind: Service
+      name: mysql
+    patch: |
+      $patch: delete
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: mysql
+
+images:
+  - name: sabor-gestion
+    newName: ghcr.io/john33-tech/sabor-gestion
+    newTag: e584144

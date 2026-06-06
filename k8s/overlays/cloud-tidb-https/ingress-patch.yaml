@@ -1,0 +1,27 @@
+# Reactiva el Ingress del base (que cloud-tidb borraba) y lo apunta al dominio
+# real con TLS automatico de Let's Encrypt via cert-manager.
+# Requiere en el cluster: ingress-nginx + cert-manager + ClusterIssuer
+# "letsencrypt-prod" (ver RUNBOOK-AKS-HTTPS.md).
+# Las anotaciones de body-size y timeouts de WebSocket se heredan del base.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sabor-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+    - hosts:
+        - sabor-y-gestion.com
+      secretName: sabor-tls
+  rules:
+    - host: sabor-y-gestion.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app
+                port:
+                  number: 80

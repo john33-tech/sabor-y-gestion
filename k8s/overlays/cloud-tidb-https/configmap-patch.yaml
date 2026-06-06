@@ -1,0 +1,35 @@
+# AKS + TiDB Cloud + dominio real con HTTPS (Ingress + cert-manager).
+# Igual que cloud-tidb pero APP_ENV=production y URLs https://sabor-y-gestion.com.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sabor-config
+data:
+  APP_ENV: "production"
+  APP_DEBUG: "false"
+  APP_URL: "https://sabor-y-gestion.com"
+  # URL base del QR de pago: /pago-externo de ESTA app (mismo dominio, ahora https).
+  APP_URL_QR: "https://sabor-y-gestion.com"
+  LOG_LEVEL: "warning"
+
+  DB_CONNECTION: "mysql"
+  DB_HOST: "gateway01.us-east-1.prod.aws.tidbcloud.com"
+  DB_PORT: "4000"
+  DB_DATABASE: "saborgestion"
+  DB_USERNAME: "3Z76JHETThLiUEQ.root"
+  DB_SSL_CA: "/etc/ssl/tidb/isrgrootx1.pem"
+  DB_SSL_VERIFY: "false"
+
+  RUN_MIGRATIONS: "false"
+  RUN_SEEDERS: "false"
+
+  MAIL_MAILER: "log"
+
+  # Tiempo real con PUSHER CLOUD (el APP_SECRET va en el Secret, no aquí).
+  BROADCAST_CONNECTION: "pusher"
+  PUSHER_APP_ID: "2150075"
+  PUSHER_APP_KEY: "a42d53009b7b282bc22d"
+  PUSHER_APP_CLUSTER: "us2"
+  PUSHER_HOST: ""
+  PUSHER_PORT: "443"
+  PUSHER_SCHEME: "https"
