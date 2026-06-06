@@ -29,7 +29,8 @@ class AuthenticatedSessionController extends Controller
         
         switch ($user->role) {
             case 'admin':
-                return redirect()->intended(route('dashboard.administrador'));
+                // El admin aterriza en el Dashboard Ejecutivo (analytics), no en el viejo.
+                return redirect()->intended(route('admin.analytics'));
             case 'mesero':
                 return redirect()->intended(route('dashboard.mesero'));
             case 'cocinero':
