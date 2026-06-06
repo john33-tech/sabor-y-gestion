@@ -1,7 +1,7 @@
 # Producción: host real + TLS (habilita wss para Reverb).
 # Requiere cert-manager con un ClusterIssuer llamado "letsencrypt-prod"
 # (o quitá la anotación y el bloque tls si tu cloud termina TLS en el LoadBalancer).
-# ⚠️ Cambiá sabor.TU-DOMINIO.com por tu dominio.
+# Dominio: sabor-y-gestion.com
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -11,10 +11,10 @@ metadata:
 spec:
   tls:
     - hosts:
-        - sabor.TU-DOMINIO.com
+        - sabor-y-gestion.com
       secretName: sabor-tls
   rules:
-    - host: sabor.TU-DOMINIO.com
+    - host: sabor-y-gestion.com
       http:
         paths:
           - path: /

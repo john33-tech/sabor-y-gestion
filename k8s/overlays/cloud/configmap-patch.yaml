@@ -1,6 +1,6 @@
 # Producción: apaga debug, activa modo production (caches optimizadas en el
 # entrypoint) y apunta APP_URL a tu dominio real.
-# ⚠️ Cambiá sabor.TU-DOMINIO.com por tu dominio.
+# Dominio: sabor-y-gestion.com
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -8,7 +8,7 @@ metadata:
 data:
   APP_ENV: "production"
   APP_DEBUG: "false"
-  APP_URL: "https://sabor.TU-DOMINIO.com"
+  APP_URL: "https://sabor-y-gestion.com"
   LOG_LEVEL: "warning"
   # Solo en el PRIMER deploy poné "true" para cargar datos de ejemplo; luego "false".
   RUN_SEEDERS: "false"
