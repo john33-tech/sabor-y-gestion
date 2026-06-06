@@ -63,3 +63,16 @@ jobs:
           build-args: |
             VITE_PUSHER_APP_KEY=a42d53009b7b282bc22d
             VITE_PUSHER_APP_CLUSTER=us2
+
+      # Auto-deploy en Render: al terminar de publicar la imagen :latest, avisa
+      # a Render para que recargue (re-pull de :latest). Requiere el secret
+      # RENDER_DEPLOY_HOOK (Settings > Secrets > Actions). Si no está, se saltea.
+      - name: Disparar deploy en Render
+        env:
+          RENDER_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$RENDER_HOOK" ]; then
+            curl -fsS -X POST "$RENDER_HOOK" && echo "✅ Deploy en Render disparado"
+          else
+            echo "ℹ️ RENDER_DEPLOY_HOOK no configurado — se omite el auto-deploy."
+          fi
