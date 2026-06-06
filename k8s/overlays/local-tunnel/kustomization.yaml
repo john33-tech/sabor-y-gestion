@@ -34,12 +34,18 @@ patches:
   - path: deployment-patch.yaml
   # Ingress catch-all: quitar el host (era "localhost") para que responda al
   # Host del tunel (sabor-y-gestion.com) y a localhost por igual.
+  # + ssl-redirect=false: el TLS lo termina Cloudflare y el tunel llega al
+  #   ingress por HTTP a proposito; sin esto, ingress-nginx hace 308 http->https
+  #   y se genera un loop de redireccion infinito (ERR_TOO_MANY_REDIRECTS).
   - target:
       kind: Ingress
       name: sabor-ingress
     patch: |
       - op: remove
         path: /spec/rules/0/host
+      - op: add
+        path: /metadata/annotations/nginx.ingress.kubernetes.io~1ssl-redirect
+        value: "false"
   # Quitar el Secret de dev del base (lo creas tu con kubectl create secret)
   - target:
       kind: Secret
