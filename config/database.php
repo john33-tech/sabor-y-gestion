@@ -68,6 +68,9 @@ return [
                 PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT  => env('DB_SSL_VERIFY', false),
                 PDO::ATTR_EMULATE_PREPARES              => true,
                 PDO::ATTR_TIMEOUT                       => 30,
+                // Perf: conexión persistente reutiliza el handshake SSL entre requests
+                // (clave con BD remota: TiDB en us-east-1 ~1.4s de handshake por conexión).
+                PDO::ATTR_PERSISTENT                    => env('DB_PERSISTENT', false),
             ], fn($v) => !is_null($v)) : [],
         ],
 

@@ -1,3 +1,10 @@
+@php
+    // Perf: la caja abierta se consultaba 4 veces por render (4 round-trips a la BD).
+    // Se computa UNA sola vez aqui (con user eager-loaded) y se reusa en todo el nav.
+    $openClosure = (\Illuminate\Support\Facades\Auth::check() && in_array(\Illuminate\Support\Facades\Auth::user()->role, ['cajero', 'admin']))
+        ? \App\Models\CashClosure::with('user')->where('status', 'Open')->first()
+        : null;
+@endphp
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
     <div class="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
@@ -19,7 +26,7 @@
                     @auth
                         @if(in_array(Auth::user()->role, ['cajero', 'admin']))
                             @php
-                                $openClosure = \App\Models\CashClosure::where('status', 'Open')->first();
+                                $openClosure = $openClosure ?? null; // ya computado arriba (1 sola query)
                             @endphp
 
                             @if(!$openClosure)
@@ -37,7 +44,7 @@
                 @auth
                     @if(in_array(Auth::user()->role, ['cajero', 'admin']))
                         @php
-                            $openClosure = \App\Models\CashClosure::where('status', 'Open')->first();
+                            $openClosure = $openClosure ?? null; // ya computado arriba (1 sola query)
                         @endphp
                         @if($openClosure)
                             <div class="hidden ml-4 text-sm text-yellow-600 sm:flex sm:items-center dark:text-yellow-400">
@@ -109,7 +116,7 @@
             @auth
                 @if(in_array(Auth::user()->role, ['cajero', 'admin']))
                     @php
-                        $openClosure = \App\Models\CashClosure::where('status', 'Open')->first();
+                        $openClosure = $openClosure ?? null; // ya computado arriba (1 sola query)
                     @endphp
                     @if(!$openClosure)
                         <x-responsive-nav-link :href="route('caja.create')" :active="request()->routeIs('caja.create')">
@@ -127,7 +134,7 @@
         @auth
             @if(in_array(Auth::user()->role, ['cajero', 'admin']))
                 @php
-                    $openClosure = \App\Models\CashClosure::where('status', 'Open')->first();
+                    $openClosure = $openClosure ?? null; // ya computado arriba (1 sola query)
                 @endphp
                 @if($openClosure)
                     <div class="px-4 py-2 text-sm text-yellow-600 border-l-4 border-yellow-400 dark:text-yellow-400">

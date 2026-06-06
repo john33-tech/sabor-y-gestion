@@ -20,6 +20,9 @@ data:
   DB_USERNAME: "3Z76JHETThLiUEQ.root"
   DB_SSL_CA: "/etc/ssl/tidb/isrgrootx1.pem"
   DB_SSL_VERIFY: "false"
+  # Perf: conexión PDO persistente → reusa el handshake SSL a TiDB entre requests
+  # (cada handshake a us-east-1 cuesta ~1.4s; es el mayor costo por página).
+  DB_PERSISTENT: "true"
 
   # --- No tocar la BD del grupo en el arranque ---
   RUN_MIGRATIONS: "false"
