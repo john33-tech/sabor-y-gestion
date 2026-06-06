@@ -6,6 +6,7 @@
 # El cluster de la nube la baja desde ahí (kubectl apply -k k8s/overlays/cloud).
 #
 # Se dispara al hacer push a main, o manualmente desde la pestaña Actions.
+# (prueba de auto-deploy a Render — 2026-06-06)
 # ---------------------------------------------------------------------------
 name: Build & Push image to GHCR
 
