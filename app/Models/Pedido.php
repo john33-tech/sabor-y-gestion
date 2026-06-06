@@ -206,7 +206,14 @@ class Pedido extends Model
         } elseif ($activos->contains('estado', DetallePedido::ESTADO_EN_PREPARACION)) {
             $nuevo = self::ESTADO_EN_PREPARACION;
         } else {
-            $nuevo = self::ESTADO_LISTO;
+            // Todos listo/entregado. Si el pedido YA fue entregado antes (existe
+            // su venta/consumo registrado), restaurar 'entregado' tras la edición:
+            // no tiene sentido pedir re-confirmar la entrega ni re-registrar la
+            // venta (p. ej. se agregó un ítem a un pedido ya entregado y se borró).
+            // Si nunca se entregó, dejarlo en 'listo' para que el botón Entregado
+            // sea quien registre la venta.
+            $yaEntregado = Consumo::where('pedido_id', $this->id)->exists();
+            $nuevo = $yaEntregado ? self::ESTADO_ENTREGADO : self::ESTADO_LISTO;
         }
 
         if ($this->estado !== $nuevo) {
