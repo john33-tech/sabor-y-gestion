@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sin conexión · Sabor & Gestión</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #fff7ed, #ffedd5);
+            color: #7c2d12; text-align: center; padding: 24px;
+        }
+        .card {
+            background: #fff; border-radius: 20px; padding: 40px 32px;
+            box-shadow: 0 20px 50px rgba(249, 115, 22, .25);
+            max-width: 380px; width: 100%;
+        }
+        .logo { width: 88px; height: 88px; margin: 0 auto 18px; display: block; }
+        h1 { font-size: 22px; margin: 0 0 8px; color: #c2410c; }
+        p { font-size: 15px; line-height: 1.5; color: #9a3412; margin: 0 0 24px; }
+        button {
+            background: linear-gradient(135deg, #f97316, #ea580c);
+            color: #fff; border: none; border-radius: 12px;
+            padding: 14px 28px; font-size: 16px; font-weight: 700;
+            cursor: pointer; box-shadow: 0 8px 20px rgba(249, 115, 22, .4);
+        }
+        button:active { transform: scale(.97); }
+        .hint { margin-top: 18px; font-size: 13px; color: #c2825b; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img class="logo" src="/icons/icon-192.png" alt="Sabor & Gestión">
+        <h1>Estás sin conexión</h1>
+        <p>No pudimos cargar esta página porque no hay internet. Revisa tu conexión y vuelve a intentarlo.</p>
+        <button onclick="location.reload()">Reintentar</button>
+        <div class="hint">Sabor &amp; Gestión funciona como app: ¡vuelve cuando tengas señal!</div>
+    </div>
+</body>
+</html>

@@ -198,6 +198,11 @@
                             <label class="block text-sm font-medium mb-2 mt-4" style="color: #111827;">
                                 <i class="fas fa-map mr-1"></i> Seleccione ubicación en el mapa
                             </label>
+                            <button type="button" id="btn-mi-ubicacion" onclick="usarMiUbicacion()"
+                                class="w-full mb-2 py-2 rounded-lg text-white font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition"
+                                style="background-color: #2563eb;">
+                                <i class="fas fa-location-crosshairs"></i> Usar mi ubicación actual
+                            </button>
                             <div id="map" style="height: 350px;" class="rounded-lg border"></div>
                             <input type="hidden" name="latitud" id="latitud">
                             <input type="hidden" name="longitud" id="longitud">
@@ -280,19 +285,68 @@ function initMap() {
     }).addTo(map);
 
     map.on('click', function(e) {
-
-        const lat = e.latlng.lat;
-        const lng = e.latlng.lng;
-
-        document.getElementById('latitud').value = lat;
-        document.getElementById('longitud').value = lng;
-
-        if (marker) {
-            map.removeLayer(marker);
-        }
-
-        marker = L.marker([lat, lng]).addTo(map);
+        colocarMarcador(e.latlng.lat, e.latlng.lng);
     });
+}
+
+// Coloca/actualiza el pin y guarda las coordenadas en los inputs.
+function colocarMarcador(lat, lng) {
+    document.getElementById('latitud').value = lat;
+    document.getElementById('longitud').value = lng;
+
+    if (marker) {
+        map.removeLayer(marker);
+    }
+    marker = L.marker([lat, lng]).addTo(map);
+}
+
+// Geolocalización del dispositivo (GPS del navegador / PWA).
+function usarMiUbicacion() {
+    const btn = document.getElementById('btn-mi-ubicacion');
+
+    if (!navigator.geolocation) {
+        alert('Tu navegador no soporta geolocalización. Marca tu ubicación tocando el mapa.');
+        return;
+    }
+
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Obteniendo tu ubicación…';
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+
+            if (!map) initMap();
+            map.setView([lat, lng], 17);
+            colocarMarcador(lat, lng);
+
+            // Autocompletar la dirección con geocodificación inversa (Nominatim, sin API key).
+            const dir = document.querySelector('textarea[name="direccion"]');
+            if (dir && !dir.value.trim()) {
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+                    headers: { 'Accept-Language': 'es' }
+                })
+                    .then((r) => r.json())
+                    .then((d) => { if (d && d.display_name) dir.value = d.display_name; })
+                    .catch(() => {});
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check"></i> ¡Ubicación detectada!';
+            setTimeout(() => { btn.innerHTML = original; }, 2500);
+        },
+        (err) => {
+            btn.disabled = false;
+            btn.innerHTML = original;
+            const msg = err.code === 1
+                ? 'Permiso de ubicación denegado. Actívalo o marca tu ubicación en el mapa.'
+                : 'No pudimos obtener tu ubicación. Marca tu ubicación tocando el mapa.';
+            alert(msg);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
 }
 
 function toggleMap() {
