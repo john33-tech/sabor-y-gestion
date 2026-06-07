@@ -1077,7 +1077,7 @@ public function updateCliente(Request $request, Pedido $pedido)
         DB::commit();
 
         return redirect()
-            ->route('pedidos.show.cliente', $pedido)
+            ->route('pedidos.showCliente', $pedido)
             ->with('success', 'Pedido actualizado correctamente');
 
     } catch (\Exception $e) {
