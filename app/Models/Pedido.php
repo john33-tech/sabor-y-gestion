@@ -156,32 +156,37 @@ class Pedido extends Model
         return $estadoFactura === null || $estadoFactura === Factura::ESTADO_PENDIENTE;
     }
 
-    public function calcularTotales()
+    public function calcularTotales(?float $distanciaKm = null)
     {
         $this->subtotal = $this->detalles->sum('subtotal');
         // IVA desactivado. total = subtotal - descuento + costo de envío (delivery).
-        $this->total = $this->subtotal - $this->descuento + $this->costoEnvio();
+        $this->total = $this->subtotal - $this->descuento + $this->costoEnvio($distanciaKm);
         $this->save();
     }
 
     /**
-     * Costo de envío (solo delivery con coordenadas). Se calcula desde la
-     * distancia (Haversine) restaurante→cliente y la tarifa de config/restaurante.
-     * NO se guarda en BD: es determinístico desde lat/lng (sin migraciones).
-     * Fórmula: envio_base + envio_por_km * km.
+     * Costo de envío (solo delivery). Fórmula: envio_base + envio_por_km * km.
+     * Si se pasa $km (distancia por calle del frontend, OSRM) se usa esa para que
+     * el cobro coincida con la ruta que se muestra en el mapa. Si no, se estima
+     * en línea recta (Haversine) desde lat/lng. NO se guarda en BD (sin migración).
      */
-    public function costoEnvio(): float
+    public function costoEnvio(?float $km = null): float
     {
-        if ($this->tipo_pedido !== self::TIPO_DELIVERY || !$this->latitud || !$this->longitud) {
+        if ($this->tipo_pedido !== self::TIPO_DELIVERY) {
             return 0.0;
         }
 
-        $km = $this->distanciaKmHaversine(
-            (float) config('restaurante.lat'),
-            (float) config('restaurante.lng'),
-            (float) $this->latitud,
-            (float) $this->longitud
-        );
+        if ($km === null) {
+            if (!$this->latitud || !$this->longitud) {
+                return 0.0;
+            }
+            $km = $this->distanciaKmHaversine(
+                (float) config('restaurante.lat'),
+                (float) config('restaurante.lng'),
+                (float) $this->latitud,
+                (float) $this->longitud
+            );
+        }
 
         $base  = (float) config('restaurante.envio_base', 0);
         $porKm = (float) config('restaurante.envio_por_km', 0);

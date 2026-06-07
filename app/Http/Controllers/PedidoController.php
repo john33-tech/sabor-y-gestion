@@ -246,6 +246,7 @@ public function storeCliente(Request $request)
         'descuento' => 'nullable|numeric|min:0',
         'latitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
         'longitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
+        'distancia_km' => 'nullable|numeric|min:0',
     ]);
 
     // Verificar stock antes de proceder
@@ -286,8 +287,8 @@ public function storeCliente(Request $request)
             ]);
         }
 
-        // Calcular totales
-        $pedido->calcularTotales();
+        // Calcular totales (envío por la distancia por calle si el frontend la envía)
+        $pedido->calcularTotales($request->filled('distancia_km') ? (float) $request->input('distancia_km') : null);
 
         // Generar número de pedido (después de tener los totales)
         $pedido->generarNumeroPedido();
@@ -1012,6 +1013,7 @@ public function updateCliente(Request $request, Pedido $pedido)
         'direccion' => 'nullable|string|max:500',
         'latitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
         'longitud' => 'required_if:tipo_pedido,delivery|nullable|numeric',
+        'distancia_km' => 'nullable|numeric|min:0',
 
         'items' => 'required|array|min:1',
 
@@ -1074,7 +1076,7 @@ public function updateCliente(Request $request, Pedido $pedido)
         // RECALCULAR pedido + SINCRONIZAR la factura. Sin esto, el "Total a
         // pagar" (que sale de la factura) quedaba con el monto viejo aunque el
         // detalle del pedido cambiara al editar.
-        $pedido->calcularTotales();
+        $pedido->calcularTotales($request->filled('distancia_km') ? (float) $request->input('distancia_km') : null);
         $pedido->generarOrUpdateFactura();
 
         DB::commit();

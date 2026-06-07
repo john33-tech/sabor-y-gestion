@@ -208,6 +208,7 @@
                                  style="background-color:#FFF7ED; border:1px solid #FED7AA;"></div>
                             <input type="hidden" name="latitud" id="latitud">
                             <input type="hidden" name="longitud" id="longitud">
+                            <input type="hidden" name="distancia_km" id="distancia_km">
                         </div>
 
                         <!-- Notas -->
@@ -320,6 +321,11 @@ function colocarMarcador(lat, lng) {
     const info = document.getElementById('delivery-info');
     if (info) info.classList.remove('hidden');
     limpiarRuta = window.rutaDelivery(map, resto, [lat, lng], function (r) {
+        // Guardar la distancia por calle (o recta si OSRM falla) para cobrar el
+        // envío por ESA distancia (la que se muestra en el mapa).
+        const dk = document.getElementById('distancia_km');
+        if (dk) dk.value = r.km;
+        updateTotals();
         if (!info) return;
         const tipoTxt = r.real ? 'por calle' : 'en línea recta';
         info.innerHTML = '<i class="fas fa-route mr-1" style="color:#C2410C"></i> <strong>' + r.km.toFixed(1) + ' km</strong> ' + tipoTxt
@@ -585,15 +591,14 @@ function updateTotals() {
     document.querySelector('input[name="descuento"]').value
 ) || 0;
 
-    // Costo de envío: solo delivery con ubicación elegida (Bs por km desde el restaurante).
+    // Costo de envío: solo delivery con ubicación elegida. Se cobra por la
+    // distancia POR CALLE (la del mapa), guardada en #distancia_km.
     let envio = 0;
     const tipo = document.getElementById('tipo_pedido_input')?.value;
-    const lat = parseFloat(document.getElementById('latitud')?.value);
-    const lng = parseFloat(document.getElementById('longitud')?.value);
+    const distKm = parseFloat(document.getElementById('distancia_km')?.value);
     const envioRow = document.getElementById('envioRow');
-    if (tipo === 'delivery' && !isNaN(lat) && !isNaN(lng) && window.costoEnvio) {
-        const km = window.distanciaKm(window.RESTAURANTE.lat, window.RESTAURANTE.lng, lat, lng);
-        envio = window.costoEnvio(km);
+    if (tipo === 'delivery' && !isNaN(distKm) && distKm > 0 && window.costoEnvio) {
+        envio = window.costoEnvio(distKm);
         if (envioRow) {
             envioRow.style.display = 'flex';
             document.getElementById('envioDisplay').innerHTML = `Bs. ${envio.toFixed(2)}`;
