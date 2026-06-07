@@ -958,7 +958,7 @@ public function showCliente(Pedido $pedido)
         abort(403);
     }
 
-    $pedido->load(['detalles.plato']);
+    $pedido->load(['detalles.plato', 'factura']);
 
     return view('pedidos.showCliente', compact('pedido'));
 }

@@ -62,6 +62,151 @@
 
     </div>
 
+    {{-- PAGO CON QR (cliente). Solo si su factura sigue pendiente. El pedido del
+         cliente entra a la cocina recién DESPUÉS de pagar (regla "primero paga,
+         luego se prepara"). El QR se escanea con otro celular. --}}
+    @if(auth()->user()->isCliente() && $pedido->factura && $pedido->factura->estado === 'pendiente')
+    <div x-data="pagoCliente({{ $pedido->factura->id }})"
+         class="bg-white rounded-xl shadow border overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b" style="background-color:#ECFDF5;">
+            <h2 class="text-xl font-bold text-emerald-700">
+                <i class="fas fa-credit-card mr-2"></i> Pagar pedido
+            </h2>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <span class="text-gray-500">Total a pagar:</span>
+                <span class="text-2xl font-bold text-emerald-600">Bs {{ number_format($pedido->factura->total, 2) }}</span>
+            </div>
+            <p class="text-sm text-gray-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <i class="fas fa-info-circle mr-1 text-amber-600"></i>
+                Tu pedido entra a la cocina <strong>después de pagar</strong>. Escanea el QR con la cámara o app bancaria de <strong>otro celular</strong>; la confirmación llega aquí sola.
+            </p>
+
+            <button type="button" @click="generarQr()" :disabled="qrLoading"
+                    class="w-full inline-flex items-center justify-center px-4 py-2.5 text-white transition bg-purple-600 rounded-lg shadow hover:bg-purple-700 disabled:opacity-50">
+                <i class="mr-2 fas fa-qrcode"></i>
+                <span x-text="qrLoading ? 'Generando...' : 'Pagar con QR'"></span>
+            </button>
+
+            {{-- Modal QR. z-index alto porque Leaflet usa hasta ~1000. --}}
+            <div x-show="qrModalOpen" x-cloak
+                 class="fixed inset-0 flex items-center justify-center bg-black/70 p-4"
+                 style="z-index: 9999;"
+                 @keydown.escape.window="cerrarQr()">
+                <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center space-y-3">
+                    <h4 class="text-lg font-semibold text-gray-800">Escanea el QR para pagar</h4>
+                    <p class="text-xs text-gray-500">
+                        Factura <span class="font-mono" x-text="qrFacturaData.numero_factura"></span>
+                        · Bs <span x-text="qrFacturaData.total"></span>
+                    </p>
+                    <div class="flex justify-center" x-html="qrSvg" x-show="!qrPagado"></div>
+                    <p class="text-[11px] text-gray-400" x-show="!qrPagado">
+                        Escanea con otro teléfono. La confirmación llegará aquí automáticamente.
+                    </p>
+
+                    @if(config('app.env') === 'local' || config('app.debug'))
+                        <button type="button" @click="simularPago()" x-show="!qrPagado"
+                                class="w-full inline-flex items-center justify-center px-3 py-2 text-xs text-amber-800 bg-amber-50 border border-amber-300 rounded-lg hover:bg-amber-100 transition">
+                            <i class="mr-1 fas fa-flask"></i> Simular pago confirmado (solo entorno local)
+                        </button>
+                    @endif
+
+                    <div x-show="qrPagado" class="space-y-2 py-4">
+                        <div class="text-emerald-700 font-semibold text-xl">
+                            <i class="fas fa-check-circle"></i> ¡Pago confirmado!
+                        </div>
+                        <div class="text-sm text-gray-600" x-show="correoEnviado">
+                            <i class="fas fa-envelope text-emerald-600"></i> Factura enviada a tu correo.
+                        </div>
+                        <div class="text-xs text-gray-400">Recargando...</div>
+                    </div>
+                    <button type="button" @click="cerrarQr()"
+                            class="w-full px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">
+                        Cerrar
+                    </button>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-gray-100 text-xs text-gray-600">
+                <i class="fas fa-envelope-open-text text-emerald-600 mr-1"></i>
+                Al confirmar el pago te enviaremos la factura a
+                <span class="font-semibold">{{ auth()->user()->email }}</span>.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function pagoCliente(facturaId) {
+            return {
+                facturaId,
+                qrLoading: false, qrModalOpen: false,
+                qrSvg: '', qrUrl: '', qrEmisor: '', qrFacturaData: {},
+                qrPagado: false, correoEnviado: false, echoChannel: null,
+                async generarQr() {
+                    this.qrLoading = true;
+                    try {
+                        const res = await fetch(`/facturas/${this.facturaId}/generar-qr`, {
+                            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+                        if (!res.ok) throw new Error('Error generando QR');
+                        const data = await res.json();
+                        this.qrSvg = data.qr_svg;
+                        this.qrUrl = data.url;
+                        this.qrEmisor = data.emisor;
+                        this.qrFacturaData = data.factura;
+                        this.qrPagado = false;
+                        this.qrModalOpen = true;
+                        this.suscribirCanal(data.emisor);
+                    } catch (err) {
+                        alert('No se pudo generar el QR. Intenta de nuevo.');
+                    } finally {
+                        this.qrLoading = false;
+                    }
+                },
+                suscribirCanal(emisor) {
+                    if (!window.Echo) return;
+                    if (this.echoChannel) window.Echo.leave('emisor-' + this.qrEmisor);
+                    this.echoChannel = window.Echo.channel('emisor-' + emisor)
+                        .listen('.pago.confirmado', (e) => {
+                            this.qrPagado = true;
+                            this.correoEnviado = !!(e && e.correo_enviado);
+                            setTimeout(() => window.location.reload(), 3000);
+                        });
+                },
+                cerrarQr() {
+                    if (this.echoChannel && this.qrEmisor) {
+                        window.Echo.leave('emisor-' + this.qrEmisor);
+                        this.echoChannel = null;
+                    }
+                    this.qrModalOpen = false;
+                },
+                async simularPago() {
+                    try {
+                        const monto = parseFloat(String(this.qrFacturaData.total).replace(/,/g, ''));
+                        const res = await fetch('/api/confirmar-pago-qr', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({
+                                emisor: this.qrEmisor,
+                                pedido: this.qrFacturaData.pedido_id,
+                                monto: monto,
+                            }),
+                        });
+                        if (!res.ok) { const txt = await res.text(); throw new Error(txt); }
+                    } catch (err) {
+                        alert('Error simulando pago: ' + err.message);
+                    }
+                },
+            };
+        }
+    </script>
+    @endif
+
     @if($pedido->tipo_pedido == 'delivery' && $pedido->latitud)
     <div class="bg-white rounded-xl shadow border overflow-hidden mb-6">
         <div class="px-6 py-4 border-b" style="background-color:#FFF7ED;">
