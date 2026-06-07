@@ -1071,8 +1071,11 @@ public function updateCliente(Request $request, Pedido $pedido)
             ]);
         }
 
-        // RECALCULAR
+        // RECALCULAR pedido + SINCRONIZAR la factura. Sin esto, el "Total a
+        // pagar" (que sale de la factura) quedaba con el monto viejo aunque el
+        // detalle del pedido cambiara al editar.
         $pedido->calcularTotales();
+        $pedido->generarOrUpdateFactura();
 
         DB::commit();
 
