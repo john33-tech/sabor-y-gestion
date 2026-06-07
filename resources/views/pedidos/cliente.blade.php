@@ -321,6 +321,23 @@ function colocarMarcador(lat, lng) {
         info.innerHTML = '<i class="fas fa-route mr-1" style="color:#C2410C"></i> <strong>' + r.km.toFixed(1) + ' km</strong> ' + tipoTxt
             + ' &nbsp;·&nbsp; <i class="fas fa-clock mr-1" style="color:#C2410C"></i> llega en <strong>~' + r.min + ' min</strong>';
     });
+
+    // Autocompletar la dirección de entrega (geocodificación inversa) — tanto al
+    // hacer clic en el mapa como al usar el GPS.
+    autocompletarDireccion(lat, lng);
+}
+
+// Geocodificación inversa (Nominatim): rellena el campo "dirección" desde lat/lng.
+// Si falla, cae a las coordenadas para que el campo nunca quede vacío.
+function autocompletarDireccion(lat, lng) {
+    const dir = document.querySelector('textarea[name="direccion"]');
+    if (!dir) return;
+    const coordsTxt = `Ubicación GPS (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+    dir.value = 'Obteniendo dirección…';
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=es`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+        .then((d) => { dir.value = (d && d.display_name) ? d.display_name : coordsTxt; })
+        .catch(() => { dir.value = coordsTxt; });
 }
 
 // Geolocalización del dispositivo (GPS del navegador / PWA).
@@ -343,20 +360,7 @@ function usarMiUbicacion() {
 
             if (!map) initMap();
             map.setView([lat, lng], 17);
-            colocarMarcador(lat, lng);
-
-            // Autocompletar la dirección de entrega con el GPS. Como es una acción
-            // explícita del usuario, siempre se rellena (sobrescribe). Si el
-            // geocodificador falla, cae a las coordenadas → nunca queda vacío.
-            const dir = document.querySelector('textarea[name="direccion"]');
-            if (dir) {
-                const coordsTxt = `Ubicación GPS (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
-                dir.value = 'Obteniendo dirección…';
-                fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=es`)
-                    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-                    .then((d) => { dir.value = (d && d.display_name) ? d.display_name : coordsTxt; })
-                    .catch(() => { dir.value = coordsTxt; });
-            }
+            colocarMarcador(lat, lng); // ya autocompleta la dirección
 
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-check"></i> ¡Ubicación detectada!';
