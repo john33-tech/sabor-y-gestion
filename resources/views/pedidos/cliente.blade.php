@@ -322,15 +322,17 @@ function usarMiUbicacion() {
             map.setView([lat, lng], 17);
             colocarMarcador(lat, lng);
 
-            // Autocompletar la dirección con geocodificación inversa (Nominatim, sin API key).
+            // Autocompletar la dirección de entrega con el GPS. Como es una acción
+            // explícita del usuario, siempre se rellena (sobrescribe). Si el
+            // geocodificador falla, cae a las coordenadas → nunca queda vacío.
             const dir = document.querySelector('textarea[name="direccion"]');
-            if (dir && !dir.value.trim()) {
-                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
-                    headers: { 'Accept-Language': 'es' }
-                })
-                    .then((r) => r.json())
-                    .then((d) => { if (d && d.display_name) dir.value = d.display_name; })
-                    .catch(() => {});
+            if (dir) {
+                const coordsTxt = `Ubicación GPS (${lat.toFixed(5)}, ${lng.toFixed(5)})`;
+                dir.value = 'Obteniendo dirección…';
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=es`)
+                    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+                    .then((d) => { dir.value = (d && d.display_name) ? d.display_name : coordsTxt; })
+                    .catch(() => { dir.value = coordsTxt; });
             }
 
             btn.disabled = false;
