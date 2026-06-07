@@ -83,15 +83,24 @@
                             </div>
                         </div>
 
-                        <!-- DERECHA: Logout (siempre con texto) -->
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit"
-                                    class="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors whitespace-nowrap">
-                                <i class="text-sm text-red-500 fas fa-sign-out-alt sm:text-base"></i>
-                                <span class="text-xs sm:text-sm">Cerrar Sesión</span>
+                        <!-- DERECHA: Refrescar + Logout -->
+                        <div class="flex items-center gap-1 sm:gap-2">
+                            <!-- Botón refrescar: clave en la PWA instalada (no tiene barra del navegador) -->
+                            <button type="button" title="Actualizar"
+                                    onclick="this.querySelector('i').classList.add('fa-spin'); location.reload();"
+                                    class="flex items-center justify-center p-1.5 sm:p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                                <i class="text-base fas fa-arrows-rotate sm:text-lg"></i>
                             </button>
-                        </form>
+
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit"
+                                        class="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors whitespace-nowrap">
+                                    <i class="text-sm text-red-500 fas fa-sign-out-alt sm:text-base"></i>
+                                    <span class="text-xs sm:text-sm">Cerrar Sesión</span>
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </nav>
 
