@@ -319,6 +319,8 @@
             </h2>
         </div>
         <div class="p-6">
+            <div id="delivery-info" class="mb-3 text-sm text-gray-700 rounded-lg px-3 py-2"
+                 style="background-color:#FFF7ED; border:1px solid #FED7AA;"></div>
             <div id="mapShow" style="height: 350px;" class="border border-gray-200 rounded-lg z-0"></div>
         </div>
     </div>
@@ -326,14 +328,31 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const mapShow = L.map('mapShow').setView([{{ $pedido->latitud }}, {{ $pedido->longitud }}], 15);
+            const cliente = [{{ $pedido->latitud }}, {{ $pedido->longitud }}];
+            const resto = [window.RESTAURANTE.lat, window.RESTAURANTE.lng];
+
+            const mapShow = L.map('mapShow');
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap'
             }).addTo(mapShow);
-            L.marker([{{ $pedido->latitud }}, {{ $pedido->longitud }}])
-                .addTo(mapShow)
-                .bindPopup('Ubicación de entrega')
-                .openPopup();
+
+            // Pin del restaurante (origen) y del cliente (destino).
+            const iconResto = L.divIcon({ html: '<div style="font-size:26px;line-height:1">🍴</div>', className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
+            L.marker(resto, { icon: iconResto }).addTo(mapShow).bindPopup(window.RESTAURANTE.nombre + ' (restaurante)');
+            L.marker(cliente).addTo(mapShow).bindPopup('📍 Tu ubicación de entrega').openPopup();
+
+            // Ruta restaurante → cliente y encuadre de ambos puntos.
+            L.polyline([resto, cliente], { color: '#C2410C', weight: 4, opacity: 0.7, dashArray: '8,8' }).addTo(mapShow);
+            mapShow.fitBounds(L.latLngBounds([resto, cliente]).pad(0.3));
+
+            // Distancia + tiempo estimado.
+            const km = window.distanciaKm(resto[0], resto[1], cliente[0], cliente[1]);
+            const min = window.tiempoEntregaMin(km);
+            const info = document.getElementById('delivery-info');
+            if (info) {
+                info.innerHTML = '<i class="fas fa-route mr-1" style="color:#C2410C"></i> <strong>' + km.toFixed(1) + ' km</strong> desde el restaurante'
+                    + ' &nbsp;·&nbsp; <i class="fas fa-clock mr-1" style="color:#C2410C"></i> llega en <strong>~' + min + ' min</strong>';
+            }
         });
     </script>
     @endif

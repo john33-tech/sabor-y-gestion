@@ -204,6 +204,8 @@
                                 <i class="fas fa-location-crosshairs"></i> Usar mi ubicación actual
                             </button>
                             <div id="map" style="height: 350px;" class="rounded-lg border"></div>
+                            <div id="delivery-info" class="hidden mt-2 text-sm text-gray-700 rounded-lg px-3 py-2"
+                                 style="background-color:#FFF7ED; border:1px solid #FED7AA;"></div>
                             <input type="hidden" name="latitud" id="latitud">
                             <input type="hidden" name="longitud" id="longitud">
                         </div>
@@ -271,6 +273,8 @@
 let items = [];
 let map;
 let marker;
+let rutaLine;
+let markerResto;
 let searchTimeout;
 
 // ======================
@@ -278,18 +282,25 @@ let searchTimeout;
 // ======================
 function initMap() {
 
-    map = L.map('map').setView([-16.5000, -68.1500], 13);
+    const resto = [window.RESTAURANTE.lat, window.RESTAURANTE.lng];
+    map = L.map('map').setView(resto, 14);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
+    // Pin del restaurante (origen del envío).
+    const iconResto = L.divIcon({ html: '<div style="font-size:24px;line-height:1">🍴</div>', className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
+    markerResto = L.marker(resto, { icon: iconResto }).addTo(map)
+        .bindPopup(window.RESTAURANTE.nombre + ' (restaurante)');
 
     map.on('click', function(e) {
         colocarMarcador(e.latlng.lat, e.latlng.lng);
     });
 }
 
-// Coloca/actualiza el pin y guarda las coordenadas en los inputs.
+// Coloca/actualiza el pin del cliente, guarda las coordenadas, y dibuja la
+// ruta + distancia/tiempo estimado desde el restaurante.
 function colocarMarcador(lat, lng) {
     document.getElementById('latitud').value = lat;
     document.getElementById('longitud').value = lng;
@@ -297,7 +308,22 @@ function colocarMarcador(lat, lng) {
     if (marker) {
         map.removeLayer(marker);
     }
-    marker = L.marker([lat, lng]).addTo(map);
+    marker = L.marker([lat, lng]).addTo(map).bindPopup('📍 Tu ubicación de entrega');
+
+    // Ruta restaurante → cliente.
+    const resto = [window.RESTAURANTE.lat, window.RESTAURANTE.lng];
+    if (rutaLine) map.removeLayer(rutaLine);
+    rutaLine = L.polyline([resto, [lat, lng]], { color: '#C2410C', weight: 4, opacity: 0.7, dashArray: '8,8' }).addTo(map);
+
+    // Distancia + tiempo estimado.
+    const km = window.distanciaKm(resto[0], resto[1], lat, lng);
+    const min = window.tiempoEntregaMin(km);
+    const info = document.getElementById('delivery-info');
+    if (info) {
+        info.classList.remove('hidden');
+        info.innerHTML = '<i class="fas fa-route mr-1" style="color:#C2410C"></i> <strong>' + km.toFixed(1) + ' km</strong> desde el restaurante'
+            + ' &nbsp;·&nbsp; <i class="fas fa-clock mr-1" style="color:#C2410C"></i> llega en <strong>~' + min + ' min</strong>';
+    }
 }
 
 // Geolocalización del dispositivo (GPS del navegador / PWA).

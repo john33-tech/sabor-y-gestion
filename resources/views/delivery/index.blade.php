@@ -111,14 +111,19 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 const puntos = @json($puntos);
+const resto = [window.RESTAURANTE.lat, window.RESTAURANTE.lng];
 
-// Centro por defecto: Cochabamba, Bolivia. Se reajusta a los pins si hay alguno.
-const map = L.map('map-delivery').setView([-17.3895, -66.1568], 13);
+// Centro en el restaurante. Se reajusta a los pins si hay alguno.
+const map = L.map('map-delivery').setView(resto, 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
     maxZoom: 19,
 }).addTo(map);
+
+// Pin del restaurante (origen de los envíos).
+const iconResto = L.divIcon({ html: '<div style="font-size:26px;line-height:1">🍴</div>', className: '', iconSize: [26, 26], iconAnchor: [13, 13] });
+const markerResto = L.marker(resto, { icon: iconResto }).addTo(map).bindPopup(window.RESTAURANTE.nombre + ' (restaurante)');
 
 const colorEstadoIcon = {
     pendiente:      'orange',
@@ -128,7 +133,7 @@ const colorEstadoIcon = {
     cancelado:      'red',
 };
 
-const markers = [];
+const markers = [markerResto];
 puntos.forEach(pt => {
     const color = colorEstadoIcon[pt.estado] ?? 'grey';
     const icon = L.icon({
@@ -140,12 +145,21 @@ puntos.forEach(pt => {
         shadowSize: [41, 41],
     });
     const m = L.marker([pt.lat, pt.lng], { icon }).addTo(map);
+
+    // Distancia + tiempo estimado desde el restaurante.
+    const km = window.distanciaKm(resto[0], resto[1], pt.lat, pt.lng);
+    const min = window.tiempoEntregaMin(km);
+
+    // Ruta restaurante → pedido (línea sutil).
+    L.polyline([resto, [pt.lat, pt.lng]], { color: '#C2410C', weight: 2, opacity: 0.4, dashArray: '6,6' }).addTo(map);
+
     m.bindPopup(`
         <div style="min-width:180px">
             <p style="font-weight:600;margin:0 0 4px">${pt.numero}</p>
             <p style="margin:2px 0;font-size:12px"><strong>${pt.cliente ?? 'Cliente'}</strong></p>
             ${pt.telefono ? `<p style="margin:2px 0;font-size:12px">📞 ${pt.telefono}</p>` : ''}
             ${pt.direccion ? `<p style="margin:2px 0;font-size:12px">📍 ${pt.direccion}</p>` : ''}
+            <p style="margin:2px 0;font-size:12px">🚚 ${km.toFixed(1)} km • ~${min} min</p>
             <p style="margin:4px 0 0;font-size:12px"><strong>Bs ${pt.total.toFixed(2)}</strong> • ${pt.estado} • ${pt.creado}</p>
         </div>
     `);

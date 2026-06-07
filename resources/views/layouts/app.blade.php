@@ -13,6 +13,29 @@
 
     @include('layouts.pwa')
 
+    {{-- Datos del restaurante + helpers de envío a domicilio (distancia/tiempo), globales --}}
+    <script>
+        window.RESTAURANTE = {
+            nombre: @json(config('restaurante.nombre')),
+            direccion: @json(config('restaurante.direccion')),
+            lat: {{ config('restaurante.lat') }},
+            lng: {{ config('restaurante.lng') }},
+            velocidadKmh: {{ config('restaurante.velocidad_kmh') }},
+            minutosBase: {{ config('restaurante.minutos_base') }},
+        };
+        // Distancia Haversine (km) entre dos coordenadas.
+        window.distanciaKm = function (lat1, lng1, lat2, lng2) {
+            const R = 6371, toRad = (d) => d * Math.PI / 180;
+            const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        };
+        // Tiempo estimado de entrega (min) dada la distancia en km.
+        window.tiempoEntregaMin = function (km) {
+            return Math.round(window.RESTAURANTE.minutosBase + (km / window.RESTAURANTE.velocidadKmh) * 60);
+        };
+    </script>
+
     @stack('styles')
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
