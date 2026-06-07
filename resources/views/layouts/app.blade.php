@@ -25,9 +25,11 @@
             envioBase: {{ config('restaurante.envio_base', 0) }},
             envioPorKm: {{ config('restaurante.envio_por_km', 0) }},
         };
-        // Costo de envío (Bs) dada la distancia en km.
+        // Costo de envío (Bs) dada la distancia en km. La distancia se redondea a
+        // 1 decimal (igual que se muestra) para que "km mostrado × tarifa" cuadre.
         window.costoEnvio = function (km) {
-            return Math.round((window.RESTAURANTE.envioBase + window.RESTAURANTE.envioPorKm * km) * 100) / 100;
+            const kmR = Math.round(km * 10) / 10;
+            return Math.round((window.RESTAURANTE.envioBase + window.RESTAURANTE.envioPorKm * kmR) * 100) / 100;
         };
         // Distancia Haversine (km) entre dos coordenadas.
         window.distanciaKm = function (lat1, lng1, lat2, lng2) {

@@ -188,6 +188,10 @@ class Pedido extends Model
             );
         }
 
+        // Redondear la distancia a 1 decimal (igual que se muestra al cliente)
+        // para que "km mostrado × tarifa" cuadre exacto.
+        $km = round($km, 1);
+
         $base  = (float) config('restaurante.envio_base', 0);
         $porKm = (float) config('restaurante.envio_por_km', 0);
 
