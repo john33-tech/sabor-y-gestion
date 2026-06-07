@@ -134,6 +134,8 @@
                 tipo: cfg.tipo,
                 lat: cfg.lat,
                 lng: cfg.lng,
+                kmRuta: null,   // distancia por calle (OSRM); llega por evento del mapa
+                minRuta: null,  // tiempo por calle (OSRM)
                 pasos: [
                     { clave: 'pendiente',      icon: 'fa-receipt',      label: 'Recibido' },
                     { clave: 'en_preparacion', icon: 'fa-fire',         label: 'En cocina' },
@@ -147,6 +149,11 @@
                         if (e.detail && String(e.detail.pedido_id) === String(this.pedidoId) && e.detail.estado) {
                             this.estado = e.detail.estado;
                         }
+                    });
+                    // El mapa comparte su distancia/tiempo POR CALLE para que la barra
+                    // muestre lo mismo (no la línea recta).
+                    window.addEventListener('ruta-delivery-calculada', (e) => {
+                        if (e.detail) { this.kmRuta = e.detail.km; this.minRuta = e.detail.min; }
                     });
                 },
                 get idx() { return ESTADOS.indexOf(this.estado); },
@@ -187,10 +194,13 @@
                     return this.tipo === 'delivery' && this.lat != null && this.lng != null && window.RESTAURANTE;
                 },
                 distKm() {
-                    return window.distanciaKm(window.RESTAURANTE.lat, window.RESTAURANTE.lng, this.lat, this.lng);
+                    // Preferir la distancia por calle (OSRM); si aún no llega, la recta.
+                    return this.kmRuta != null
+                        ? this.kmRuta
+                        : window.distanciaKm(window.RESTAURANTE.lat, window.RESTAURANTE.lng, this.lat, this.lng);
                 },
                 etaMin() {
-                    return window.tiempoEntregaMin(this.distKm());
+                    return this.minRuta != null ? this.minRuta : window.tiempoEntregaMin(this.distKm());
                 },
                 // El cliente confirma que recibió su pedido (listo -> entregado).
                 get puedeConfirmar() {
@@ -407,6 +417,8 @@
             // Ruta REAL por calle (OSRM) restaurante → cliente, con encuadre.
             const info = document.getElementById('delivery-info');
             window.rutaDelivery(mapShow, resto, cliente, function (r) {
+                // Compartir la distancia/tiempo POR CALLE con la barra de seguimiento.
+                window.dispatchEvent(new CustomEvent('ruta-delivery-calculada', { detail: { km: r.km, min: r.min } }));
                 if (!info) return;
                 const tipoTxt = r.real ? 'por calle' : 'en línea recta';
                 info.innerHTML = '<i class="fas fa-route mr-1" style="color:#C2410C"></i> <strong>' + r.km.toFixed(1) + ' km</strong> ' + tipoTxt
