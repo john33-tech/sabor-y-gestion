@@ -106,6 +106,16 @@
                         </template>
                     </div>
 
+                    {{-- Botón para que el cliente confirme la recepción (solo cuando está "En camino"/Listo) --}}
+                    <template x-if="puedeConfirmar">
+                        <button type="button" @click="confirmarRecepcion()" :disabled="confirmando"
+                                class="mt-6 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 text-white font-semibold rounded-lg transition hover:opacity-90 disabled:opacity-50"
+                                style="background-color:#10B981;">
+                            <i class="fas fa-circle-check"></i>
+                            <span x-text="confirmando ? 'Confirmando...' : 'Confirmar que recibí mi pedido'"></span>
+                        </button>
+                    </template>
+
                     <p class="mt-6 text-center text-xs text-gray-400">
                         <i class="fas fa-circle-notch fa-spin mr-1"></i>
                         Esta pantalla se actualiza sola cuando tu pedido avanza.
@@ -181,6 +191,38 @@
                 },
                 etaMin() {
                     return window.tiempoEntregaMin(this.distKm());
+                },
+                // El cliente confirma que recibió su pedido (listo -> entregado).
+                get puedeConfirmar() {
+                    return this.estado === 'listo' && (this.tipo === 'delivery' || this.tipo === 'para_llevar');
+                },
+                confirmando: false,
+                async confirmarRecepcion() {
+                    if (this.confirmando) return;
+                    if (!confirm('¿Confirmas que recibiste tu pedido?')) return;
+                    this.confirmando = true;
+                    try {
+                        const res = await fetch(`/pedidos/${this.pedidoId}/cambiar-estado`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                            },
+                            body: JSON.stringify({ estado: 'entregado' }),
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (res.ok && data.success) {
+                            this.estado = 'entregado';
+                        } else {
+                            alert(data.mensaje || 'No se pudo confirmar la recepción.');
+                        }
+                    } catch (e) {
+                        alert('Error al confirmar la recepción.');
+                    } finally {
+                        this.confirmando = false;
+                    }
                 },
             };
         }
