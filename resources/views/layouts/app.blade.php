@@ -22,6 +22,12 @@
             lng: {{ config('restaurante.lng') }},
             velocidadKmh: {{ config('restaurante.velocidad_kmh') }},
             minutosBase: {{ config('restaurante.minutos_base') }},
+            envioBase: {{ config('restaurante.envio_base', 0) }},
+            envioPorKm: {{ config('restaurante.envio_por_km', 0) }},
+        };
+        // Costo de envío (Bs) dada la distancia en km.
+        window.costoEnvio = function (km) {
+            return Math.round((window.RESTAURANTE.envioBase + window.RESTAURANTE.envioPorKm * km) * 100) / 100;
         };
         // Distancia Haversine (km) entre dos coordenadas.
         window.distanciaKm = function (lat1, lng1, lat2, lng2) {

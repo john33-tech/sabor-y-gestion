@@ -88,6 +88,10 @@
                         @if($factura->descuento > 0)
                         <tr><td align="right" style="color:#b91c1c; padding:2px 10px;">Descuento</td><td align="right" style="color:#b91c1c; padding:2px 0;">− Bs {{ number_format($factura->descuento, 2) }}</td></tr>
                         @endif
+                        @php $envioFactura = max(0, round($factura->total - $factura->subtotal + $factura->descuento, 2)); @endphp
+                        @if($envioFactura > 0)
+                        <tr><td align="right" style="color:#78716c; padding:2px 10px;">🛵 Costo de envío</td><td align="right" style="padding:2px 0;">Bs {{ number_format($envioFactura, 2) }}</td></tr>
+                        @endif
                     </table>
                     <table width="100%" cellpadding="0" cellspacing="0">
                         <tr><td style="background:#C2410C; border-radius:8px; padding:13px 16px;">

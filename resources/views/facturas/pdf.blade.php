@@ -358,6 +358,13 @@
                             <td class="r">− Bs {{ number_format($factura->descuento, 2) }}</td>
                         </tr>
                     @endif
+                    @php $envioFactura = max(0, round($factura->total - $factura->subtotal + $factura->descuento, 2)); @endphp
+                    @if($envioFactura > 0)
+                        <tr>
+                            <td class="l">Costo de envío:</td>
+                            <td class="r">Bs {{ number_format($envioFactura, 2) }}</td>
+                        </tr>
+                    @endif
                     <tr class="total">
                         <td class="l">TOTAL A PAGAR:</td>
                         <td class="r">Bs {{ number_format($factura->total, 2) }}</td>

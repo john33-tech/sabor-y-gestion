@@ -241,6 +241,10 @@
                                     <span style="color: #78716C;">Descuento:</span>
                                     <span id="descuentoDisplay" class="font-semibold" style="color: #C2410C;">Bs. 0.00</span>
                                 </div>
+                                <div class="flex justify-between text-sm" id="envioRow" style="display:none;">
+                                    <span style="color: #78716C;"><i class="fas fa-motorcycle mr-1"></i> Costo de envío:</span>
+                                    <span id="envioDisplay" class="font-semibold" style="color: #C2410C;">Bs. 0.00</span>
+                                </div>
                                 <div class="border-t pt-2 mt-2" style="border-color: #FED7AA;">
                                     <div class="flex justify-between font-bold text-lg">
                                         <span style="color: #111827;">TOTAL:</span>
@@ -325,6 +329,9 @@ function colocarMarcador(lat, lng) {
     // Autocompletar la dirección de entrega (geocodificación inversa) — tanto al
     // hacer clic en el mapa como al usar el GPS.
     autocompletarDireccion(lat, lng);
+
+    // Recalcular totales: ya hay ubicación → se puede cobrar el envío.
+    updateTotals();
 }
 
 // Geocodificación inversa (Nominatim): rellena el campo "dirección" desde lat/lng.
@@ -402,6 +409,8 @@ function toggleMap() {
 
         mapContainer.classList.add('hidden');
     }
+
+    updateTotals(); // recalcular: el envío solo aplica a delivery
 }
 
 // ======================
@@ -576,8 +585,25 @@ function updateTotals() {
     document.querySelector('input[name="descuento"]').value
 ) || 0;
 
-    // IVA eliminado: el total es subtotal - descuento.
-    let total = subtotal - descuento;
+    // Costo de envío: solo delivery con ubicación elegida (Bs por km desde el restaurante).
+    let envio = 0;
+    const tipo = document.getElementById('tipo_pedido_input')?.value;
+    const lat = parseFloat(document.getElementById('latitud')?.value);
+    const lng = parseFloat(document.getElementById('longitud')?.value);
+    const envioRow = document.getElementById('envioRow');
+    if (tipo === 'delivery' && !isNaN(lat) && !isNaN(lng) && window.costoEnvio) {
+        const km = window.distanciaKm(window.RESTAURANTE.lat, window.RESTAURANTE.lng, lat, lng);
+        envio = window.costoEnvio(km);
+        if (envioRow) {
+            envioRow.style.display = 'flex';
+            document.getElementById('envioDisplay').innerHTML = `Bs. ${envio.toFixed(2)}`;
+        }
+    } else if (envioRow) {
+        envioRow.style.display = 'none';
+    }
+
+    // IVA eliminado: total = subtotal - descuento + envío.
+    let total = subtotal - descuento + envio;
 
     document.getElementById('subtotal').innerHTML =
         `Bs. ${subtotal.toFixed(2)}`;

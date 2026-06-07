@@ -159,10 +159,43 @@ class Pedido extends Model
     public function calcularTotales()
     {
         $this->subtotal = $this->detalles->sum('subtotal');
-        // IVA desactivado. NO escribimos 'impuesto' en pedidos: la columna no
-        // existe en la BD del grupo (total = subtotal - descuento).
-        $this->total = $this->subtotal - $this->descuento;
+        // IVA desactivado. total = subtotal - descuento + costo de envío (delivery).
+        $this->total = $this->subtotal - $this->descuento + $this->costoEnvio();
         $this->save();
+    }
+
+    /**
+     * Costo de envío (solo delivery con coordenadas). Se calcula desde la
+     * distancia (Haversine) restaurante→cliente y la tarifa de config/restaurante.
+     * NO se guarda en BD: es determinístico desde lat/lng (sin migraciones).
+     * Fórmula: envio_base + envio_por_km * km.
+     */
+    public function costoEnvio(): float
+    {
+        if ($this->tipo_pedido !== self::TIPO_DELIVERY || !$this->latitud || !$this->longitud) {
+            return 0.0;
+        }
+
+        $km = $this->distanciaKmHaversine(
+            (float) config('restaurante.lat'),
+            (float) config('restaurante.lng'),
+            (float) $this->latitud,
+            (float) $this->longitud
+        );
+
+        $base  = (float) config('restaurante.envio_base', 0);
+        $porKm = (float) config('restaurante.envio_por_km', 0);
+
+        return round($base + $porKm * $km, 2);
+    }
+
+    private function distanciaKmHaversine(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $R = 6371.0;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+        return $R * 2 * atan2(sqrt($a), sqrt(1 - $a));
     }
 
     public function actualizarEstado($estado)

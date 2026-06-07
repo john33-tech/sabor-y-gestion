@@ -14,4 +14,9 @@ return [
     'velocidad_kmh' => 22,
     // Minutos base (preparación + salida del repartidor) que se suman al viaje.
     'minutos_base'  => 12,
+
+    // Costo de envío (delivery): cobro = envio_base + envio_por_km * distancia_km.
+    // Actual: solo por km (Bs 2/km, sin base).
+    'envio_base'    => 0,
+    'envio_por_km'  => 2,
 ];
