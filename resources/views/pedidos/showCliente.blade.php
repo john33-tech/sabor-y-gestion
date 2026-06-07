@@ -52,7 +52,7 @@
 
     {{-- SEGUIMIENTO EN VIVO del pedido (estilo app de delivery). Se actualiza
          solo en tiempo real al cambiar el estado (evento global de app.js). --}}
-    <div x-data="seguimientoPedido({ estadoInicial: '{{ $pedido->estado }}', pedidoId: {{ $pedido->id }}, tipo: '{{ $pedido->tipo_pedido }}' })"
+    <div x-data="seguimientoPedido({ estadoInicial: '{{ $pedido->estado }}', pedidoId: {{ $pedido->id }}, tipo: '{{ $pedido->tipo_pedido }}', lat: {{ $pedido->latitud ?? 'null' }}, lng: {{ $pedido->longitud ?? 'null' }} })"
          class="bg-white rounded-xl shadow border overflow-hidden mb-6">
         <div class="px-6 py-4 border-b" style="background-color:#FFF7ED;">
             <h2 class="text-xl font-bold" style="color:#C2410C;">
@@ -72,13 +72,22 @@
             {{-- Flujo normal: pill de estado + stepper --}}
             <template x-if="!esTerminalRaro">
                 <div>
-                    <div class="flex justify-center mb-6">
+                    <div class="flex justify-center mb-3">
                         <span class="px-4 py-1.5 rounded-full text-white text-sm font-semibold inline-flex items-center gap-2"
                               :style="`background-color:${colorActual()}`">
                             <span class="w-2 h-2 rounded-full bg-white/80 animate-pulse"></span>
                             <span x-text="labelActual()"></span>
                         </span>
                     </div>
+
+                    {{-- Entrega estimada (solo delivery con coordenadas, hasta que se entrega) --}}
+                    <template x-if="tieneCoords && estado !== 'entregado'">
+                        <p class="text-center text-sm text-gray-600 mb-5">
+                            <i class="fas fa-motorcycle mr-1" style="color:#C2410C"></i>
+                            Entrega estimada: <strong x-text="'~' + etaMin() + ' min'"></strong>
+                            <span class="text-gray-400" x-text="'· ' + distKm().toFixed(1) + ' km'"></span>
+                        </p>
+                    </template>
 
                     <div class="flex items-start">
                         <template x-for="(paso, i) in pasos" :key="paso.clave">
@@ -113,6 +122,8 @@
                 estado: cfg.estadoInicial,
                 pedidoId: cfg.pedidoId,
                 tipo: cfg.tipo,
+                lat: cfg.lat,
+                lng: cfg.lng,
                 pasos: [
                     { clave: 'pendiente',      icon: 'fa-receipt',      label: 'Recibido' },
                     { clave: 'en_preparacion', icon: 'fa-fire',         label: 'En cocina' },
@@ -160,6 +171,16 @@
                         entregado: '#0EA5E9', cancelado: '#EF4444', facturado: '#6366F1',
                     };
                     return m[this.estado] || '#6B7280';
+                },
+                // Envío a domicilio: distancia y tiempo estimado desde el restaurante.
+                get tieneCoords() {
+                    return this.tipo === 'delivery' && this.lat != null && this.lng != null && window.RESTAURANTE;
+                },
+                distKm() {
+                    return window.distanciaKm(window.RESTAURANTE.lat, window.RESTAURANTE.lng, this.lat, this.lng);
+                },
+                etaMin() {
+                    return window.tiempoEntregaMin(this.distKm());
                 },
             };
         }
