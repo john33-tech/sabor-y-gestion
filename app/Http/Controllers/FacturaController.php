@@ -112,7 +112,29 @@ class FacturaController extends Controller
         $factura->save();
 
         if ($factura->pedido) {
-            $factura->pedido->update(['estado' => Pedido::ESTADO_FACTURADO]);
+            $pedido = $factura->pedido;
+            $pedido->loadMissing('usuario');
+
+            $esClienteEnCocina = optional($pedido->usuario)->role === 'cliente'
+                && in_array($pedido->estado, [
+                    Pedido::ESTADO_PENDIENTE,
+                    Pedido::ESTADO_EN_PREPARACION,
+                    Pedido::ESTADO_LISTO,
+                ]);
+
+            if ($esClienteEnCocina) {
+                // Pedido de autoservicio del cliente recién pagado: NO cerrarlo a
+                // facturado. Debe ENTRAR a la cocina (regla "primero paga, luego se
+                // prepara"), igual que el webhook del QR. Se avisa al cocinero.
+                try {
+                    event(new \App\Events\PedidoCreado($pedido));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('No se pudo notificar a cocina (factura pagar cliente): ' . $e->getMessage());
+                }
+            } else {
+                // Mesa/cajero o pedido ya entregado: cerrar la cuenta a facturado.
+                $pedido->update(['estado' => Pedido::ESTADO_FACTURADO]);
+            }
         }
 
         // Avisar en vivo (mesero/cajero/admin) que esta cuenta se pagó (tu mejora).
