@@ -55,15 +55,19 @@
             if (opts.fit) map.fitBounds(layer.getBounds().pad(0.25));
             recalcInfo(window.distanciaKm(origen[0], origen[1], destino[0], destino[1]), false);
 
-            // 2) Ruta real por calle (asíncrona).
-            const url = `https://router.project-osrm.org/route/v1/driving/${origen[1]},${origen[0]};${destino[1]},${destino[0]}?overview=full&geometries=geojson`;
+            // 2) Ruta real por calle (asíncrona). Pedimos alternativas y elegimos
+            //    la MÁS CORTA en distancia (OSRM por defecto da la más rápida).
+            const url = `https://router.project-osrm.org/route/v1/driving/${origen[1]},${origen[0]};${destino[1]},${destino[0]}?overview=full&geometries=geojson&alternatives=3`;
             const ctrl = new AbortController();
             const t = setTimeout(() => ctrl.abort(), 7000);
             fetch(url, { signal: ctrl.signal })
                 .then((r) => (r.ok ? r.json() : Promise.reject()))
                 .then((data) => {
                     clearTimeout(t);
-                    const route = data && data.routes && data.routes[0];
+                    const rutas = data && data.routes;
+                    if (!rutas || !rutas.length) return;
+                    // Elegir la ruta de MENOR distancia entre las alternativas.
+                    const route = rutas.reduce((a, b) => (b.distance < a.distance ? b : a));
                     if (!route || !route.geometry) return;
                     const coords = route.geometry.coordinates.map((c) => [c[1], c[0]]); // [lng,lat] -> [lat,lng]
                     if (map._rutaLayer) map.removeLayer(map._rutaLayer);
