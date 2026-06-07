@@ -38,36 +38,49 @@ class Plato extends Model
                     ->withTimestamps();
     }
     
-    // Método: Descontar ingredientes del inventario
+    // Método: Descontar ingredientes del inventario (escandallo).
+    // BLINDADO contra concurrencia: bloquea la fila del inventario con
+    // lockForUpdate (debe correr dentro de una transacción — todos los callers
+    // la abren) y re-verifica el stock DENTRO del lock. Si no alcanza, lanza una
+    // excepción para que la transacción haga rollback (en vez de descontar a 0
+    // en silencio y sobre-vender). Así dos pedidos simultáneos del mismo
+    // ingrediente se serializan y nunca se vende stock que no existe.
     public function descontarInventario($cantidad = 1)
     {
         foreach ($this->ingredientes as $ingrediente) {
-            $inventario = $ingrediente->inventario;
-            
-            if ($inventario) {
-                $cantidadADescontar = $ingrediente->pivot->cantidad * $cantidad;
-                $nuevaCantidad = $inventario->cantidad_actual - $cantidadADescontar;
-                
-                // Actualizar el inventario (no permite negativo)
-                $inventario->cantidad_actual = max(0, $nuevaCantidad);
-                $inventario->save();
+            $inventario = $ingrediente->inventario()->lockForUpdate()->first();
+
+            if (!$inventario) {
+                continue;
             }
+
+            $cantidadADescontar = $ingrediente->pivot->cantidad * $cantidad;
+
+            if ($inventario->cantidad_actual < $cantidadADescontar) {
+                throw new \RuntimeException(
+                    "Stock insuficiente de «{$ingrediente->nombre}»: disponible {$inventario->cantidad_actual}, se necesitan {$cantidadADescontar}."
+                );
+            }
+
+            $inventario->cantidad_actual -= $cantidadADescontar;
+            $inventario->save();
         }
     }
-    
-    // Método para revertir el inventario (cuando se cancela un pedido)
+
+    // Método para revertir el inventario (cuando se cancela un pedido).
+    // También bloquea la fila para evitar perder actualizaciones por concurrencia.
     public function revertirInventario($cantidad = 1)
     {
         foreach ($this->ingredientes as $ingrediente) {
-            $inventario = $ingrediente->inventario;
-            
-            if ($inventario) {
-                $cantidadARevertir = $ingrediente->pivot->cantidad * $cantidad;
-                $nuevaCantidad = $inventario->cantidad_actual + $cantidadARevertir;
-                
-                $inventario->cantidad_actual = $nuevaCantidad;
-                $inventario->save();
+            $inventario = $ingrediente->inventario()->lockForUpdate()->first();
+
+            if (!$inventario) {
+                continue;
             }
+
+            $cantidadARevertir = $ingrediente->pivot->cantidad * $cantidad;
+            $inventario->cantidad_actual += $cantidadARevertir;
+            $inventario->save();
         }
     }
     
