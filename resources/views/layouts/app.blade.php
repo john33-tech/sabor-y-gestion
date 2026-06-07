@@ -34,6 +34,45 @@
         window.tiempoEntregaMin = function (km) {
             return Math.round(window.RESTAURANTE.minutosBase + (km / window.RESTAURANTE.velocidadKmh) * 60);
         };
+
+        // Dibuja la RUTA por calle (OSRM, gratis, sin API key) entre origen y
+        // destino sobre un mapa Leaflet. Muestra primero una línea recta al
+        // instante y luego la reemplaza por la ruta real. Si OSRM no responde,
+        // se queda la recta. onInfo recibe { km, min, real }.
+        // Devuelve una función para borrar la ruta dibujada.
+        window.rutaDelivery = function (map, origen, destino, onInfo, opts) {
+            opts = opts || {};
+            const recalcInfo = (km, real) => onInfo && onInfo({ km: km, min: window.tiempoEntregaMin(km), real: real });
+
+            // 1) Línea recta inmediata (feedback al toque).
+            let layer = L.polyline([origen, destino], { color: '#C2410C', weight: 4, opacity: 0.6, dashArray: '8,8' }).addTo(map);
+            if (opts.fit) map.fitBounds(layer.getBounds().pad(0.25));
+            recalcInfo(window.distanciaKm(origen[0], origen[1], destino[0], destino[1]), false);
+
+            // 2) Ruta real por calle (asíncrona).
+            const url = `https://router.project-osrm.org/route/v1/driving/${origen[1]},${origen[0]};${destino[1]},${destino[0]}?overview=full&geometries=geojson`;
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 7000);
+            fetch(url, { signal: ctrl.signal })
+                .then((r) => (r.ok ? r.json() : Promise.reject()))
+                .then((data) => {
+                    clearTimeout(t);
+                    const route = data && data.routes && data.routes[0];
+                    if (!route || !route.geometry) return;
+                    const coords = route.geometry.coordinates.map((c) => [c[1], c[0]]); // [lng,lat] -> [lat,lng]
+                    if (map._rutaLayer) map.removeLayer(map._rutaLayer);
+                    layer = L.polyline(coords, { color: '#C2410C', weight: 5, opacity: 0.85 }).addTo(map);
+                    map._rutaLayer = layer;
+                    if (opts.fit) map.fitBounds(layer.getBounds().pad(0.15));
+                    const km = route.distance / 1000;
+                    const min = Math.round(window.RESTAURANTE.minutosBase + route.duration / 60);
+                    if (onInfo) onInfo({ km: km, min: min, real: true });
+                })
+                .catch(() => clearTimeout(t));
+
+            map._rutaLayer = layer;
+            return () => { if (map._rutaLayer) { map.removeLayer(map._rutaLayer); map._rutaLayer = null; } };
+        };
     </script>
 
     @stack('styles')

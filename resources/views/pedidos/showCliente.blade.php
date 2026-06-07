@@ -404,18 +404,14 @@
             L.marker(resto, { icon: iconResto }).addTo(mapShow).bindPopup(window.RESTAURANTE.nombre + ' (restaurante)');
             L.marker(cliente).addTo(mapShow).bindPopup('📍 Tu ubicación de entrega').openPopup();
 
-            // Ruta restaurante → cliente y encuadre de ambos puntos.
-            L.polyline([resto, cliente], { color: '#C2410C', weight: 4, opacity: 0.7, dashArray: '8,8' }).addTo(mapShow);
-            mapShow.fitBounds(L.latLngBounds([resto, cliente]).pad(0.3));
-
-            // Distancia + tiempo estimado.
-            const km = window.distanciaKm(resto[0], resto[1], cliente[0], cliente[1]);
-            const min = window.tiempoEntregaMin(km);
+            // Ruta REAL por calle (OSRM) restaurante → cliente, con encuadre.
             const info = document.getElementById('delivery-info');
-            if (info) {
-                info.innerHTML = '<i class="fas fa-route mr-1" style="color:#C2410C"></i> <strong>' + km.toFixed(1) + ' km</strong> desde el restaurante'
-                    + ' &nbsp;·&nbsp; <i class="fas fa-clock mr-1" style="color:#C2410C"></i> llega en <strong>~' + min + ' min</strong>';
-            }
+            window.rutaDelivery(mapShow, resto, cliente, function (r) {
+                if (!info) return;
+                const tipoTxt = r.real ? 'por calle' : 'en línea recta';
+                info.innerHTML = '<i class="fas fa-route mr-1" style="color:#C2410C"></i> <strong>' + r.km.toFixed(1) + ' km</strong> ' + tipoTxt
+                    + ' &nbsp;·&nbsp; <i class="fas fa-clock mr-1" style="color:#C2410C"></i> llega en <strong>~' + r.min + ' min</strong>';
+            }, { fit: true });
         });
     </script>
     @endif

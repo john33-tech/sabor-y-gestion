@@ -273,7 +273,7 @@
 let items = [];
 let map;
 let marker;
-let rutaLine;
+let limpiarRuta;
 let markerResto;
 let searchTimeout;
 
@@ -310,20 +310,17 @@ function colocarMarcador(lat, lng) {
     }
     marker = L.marker([lat, lng]).addTo(map).bindPopup('📍 Tu ubicación de entrega');
 
-    // Ruta restaurante → cliente.
+    // Ruta REAL por calle restaurante → cliente (con fallback a línea recta).
     const resto = [window.RESTAURANTE.lat, window.RESTAURANTE.lng];
-    if (rutaLine) map.removeLayer(rutaLine);
-    rutaLine = L.polyline([resto, [lat, lng]], { color: '#C2410C', weight: 4, opacity: 0.7, dashArray: '8,8' }).addTo(map);
-
-    // Distancia + tiempo estimado.
-    const km = window.distanciaKm(resto[0], resto[1], lat, lng);
-    const min = window.tiempoEntregaMin(km);
+    if (limpiarRuta) limpiarRuta();
     const info = document.getElementById('delivery-info');
-    if (info) {
-        info.classList.remove('hidden');
-        info.innerHTML = '<i class="fas fa-route mr-1" style="color:#C2410C"></i> <strong>' + km.toFixed(1) + ' km</strong> desde el restaurante'
-            + ' &nbsp;·&nbsp; <i class="fas fa-clock mr-1" style="color:#C2410C"></i> llega en <strong>~' + min + ' min</strong>';
-    }
+    if (info) info.classList.remove('hidden');
+    limpiarRuta = window.rutaDelivery(map, resto, [lat, lng], function (r) {
+        if (!info) return;
+        const tipoTxt = r.real ? 'por calle' : 'en línea recta';
+        info.innerHTML = '<i class="fas fa-route mr-1" style="color:#C2410C"></i> <strong>' + r.km.toFixed(1) + ' km</strong> ' + tipoTxt
+            + ' &nbsp;·&nbsp; <i class="fas fa-clock mr-1" style="color:#C2410C"></i> llega en <strong>~' + r.min + ' min</strong>';
+    });
 }
 
 // Geolocalización del dispositivo (GPS del navegador / PWA).
