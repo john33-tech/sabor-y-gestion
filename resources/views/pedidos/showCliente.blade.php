@@ -30,19 +30,7 @@
     </div>
 
     {{-- INFO --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
-        <div class="bg-white rounded-xl shadow p-4 border">
-            <p class="text-sm text-gray-500 mb-1">Estado</p>
-
-            <span class="px-3 py-1 rounded-full text-white text-sm"
-                  style="background-color:
-                    {{ $pedido->estado == 'pendiente' ? '#F59E0B' :
-                       ($pedido->estado == 'en_preparacion' ? '#3B82F6' :
-                       ($pedido->estado == 'listo' ? '#10B981' : '#6B7280')) }};">
-                {{ ucfirst(str_replace('_', ' ', $pedido->estado)) }}
-            </span>
-        </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
 
         <div class="bg-white rounded-xl shadow p-4 border">
             <p class="text-sm text-gray-500 mb-1">Tipo Pedido</p>
@@ -61,6 +49,121 @@
         </div>
 
     </div>
+
+    {{-- SEGUIMIENTO EN VIVO del pedido (estilo app de delivery). Se actualiza
+         solo en tiempo real al cambiar el estado (evento global de app.js). --}}
+    <div x-data="seguimientoPedido({ estadoInicial: '{{ $pedido->estado }}', pedidoId: {{ $pedido->id }}, tipo: '{{ $pedido->tipo_pedido }}' })"
+         class="bg-white rounded-xl shadow border overflow-hidden mb-6">
+        <div class="px-6 py-4 border-b" style="background-color:#FFF7ED;">
+            <h2 class="text-xl font-bold" style="color:#C2410C;">
+                <i class="fas fa-location-arrow mr-2"></i> Seguimiento de tu pedido
+            </h2>
+        </div>
+        <div class="p-6">
+            {{-- Estados terminales (cancelado / facturado) --}}
+            <template x-if="esTerminalRaro">
+                <div class="flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium"
+                     :class="estado === 'cancelado' ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-indigo-50 border border-indigo-200 text-indigo-700'">
+                    <i class="fas" :class="estado === 'cancelado' ? 'fa-ban' : 'fa-file-invoice-dollar'"></i>
+                    <span x-text="labelActual()"></span>
+                </div>
+            </template>
+
+            {{-- Flujo normal: pill de estado + stepper --}}
+            <template x-if="!esTerminalRaro">
+                <div>
+                    <div class="flex justify-center mb-6">
+                        <span class="px-4 py-1.5 rounded-full text-white text-sm font-semibold inline-flex items-center gap-2"
+                              :style="`background-color:${colorActual()}`">
+                            <span class="w-2 h-2 rounded-full bg-white/80 animate-pulse"></span>
+                            <span x-text="labelActual()"></span>
+                        </span>
+                    </div>
+
+                    <div class="flex items-start">
+                        <template x-for="(paso, i) in pasos" :key="paso.clave">
+                            <div class="flex-1 flex flex-col items-center relative">
+                                <template x-if="i < pasos.length - 1">
+                                    <div class="absolute left-1/2 w-full h-1 transition-colors" style="top:18px;"
+                                         :class="hecho(i) ? 'bg-emerald-500' : 'bg-gray-200'"></div>
+                                </template>
+                                <span class="relative z-10 flex items-center justify-center w-10 h-10 rounded-full ring-4 ring-white transition-colors"
+                                      :class="claseCirculo(i)">
+                                    <i class="fas text-sm" :class="hecho(i) ? 'fa-check' : paso.icon"></i>
+                                </span>
+                                <span class="mt-2 text-[11px] sm:text-xs text-center font-medium transition-colors"
+                                      :class="claseLabel(i)" x-text="paso.label"></span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <p class="mt-6 text-center text-xs text-gray-400">
+                        <i class="fas fa-circle-notch fa-spin mr-1"></i>
+                        Esta pantalla se actualiza sola cuando tu pedido avanza.
+                    </p>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <script>
+        function seguimientoPedido(cfg) {
+            const ESTADOS = ['pendiente', 'en_preparacion', 'listo', 'entregado'];
+            return {
+                estado: cfg.estadoInicial,
+                pedidoId: cfg.pedidoId,
+                tipo: cfg.tipo,
+                pasos: [
+                    { clave: 'pendiente',      icon: 'fa-receipt',      label: 'Recibido' },
+                    { clave: 'en_preparacion', icon: 'fa-fire',         label: 'En cocina' },
+                    { clave: 'listo',          icon: cfg.tipo === 'delivery' ? 'fa-motorcycle' : 'fa-bell',
+                                               label: cfg.tipo === 'delivery' ? 'En camino' : (cfg.tipo === 'para_llevar' ? 'Para retirar' : 'Listo') },
+                    { clave: 'entregado',      icon: 'fa-check-double', label: 'Entregado' },
+                ],
+                init() {
+                    // app.js (canal cliente.{id}.pedidos) re-emite este evento global.
+                    window.addEventListener('pedido-estado-cambiado', (e) => {
+                        if (e.detail && String(e.detail.pedido_id) === String(this.pedidoId) && e.detail.estado) {
+                            this.estado = e.detail.estado;
+                        }
+                    });
+                },
+                get idx() { return ESTADOS.indexOf(this.estado); },
+                get esFinal() { return this.estado === 'entregado'; },
+                get esTerminalRaro() { return this.estado === 'cancelado' || this.estado === 'facturado'; },
+                hecho(i) { return this.idx >= 0 && (i < this.idx || this.esFinal); },
+                actual(i) { return i === this.idx && !this.esFinal; },
+                claseCirculo(i) {
+                    if (this.hecho(i)) return 'bg-emerald-500 text-white';
+                    if (this.actual(i)) return 'bg-amber-500 text-white animate-pulse';
+                    return 'bg-gray-200 text-gray-400';
+                },
+                claseLabel(i) {
+                    if (this.hecho(i)) return 'text-emerald-700';
+                    if (this.actual(i)) return 'text-amber-700';
+                    return 'text-gray-400';
+                },
+                labelActual() {
+                    const m = {
+                        pendiente: 'Pedido recibido',
+                        en_preparacion: 'En preparación',
+                        listo: this.tipo === 'delivery' ? 'En camino' : 'Listo para retirar',
+                        entregado: '¡Entregado!',
+                        cancelado: 'Pedido cancelado',
+                        facturado: 'Pedido facturado',
+                    };
+                    return m[this.estado] || this.estado;
+                },
+                colorActual() {
+                    const m = {
+                        pendiente: '#F59E0B', en_preparacion: '#3B82F6', listo: '#10B981',
+                        entregado: '#0EA5E9', cancelado: '#EF4444', facturado: '#6366F1',
+                    };
+                    return m[this.estado] || '#6B7280';
+                },
+            };
+        }
+    </script>
 
     {{-- PAGO CON QR (cliente). Solo si su factura sigue pendiente. El pedido del
          cliente entra a la cocina recién DESPUÉS de pagar (regla "primero paga,
