@@ -13,7 +13,7 @@
  *
  * Subir CACHE_VERSION invalida el caché viejo en el siguiente deploy.
  */
-const CACHE_VERSION = 'sabor-v2';
+const CACHE_VERSION = 'sabor-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const OFFLINE_URL = '/offline.html';
 
@@ -71,10 +71,12 @@ self.addEventListener('fetch', (event) => {
     // Sólo same-origin. CDNs (Leaflet, Font Awesome, tiles de OSM, Pusher) → red.
     if (url.origin !== self.location.origin) return;
 
-    // Navegaciones (páginas HTML): network-first con fallback offline.
+    // Navegaciones (páginas HTML): SIEMPRE de la red sin tocar el caché HTTP
+    // (cache: 'no-store') para no servir nunca una página vieja (p. ej. un
+    // pedido que ya cambió de estado). Fallback offline solo si no hay red.
     if (req.mode === 'navigate') {
         event.respondWith(
-            fetch(req).catch(() => caches.match(OFFLINE_URL))
+            fetch(req, { cache: 'no-store' }).catch(() => caches.match(OFFLINE_URL))
         );
         return;
     }
