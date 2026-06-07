@@ -13,7 +13,7 @@
  *
  * Subir CACHE_VERSION invalida el caché viejo en el siguiente deploy.
  */
-const CACHE_VERSION = 'sabor-v1';
+const CACHE_VERSION = 'sabor-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const OFFLINE_URL = '/offline.html';
 
@@ -21,8 +21,8 @@ const OFFLINE_URL = '/offline.html';
 const PRECACHE = [
     OFFLINE_URL,
     '/manifest.json',
-    '/icons/icon-192.png',
-    '/icons/icon-512.png',
+    '/icon-192.png',
+    '/icon-512.png',
     '/logo.png',
 ];
 
@@ -51,7 +51,8 @@ self.addEventListener('message', (event) => {
 
 function esEstaticoCacheable(url) {
     return (
-        url.pathname.startsWith('/icons/') ||
+        url.pathname.startsWith('/icon-') ||
+        url.pathname === '/apple-touch-icon.png' ||
         url.pathname.startsWith('/build/') ||
         url.pathname === '/logo.png' ||
         url.pathname === '/favicon.ico' ||
