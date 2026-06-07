@@ -168,7 +168,7 @@
     {{-- PAGO CON QR (cliente). Solo si su factura sigue pendiente. El pedido del
          cliente entra a la cocina recién DESPUÉS de pagar (regla "primero paga,
          luego se prepara"). El QR se escanea con otro celular. --}}
-    @if(auth()->user()->isCliente() && $pedido->factura && $pedido->factura->estado === 'pendiente')
+    @if(auth()->user()->isCliente() && $pedido->estado === 'pendiente' && $pedido->factura && $pedido->factura->estado === 'pendiente')
     <div x-data="pagoCliente({{ $pedido->factura->id }})"
          class="bg-white rounded-xl shadow border overflow-hidden mb-6">
         <div class="px-6 py-4 border-b" style="background-color:#ECFDF5;">

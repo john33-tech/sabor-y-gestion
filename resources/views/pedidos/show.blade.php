@@ -341,7 +341,7 @@
 
             {{-- Pago de cuenta para el cliente (puntos #5 y #5.1 del spec) --}}
             @auth
-                @if(auth()->user()->isCliente() && $pedido->factura && $pedido->factura->estado === 'pendiente')
+                @if(auth()->user()->isCliente() && $pedido->estado === 'pendiente' && $pedido->factura && $pedido->factura->estado === 'pendiente')
                 <div x-data="pagoCliente({{ $pedido->factura->id }}, '{{ addslashes(auth()->user()->email) }}')"
                      class="overflow-hidden bg-white shadow-lg rounded-xl">
                     <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-white">

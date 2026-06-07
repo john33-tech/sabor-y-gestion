@@ -57,6 +57,15 @@ class PagoQrController extends Controller
             ], 404);
         }
 
+        // No cobrar un pedido cancelado (su factura puede haber quedado pendiente).
+        $factura->loadMissing('pedido');
+        if ($factura->pedido && $factura->pedido->estado === Pedido::ESTADO_CANCELADO) {
+            return response()->json([
+                'success' => false,
+                'message' => 'El pedido fue cancelado; no se puede pagar.'
+            ], 422);
+        }
+
         // Marcar factura como pagada con método QR
         $factura->metodo_pago = 'qr';
         $factura->estado = Factura::ESTADO_PAGADA;
