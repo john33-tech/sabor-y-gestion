@@ -1164,6 +1164,15 @@ public function destroyCliente(Pedido $pedido)
     {
         $pedidos = Pedido::where('usuario_id', Auth::id())
             ->whereNotIn('estado', [Pedido::ESTADO_FACTURADO, Pedido::ESTADO_CANCELADO])
+            ->where(function ($q) {
+                // Solo los que NO están pagados: sin factura todavía, o con
+                // factura en estado pendiente. Excluye los ya pagados (p. ej.
+                // un pedido entregado cuya factura quedó 'pagada').
+                $q->whereDoesntHave('factura')
+                  ->orWhereHas('factura', function ($f) {
+                      $f->where('estado', \App\Models\Factura::ESTADO_PENDIENTE);
+                  });
+            })
             ->orderBy('created_at', 'desc')
             ->get();
 
