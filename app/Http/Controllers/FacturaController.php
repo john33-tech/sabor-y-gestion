@@ -206,12 +206,14 @@ class FacturaController extends Controller
 
         // Construir URL del QR con parámetros dinámicos
         $params = [
-            'i'         => 1,
-            'cliente'   => $factura->cliente_nombre,
-            'monto'     => $factura->total,
-            'descuento' => $factura->descuento,
-            'emisor'    => $emisor,
-            'pedido'    => $factura->pedido_id,
+            'i'           => 1,
+            'cliente'     => $factura->cliente_nombre,
+            'monto'       => $factura->total,
+            'descuento'   => $factura->descuento,
+            'emisor'      => $emisor,
+            'pedido'      => $factura->pedido_id,                       // id interno (para el webhook)
+            'nro_factura' => $factura->numero_factura,                  // para mostrar
+            'nro_pedido'  => optional($factura->pedido)->numero_pedido, // para mostrar
         ];
 
 

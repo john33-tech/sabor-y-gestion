@@ -21,11 +21,13 @@ class PagoQrController extends Controller
     public function pagoExterno(Request $request)
     {
         return view('pago-externo.index', [
-            'emisor'    => $request->input('emisor', ''),
-            'pedido'    => $request->input('pedido', ''),
-            'cliente'   => $request->input('cliente', 'Cliente'),
-            'monto'     => (float) $request->input('monto', 0),
-            'descuento' => (float) $request->input('descuento', 0),
+            'emisor'     => $request->input('emisor', ''),
+            'pedido'     => $request->input('pedido', ''),
+            'nroFactura' => $request->input('nro_factura', ''),
+            'nroPedido'  => $request->input('nro_pedido', ''),
+            'cliente'    => $request->input('cliente', 'Cliente'),
+            'monto'      => (float) $request->input('monto', 0),
+            'descuento'  => (float) $request->input('descuento', 0),
         ]);
     }
 

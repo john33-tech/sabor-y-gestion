@@ -143,9 +143,15 @@
                 <span class="value">{{ $cliente ?? 'Consumidor' }}</span>
             </div>
             <div class="row">
-                <span class="label">Pedido</span>
-                <span class="value">#{{ $pedido }}</span>
+                <span class="label">Factura</span>
+                <span class="value">{{ $nroFactura ?? '' ?: ('#' . $pedido) }}</span>
             </div>
+            @if(!empty($nroPedido))
+            <div class="row">
+                <span class="label">Pedido</span>
+                <span class="value">{{ $nroPedido }}</span>
+            </div>
+            @endif
             @if(($descuento ?? 0) > 0)
             <div class="row">
                 <span class="label">Descuento</span>
