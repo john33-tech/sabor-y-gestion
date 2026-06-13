@@ -48,8 +48,11 @@ class DashboardController extends Controller
     {
         $this->authorizeRole('cocinero');
 
-        // Mostrar pedidos de hoy: En espera (pendiente) y En preparación
+        // Mostrar pedidos de hoy: En espera (pendiente) y En preparación.
+        // visibleEnCocina() aplica la regla "pagar primero": los pedidos del
+        // CLIENTE solo entran a cocina cuando su factura está PAGADA.
         $query = \App\Models\Pedido::with(['detalles.plato', 'mesa', 'usuario'])
+            ->visibleEnCocina()
             ->whereDate('created_at', now()->today())
             ->whereIn('estado', [
                 \App\Models\Pedido::ESTADO_PENDIENTE,
@@ -60,16 +63,13 @@ class DashboardController extends Controller
 
         $tipos = \App\Models\Pedido::getTipos();
 
-        // Estadísticas solo de HOY
+        // Estadísticas solo de HOY (mismo criterio que la cocina: visibleEnCocina).
+        $statBase = fn() => \App\Models\Pedido::visibleEnCocina()->whereDate('created_at', now()->today());
         $stats = [
-            'total'          => \App\Models\Pedido::whereDate('created_at', now()->today())
-                                    ->whereIn('estado', ['pendiente', 'en_preparacion', 'listo'])->count(),
-            'pendientes'     => \App\Models\Pedido::whereDate('created_at', now()->today())
-                                    ->where('estado', 'pendiente')->count(),
-            'en_preparacion' => \App\Models\Pedido::whereDate('created_at', now()->today())
-                                    ->where('estado', 'en_preparacion')->count(),
-            'listos'         => \App\Models\Pedido::whereDate('created_at', now()->today())
-                                    ->where('estado', 'listo')->count(),
+            'total'          => $statBase()->whereIn('estado', ['pendiente', 'en_preparacion', 'listo'])->count(),
+            'pendientes'     => $statBase()->where('estado', 'pendiente')->count(),
+            'en_preparacion' => $statBase()->where('estado', 'en_preparacion')->count(),
+            'listos'         => $statBase()->where('estado', 'listo')->count(),
         ];
 
         return view('dashboard.cocinero.index', compact('comandas', 'tipos', 'stats'));

@@ -296,8 +296,9 @@ public function storeCliente(Request $request)
         // Generar factura automática
         $pedido->generarOrUpdateFactura();
 
-        // Emitir evento para tiempo real (Notificar a cocineros)
-        event(new \App\Events\PedidoCreado($pedido));
+        // NO se notifica a cocina al crear: este es un pedido del CLIENTE y rige
+        // la regla "pagar primero". La cocina se entera recién al PAGAR
+        // (PagoQrController@confirmar / FacturaController@pagar disparan PedidoCreado).
 
         DB::commit();
 
