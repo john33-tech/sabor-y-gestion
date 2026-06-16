@@ -27,7 +27,9 @@ class AuthenticationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        // La app redirige según el rol; un usuario de factory (sin rol) cae en
+        // el caso por defecto -> dashboard.cliente (ver AuthenticatedSessionController).
+        $response->assertRedirect(route('dashboard.cliente', absolute: false));
     }
 
     public function test_users_can_not_authenticate_with_invalid_password(): void

@@ -26,6 +26,7 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        // El registro crea siempre un usuario 'cliente' (ver RegisteredUserController).
+        $response->assertRedirect(route('dashboard.cliente', absolute: false));
     }
 }

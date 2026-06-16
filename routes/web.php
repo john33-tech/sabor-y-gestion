@@ -48,6 +48,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/cajero', [DashboardController::class, 'cajero'])->name('dashboard.cajero');
     Route::get('/dashboard/cliente', [DashboardController::class, 'cliente'])->name('dashboard.cliente');
 
+    // Punto de entrada genérico: varias vistas (layouts/navigation) y los
+    // controllers de auth de Breeze enlazan a route('dashboard'). Redirige a
+    // cada usuario a su panel según el rol. (Método de controlador, NO closure,
+    // para que `route:cache` del deploy no falle.)
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
     // Dashboard Ejecutivo / Analytics (solo admin). Módulo extraído del repo de Henry
     // y adaptado al esquema local (ver app/Services/DashboardAnalyticsService.php).
     Route::get('/admin/analytics', [\App\Http\Controllers\AdminAnalyticsController::class, 'index'])

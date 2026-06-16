@@ -7,6 +7,24 @@ use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
+    /**
+     * Punto de entrada genérico (route('dashboard')): redirige a cada usuario a
+     * su panel según el rol. Lo usan las vistas (layouts/navigation) y los
+     * controllers de auth de Breeze (verificación de email, confirmar
+     * contraseña), que enlazan a route('dashboard'). Espeja la lógica de
+     * AuthenticatedSessionController::store.
+     */
+    public function index()
+    {
+        return match (Auth::user()->role) {
+            'admin'    => redirect()->route('admin.analytics'),
+            'mesero'   => redirect()->route('dashboard.mesero'),
+            'cocinero' => redirect()->route('dashboard.cocinero'),
+            'cajero'   => redirect()->route('dashboard.cajero'),
+            default    => redirect()->route('dashboard.cliente'),
+        };
+    }
+
     public function administrador()
     {
         $this->authorizeRole('admin');
