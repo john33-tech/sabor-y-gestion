@@ -18,7 +18,12 @@ return new class extends Migration
     public function up(): void
     {
         // Enum de mesas: agregar el nuevo estado (MySQL/TiDB).
-        DB::statement("ALTER TABLE mesas MODIFY COLUMN estado ENUM('libre','ocupado','reservado','fuera_servicio','cuenta_solicitada') NOT NULL DEFAULT 'libre'");
+        // El ALTER ... MODIFY ENUM es sintaxis exclusiva de MySQL/MariaDB; en
+        // SQLite (tests) la columna es TEXT y acepta cualquier valor, así que
+        // no se necesita y rompería la migración. Por eso se omite ahí.
+        if (in_array(DB::getDriverName(), ['mysql', 'mariadb'])) {
+            DB::statement("ALTER TABLE mesas MODIFY COLUMN estado ENUM('libre','ocupado','reservado','fuera_servicio','cuenta_solicitada') NOT NULL DEFAULT 'libre'");
+        }
 
         Schema::table('pedidos', function (Blueprint $table) {
             $table->boolean('cuenta_solicitada')->default(false)->after('estado');
@@ -32,6 +37,8 @@ return new class extends Migration
             $table->dropColumn(['cuenta_solicitada', 'cuenta_solicitada_at']);
         });
 
-        DB::statement("ALTER TABLE mesas MODIFY COLUMN estado ENUM('libre','ocupado','reservado','fuera_servicio') NOT NULL DEFAULT 'libre'");
+        if (in_array(DB::getDriverName(), ['mysql', 'mariadb'])) {
+            DB::statement("ALTER TABLE mesas MODIFY COLUMN estado ENUM('libre','ocupado','reservado','fuera_servicio') NOT NULL DEFAULT 'libre'");
+        }
     }
 };

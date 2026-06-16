@@ -1,6 +1,6 @@
 
 # ---------------------------------------------------------------------------
-# Sabor & Gestión — Dockerfile para Laravel 12 + PHP 8.2 + Apache
+# Sabor & Gestión — Dockerfile para Laravel 12 + PHP 8.5 + Apache
 # Multi-stage: composer (deps PHP) -> node (build Vite) -> runtime (Apache+PHP)
 # Compatible con Railway, Fly.io, Render, y `docker compose up` local.
 # ---------------------------------------------------------------------------
@@ -47,11 +47,13 @@ ENV VITE_PUSHER_APP_CLUSTER=${VITE_PUSHER_APP_CLUSTER}
 RUN npm run build
 
 # ============================================================================
-# STAGE 3 — Runtime: Apache + PHP 8.2
+# STAGE 3 — Runtime: Apache + PHP 8.5
 # ============================================================================
-FROM php:8.2-apache AS runtime
+FROM php:8.5-apache AS runtime
 
 # Dependencias del sistema y extensiones PHP
+# Nota: en PHP 8.5 OPcache viene compilado de fábrica (Zend OPcache), por eso
+# NO se instala aquí; se activa solo con la config de docker/php.ini.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         curl \
@@ -75,7 +77,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gd \
         zip \
         intl \
-        opcache \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

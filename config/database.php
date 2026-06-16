@@ -62,10 +62,15 @@ return [
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 // SSL solo si está habilitado vía env (para TiDB Cloud por ejemplo).
                 // En local Docker / Railway MySQL no se usa SSL.
-                PDO::MYSQL_ATTR_SSL_CA                  => env('DB_SSL_CA') && file_exists(env('DB_SSL_CA'))
+                // PHP 8.5 deprecó las constantes PDO::MYSQL_ATTR_*; su reemplazo
+                // (Pdo\Mysql::ATTR_*) solo existe desde PHP 8.4. Guard por versión
+                // para seguir funcionando en local (8.2/8.3) y en prod (8.5).
+                (PHP_VERSION_ID >= 80400 ? \Pdo\Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA)
+                    => env('DB_SSL_CA') && file_exists(env('DB_SSL_CA'))
                     ? env('DB_SSL_CA')
                     : null,
-                PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT  => env('DB_SSL_VERIFY', false),
+                (PHP_VERSION_ID >= 80400 ? \Pdo\Mysql::ATTR_SSL_VERIFY_SERVER_CERT : PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT)
+                    => env('DB_SSL_VERIFY', false),
                 PDO::ATTR_EMULATE_PREPARES              => true,
                 PDO::ATTR_TIMEOUT                       => 30,
                 // Perf: conexión persistente reutiliza el handshake SSL entre requests
@@ -90,7 +95,7 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('DB_SSL_CA'),
+                (PHP_VERSION_ID >= 80400 ? \Pdo\Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('DB_SSL_CA'),
             ]) : [],
         ],
 
