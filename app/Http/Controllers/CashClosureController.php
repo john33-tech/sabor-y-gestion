@@ -185,7 +185,11 @@ class CashClosureController extends Controller
             $closingDate = now();
             $totals = $this->calculateTotals($cierre, $closingDate);
 
-            $expectedAmount = $cierre->initial_amount + $totals['total_sales'];
+            // El arqueo concilia SOLO el efectivo físico del cajón: el monto
+            // final contado se compara contra (inicial + ventas en efectivo).
+            // Tarjeta/QR/transferencia NO entran al cajón, así que no cuentan
+            // para el "esperado en caja" (si no, la caja nunca cuadraría).
+            $expectedAmount = $cierre->initial_amount + $totals['total_cash'];
             $difference = $validated['final_amount'] - $expectedAmount;
 
             $cierre->update([
@@ -229,15 +233,17 @@ class CashClosureController extends Controller
                 SUM(total) as total_sales,
                 SUM(CASE WHEN metodo_pago = "efectivo" THEN total ELSE 0 END) as total_cash,
                 SUM(CASE WHEN metodo_pago = "tarjeta" THEN total ELSE 0 END) as total_card,
-                SUM(CASE WHEN metodo_pago = "qr" THEN total ELSE 0 END) as total_qr
+                SUM(CASE WHEN metodo_pago = "qr" THEN total ELSE 0 END) as total_qr,
+                SUM(CASE WHEN metodo_pago = "transferencia" THEN total ELSE 0 END) as total_transfer
             ')
             ->first();
 
         return [
-            'total_sales' => (float) ($totals->total_sales ?? 0),
-            'total_cash'  => (float) ($totals->total_cash ?? 0),
-            'total_card'  => (float) ($totals->total_card ?? 0),
-            'total_qr'    => (float) ($totals->total_qr ?? 0),
+            'total_sales'    => (float) ($totals->total_sales ?? 0),
+            'total_cash'     => (float) ($totals->total_cash ?? 0),
+            'total_card'     => (float) ($totals->total_card ?? 0),
+            'total_qr'       => (float) ($totals->total_qr ?? 0),
+            'total_transfer' => (float) ($totals->total_transfer ?? 0),
         ];
     }
 
@@ -280,10 +286,13 @@ class CashClosureController extends Controller
 
         // Totales ya están guardados en $cierre, pero los pasamos para la vista
         $totals = [
-            'total_sales' => $cierre->total_sales,
-            'total_cash'  => $cierre->total_cash,
-            'total_card'  => $cierre->total_card,
-            'total_qr'    => $cierre->total_qr,
+            'total_sales'    => $cierre->total_sales,
+            'total_cash'     => $cierre->total_cash,
+            'total_card'     => $cierre->total_card,
+            'total_qr'       => $cierre->total_qr,
+            // No hay columna para transferencia: es el resto del total de ventas
+            // que no fue efectivo, tarjeta ni QR.
+            'total_transfer' => max(0, (float) $cierre->total_sales - (float) $cierre->total_cash - (float) $cierre->total_card - (float) $cierre->total_qr),
         ];
 
         // Cargar la vista del PDF

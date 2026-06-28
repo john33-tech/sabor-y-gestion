@@ -65,9 +65,8 @@ class PlatoController extends Controller
     
         public function store(Request $request)
     {
-        // Validación mejorada
         $validated = $request->validate([
-            'nombre' => 'required|string|max:255',
+            'nombre' => 'required|string|max:255|unique:platos,nombre',
             'precio' => 'required|numeric|min:0',
             'categoria_id' => 'required|exists:categorias,id',
             'descripcion' => 'nullable|string',
@@ -76,6 +75,8 @@ class PlatoController extends Controller
             'ingredientes' => 'nullable|array',
             'ingredientes.*.id' => 'required|exists:ingredientes,id',
             'ingredientes.*.cantidad' => 'required|numeric|min:0.01',
+        ], [
+            'nombre.unique' => 'Ya existe un plato con ese nombre. Elige un nombre diferente.',
         ]);
         
         $plato = new Plato();
@@ -132,7 +133,8 @@ class PlatoController extends Controller
     public function update(Request $request, Plato $plato)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255',
+            // Ignora el propio plato al verificar unicidad (evita falso positivo al guardar sin cambiar nombre)
+            'nombre' => 'required|string|max:255|unique:platos,nombre,' . $plato->id,
             'precio' => 'required|numeric|min:0',
             'categoria_id' => 'required|exists:categorias,id',
             'descripcion' => 'nullable|string',
@@ -141,8 +143,10 @@ class PlatoController extends Controller
             'ingredientes' => 'array',
             'ingredientes.*.id' => 'exists:ingredientes,id',
             'ingredientes.*.cantidad' => 'required|numeric|min:0.01',
+        ], [
+            'nombre.unique' => 'Ya existe un plato con ese nombre. Elige un nombre diferente.',
         ]);
-        
+
         $plato->nombre = $request->nombre;
         $plato->precio = $request->precio;
         $plato->categoria_id = $request->categoria_id;

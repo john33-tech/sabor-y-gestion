@@ -125,17 +125,18 @@
         <h3>Resumen de Montos</h3>
         <table class="amount-table">
             <thead>
-                <tr><th>Concepto</th><th>Monto (S/)</th></tr>
+                <tr><th>Concepto</th><th>Monto (Bs.)</th></tr>
             </thead>
             <tbody>
-                <tr><td>Monto inicial (apertura)</td><td>{{ number_format($cierre->initial_amount, 2) }}</td></tr>
-                <tr><td>Total ventas del turno</td><td>{{ number_format($totals['total_sales'], 2) }}</td></tr>
-                <tr><td style="padding-left:20px;">- Ventas en efectivo</td><td>{{ number_format($totals['total_cash'], 2) }}</td></tr>
-                <tr><td style="padding-left:20px;">- Ventas con tarjeta</td><td>{{ number_format($totals['total_card'], 2) }}</td></tr>
-                <tr><td style="padding-left:20px;">- Ventas con QR</td><td>{{ number_format($totals['total_qr'], 2) }}</td></tr>
-                <tr><td><strong>Monto esperado en caja</strong></td><td><strong>{{ number_format($cierre->initial_amount + $totals['total_sales'], 2) }}</strong></td></tr>
-                <tr><td>Monto final real registrado</td><td>{{ number_format($cierre->final_amount, 2) }}</td></tr>
-                <tr><td><strong>Diferencia</strong></td><td><strong>{{ number_format($cierre->difference, 2) }}</strong></td></tr>
+                <tr><td>Monto inicial (apertura)</td><td>Bs. {{ number_format($cierre->initial_amount, 2) }}</td></tr>
+                <tr><td>Total ventas del turno</td><td>Bs. {{ number_format($totals['total_sales'], 2) }}</td></tr>
+                <tr><td style="padding-left:20px;">- Ventas en efectivo</td><td>Bs. {{ number_format($totals['total_cash'], 2) }}</td></tr>
+                <tr><td style="padding-left:20px;">- Ventas con tarjeta</td><td>Bs. {{ number_format($totals['total_card'], 2) }}</td></tr>
+                <tr><td style="padding-left:20px;">- Ventas con QR</td><td>Bs. {{ number_format($totals['total_qr'], 2) }}</td></tr>
+                <tr><td style="padding-left:20px;">- Ventas por transferencia</td><td>Bs. {{ number_format($totals['total_transfer'] ?? 0, 2) }}</td></tr>
+                <tr><td><strong>Efectivo esperado en caja</strong><br><span style="font-weight:normal;font-size:10px;color:#666;">Inicial + ventas en efectivo (tarjeta/QR/transferencia no entran al cajón)</span></td><td><strong>Bs. {{ number_format($cierre->initial_amount + $totals['total_cash'], 2) }}</strong></td></tr>
+                <tr><td>Monto final real contado (efectivo)</td><td>Bs. {{ number_format($cierre->final_amount, 2) }}</td></tr>
+                <tr><td><strong>Diferencia</strong></td><td><strong>Bs. {{ number_format($cierre->difference, 2) }}</strong></td></tr>
             </tbody>
         </table>
         @if($cierre->difference != 0)
@@ -155,7 +156,7 @@
         @if($orders->count())
         <table>
             <thead>
-                <tr><th>ID Pedido</th><th>Mesa / Cliente</th><th>Total (S/)</th><th>Método pago</th><th>Fecha</th></tr>
+                <tr><th>ID Pedido</th><th>Mesa / Cliente</th><th>Total (Bs.)</th><th>Método pago</th><th>Fecha</th></tr>
             </thead>
             <tbody>
                 @foreach($orders as $order)
@@ -168,7 +169,7 @@
                             {{ $order->cliente_nombre ?? 'Cliente' }}
                         @endif
                     </td>
-                    <td>{{ number_format($order->total, 2) }}</td>
+                    <td>Bs. {{ number_format($order->total, 2) }}</td>
                     <td>{{ ucfirst($order->factura->metodo_pago ?? 'N/A') }}</td>
                     <td>{{ $order->created_at->format('d/m/Y H:i') }}</td>
                 </tr>

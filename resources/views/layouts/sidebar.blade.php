@@ -18,9 +18,8 @@
 
 <aside class="flex flex-col h-full text-white transition-all duration-300 ease-in-out shadow-xl bg-primary"
        :class="{
-           'w-72': sidebarExpanded,
-           'w-20': !sidebarExpanded && windowWidth >= 1024,
-           'w-72': mobileSidebarOpen && windowWidth < 1024
+           'w-72': sidebarExpanded || (mobileSidebarOpen && windowWidth < 1024),
+           'w-20': !sidebarExpanded && windowWidth >= 1024
        }">
 
     <!-- Logo compacto -->

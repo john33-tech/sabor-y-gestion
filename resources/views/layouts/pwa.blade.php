@@ -18,6 +18,13 @@
         });
     }
 
+    // --- Ocultar el botón "Instalar app" al imprimir ---
+    (function () {
+        const s = document.createElement('style');
+        s.textContent = '@media print { #pwa-install-btn { display: none !important; } }';
+        document.head.appendChild(s);
+    })();
+
     // --- Botón flotante "Instalar app" (Android/Chrome/Edge) ---
     let deferredPrompt = null;
     window.addEventListener('beforeinstallprompt', (e) => {

@@ -52,17 +52,17 @@
                 <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
                     <div class="p-4 border bg-background rounded-xl border-border">
                         <p class="text-xs font-bold uppercase text-muted">Inicial</p>
-                        <p class="text-xl font-extrabold text-text">S/ {{ number_format($cierre->initial_amount, 2) }}</p>
+                        <p class="text-xl font-extrabold text-text">Bs. {{ number_format($cierre->initial_amount, 2) }}</p>
                     </div>
                     <div class="p-4 border bg-background rounded-xl border-border">
                         <p class="text-xs font-bold uppercase text-muted">Ventas</p>
-                        <p class="text-xl font-extrabold text-primary">S/ {{ number_format($cierre->total_sales ?? 0, 2) }}</p>
+                        <p class="text-xl font-extrabold text-primary">Bs. {{ number_format($cierre->total_sales ?? 0, 2) }}</p>
                     </div>
                     @if($cierre->status === 'Closed')
                     <div class="col-span-2 p-4 border bg-background rounded-xl border-border sm:col-span-1">
                         <p class="text-xs font-bold uppercase text-muted">Diferencia</p>
                         <p class="text-xl font-extrabold {{ $cierre->difference >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                            S/ {{ number_format($cierre->difference, 2) }}
+                            Bs. {{ number_format($cierre->difference, 2) }}
                         </p>
                     </div>
                     @endif
@@ -97,7 +97,7 @@
                             <tr class="transition hover:bg-orange-50/30">
                                 <td class="px-6 py-4 text-sm font-semibold text-text">#{{ $order->numero_pedido ?? 'N/A' }}</td>
                                 <td class="px-6 py-4 text-sm">{{ $order->mesa->numero_mesa ?? 'Delivery' }}</td>
-                                <td class="px-6 py-4 text-sm font-bold text-primary">S/ {{ number_format($order->total, 2) }}</td>
+                                <td class="px-6 py-4 text-sm font-bold text-primary">Bs. {{ number_format($order->total, 2) }}</td>
                                 <td class="px-6 py-4 text-sm uppercase text-muted">{{ $order->factura->metodo_pago ?? 'N/D' }}</td>
                                 <td class="px-6 py-4 text-right">
                                     <a href="{{ route('pedidos.show', $order) }}" class="font-bold text-primary hover:underline">Ver</a>
@@ -130,7 +130,7 @@
             data: {
                 labels: @json($chartData['labels']),
                 datasets: [{
-                    label: 'Ventas (S/)',
+                    label: 'Ventas (Bs.)',
                     data: @json($chartData['values']),
                     backgroundColor: '#C2410C',
                     borderRadius: 8

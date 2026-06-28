@@ -27,7 +27,7 @@
                 </div>
                 <div class="p-5">
                     <p class="text-[10px] font-bold tracking-widest uppercase text-muted">Monto Inicial</p>
-                    <p class="mt-1 text-sm font-bold text-primary">$ {{ number_format($cierre->initial_amount, 2) }}</p>
+                    <p class="mt-1 text-sm font-bold text-primary">Bs. {{ number_format($cierre->initial_amount, 2) }}</p>
                 </div>
             </div>
 
@@ -44,15 +44,18 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-border">
-                                @foreach(['Total Ventas' => $totals['total_sales'], 'Efectivo' => $totals['total_cash'], 'Tarjeta' => $totals['total_card'], 'QR/Transferencia' => $totals['total_qr']] as $label => $val)
+                                @foreach(['Total Ventas' => $totals['total_sales'], 'Efectivo' => $totals['total_cash'], 'Tarjeta' => $totals['total_card'], 'QR' => $totals['total_qr'], 'Transferencia' => $totals['total_transfer']] as $label => $val)
                                 <tr class="transition-colors hover:bg-orange-50/50">
                                     <td class="px-4 py-3 font-medium text-text">{{ $label }}</td>
-                                    <td class="px-4 py-3 font-mono text-right text-text">$ {{ number_format($val, 2) }}</td>
+                                    <td class="px-4 py-3 font-mono text-right text-text">Bs. {{ number_format($val, 2) }}</td>
                                 </tr>
                                 @endforeach
                                 <tr class="bg-primary/5">
-                                    <td class="px-4 py-3 font-bold text-primary">Total Esperado</td>
-                                    <td class="px-4 py-3 font-bold text-right text-primary">$ {{ number_format($cierre->initial_amount + $totals['total_sales'], 2) }}</td>
+                                    <td class="px-4 py-3 font-bold text-primary">
+                                        Efectivo esperado en caja
+                                        <span class="block text-[10px] font-normal normal-case text-muted">Monto inicial + ventas en efectivo (tarjeta/QR/transferencia no entran al cajón)</span>
+                                    </td>
+                                    <td class="px-4 py-3 font-bold text-right text-primary">Bs. {{ number_format($cierre->initial_amount + $totals['total_cash'], 2) }}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -71,7 +74,7 @@
                       x-data="{
                         finalAmount: 0,
                         submitting: false,
-                        expected: {{ $cierre->initial_amount + $totals['total_sales'] }}
+                        expected: {{ $cierre->initial_amount + $totals['total_cash'] }}
                       }"
                       @submit.prevent="submitting = true; $el.submit()">
                     @csrf @method('PUT')
@@ -79,7 +82,7 @@
                     <div class="mb-6">
                         <label class="block mb-2 text-xs font-bold uppercase text-text">Monto Final Contado</label>
                         <div class="relative">
-                            <span class="absolute left-3 top-3 text-muted">$</span>
+                            <span class="absolute left-3 top-3 text-muted">Bs.</span>
                             <input type="number" name="final_amount" step="0.01" required
                                    x-model="finalAmount"
                                    class="w-full pl-8 pr-4 py-2.5 bg-background border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all">

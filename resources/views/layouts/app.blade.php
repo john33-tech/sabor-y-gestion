@@ -90,9 +90,30 @@
     @stack('styles')
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    <style>
+        @media print {
+            /* Ocultar navegación, sidebar, botón PWA, toasts y alertas flotantes */
+            #print-sidebar,
+            #print-topnav,
+            #pwa-install-btn,
+            #toast-stack-pedidos,
+            .fixed.top-4.right-4 { display: none !important; }
+
+            /* Restaurar el flujo natural del documento: sin overflow ni altura fija */
+            html, body,
+            #print-layout-root,
+            #print-main-col,
+            #print-main { overflow: visible !important; height: auto !important; }
+
+            /* El contenido principal ocupa el ancho completo al imprimir */
+            #print-main-col { width: 100% !important; }
+        }
+    </style>
 </head>
 <body class="overflow-hidden antialiased bg-gray-50">
-    <div x-data="appLayout()"
+    <div id="print-layout-root"
+         x-data="appLayout()"
          x-init="init()"
          class="relative h-screen overflow-hidden">
 
@@ -106,7 +127,8 @@
 
         <div class="flex h-full">
             <!-- Sidebar -->
-            <div x-show="sidebarOpen || (window.innerWidth >= 1024 && !mobileSidebarOpen)"
+            <div id="print-sidebar"
+                 x-show="sidebarOpen || (window.innerWidth >= 1024 && !mobileSidebarOpen)"
                  x-transition:enter="transition-transform duration-300 ease-in-out"
                  x-transition:enter-start="-translate-x-full lg:translate-x-0"
                  x-transition:enter-end="translate-x-0"
@@ -115,22 +137,22 @@
                  x-transition:leave-end="-translate-x-full lg:translate-x-0"
                  class="fixed inset-y-0 left-0 z-30 lg:relative lg:z-0"
                  :class="{
-                     'w-72': sidebarExpanded,
-                     'w-20': !sidebarExpanded && window.innerWidth >= 1024,
-                     'w-72': mobileSidebarOpen && window.innerWidth < 1024
+                     'w-72': sidebarExpanded || (mobileSidebarOpen && windowWidth < 1024),
+                     'w-20': !sidebarExpanded && windowWidth >= 1024
                  }">
                 @include('layouts.sidebar')
             </div>
 
             <!-- Contenido Principal -->
-            <div class="flex flex-col flex-1 min-w-0 overflow-hidden"
+            <div id="print-main-col"
+                 class="flex flex-col flex-1 min-w-0 overflow-hidden"
                  :class="{
                      'lg:ml-0': true,
                      'ml-0': true
                  }">
 
                 <!-- Navbar Superior con Perfil y Logout -->
-                <nav class="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
+                <nav id="print-topnav" class="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
                     <div class="flex items-center justify-between px-3 py-2 sm:px-6 sm:py-3">
                         <!-- Sección izquierda: Botón hamburguesa + Datos usuario -->
                         <div class="flex items-center gap-2 sm:gap-3">
@@ -179,7 +201,7 @@
                 </nav>
 
                 <!-- Contenido Principal -->
-                <main class="flex-1 overflow-y-auto bg-gray-50">
+                <main id="print-main" class="flex-1 overflow-y-auto bg-gray-50">
                     <div class="container px-3 py-4 mx-auto sm:px-4 lg:px-6 sm:py-6">
 
 

@@ -66,7 +66,7 @@
                         </label>
                         <div class="relative rounded-md shadow-sm">
                             <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                <span class="text-gray-500 dark:text-gray-400 sm:text-sm">$</span>
+                                <span class="text-gray-500 dark:text-gray-400 sm:text-sm">Bs.</span>
                             </div>
                             <input type="number" name="initial_amount" id="initial_amount" step="0.01" min="0"
                                    value="{{ old('initial_amount') }}"

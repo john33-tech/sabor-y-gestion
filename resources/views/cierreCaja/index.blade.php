@@ -80,8 +80,8 @@
                             <td class="px-6 py-5 text-sm font-bold text-text">#{{ $closure->id }}</td>
                             <td class="px-6 py-5 text-sm text-text">{{ $closure->user->name }}</td>
                             <td class="px-6 py-5 text-sm text-muted">{{ $closure->opening_date->format('d/m/Y H:i') }}</td>
-                            <td class="px-6 py-5 text-sm font-semibold text-text">$ {{ number_format($closure->initial_amount, 2) }}</td>
-                            <td class="px-6 py-5 text-sm font-semibold text-primary">$ {{ number_format($closure->total_sales ?? 0, 2) }}</td>
+                            <td class="px-6 py-5 text-sm font-semibold text-text">Bs. {{ number_format($closure->initial_amount, 2) }}</td>
+                            <td class="px-6 py-5 text-sm font-semibold text-primary">Bs. {{ number_format($closure->total_sales ?? 0, 2) }}</td>
                             <td class="px-6 py-5">
                                 <span class="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full {{ $closure->status == 'Open' ? 'bg-orange-100 text-primary' : 'bg-green-100 text-green-700' }}">
                                     {{ $closure->status == 'Open' ? 'Abierta' : 'Cerrada' }}
