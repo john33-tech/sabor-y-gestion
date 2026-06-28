@@ -34,12 +34,14 @@
                 </div>
             </div>
             <div class="flex gap-2">
-                <button class="px-4 py-2 text-sm font-medium text-white transition rounded-lg shadow bg-primary hover:bg-primary/90">
+                <a href="{{ route('pedidos.index') }}"
+                   class="px-4 py-2 text-sm font-medium text-white transition rounded-lg shadow bg-primary hover:bg-primary/90">
                     <i class="mr-2 fas fa-cash-register"></i>Solicitar Cuenta
-                </button>
-                <button class="px-4 py-2 text-sm font-medium text-gray-700 transition bg-gray-100 rounded-lg hover:bg-gray-200">
+                </a>
+                <a href="{{ route('pedidos.create') }}"
+                   class="px-4 py-2 text-sm font-medium text-gray-700 transition bg-gray-100 rounded-lg hover:bg-gray-200">
                     <i class="mr-2 fas fa-utensils"></i>Nuevo Pedido
-                </button>
+                </a>
             </div>
         </div>
     </div>
